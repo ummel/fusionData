@@ -10,6 +10,6 @@ fusionData.Rproj
 /spatial-processed
 *.fst
 *.rds
-!*_dictionary.rds
+!*dictionary.rds
 README.html
 README.Rmd
