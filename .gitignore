@@ -1,0 +1,15 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+fusionData.Rproj
+/deprecated
+/R/deprecated
+/survey-raw
+/spatial-raw
+/spatial-processed
+*.fst
+*.rds
+!*_dictionary.rds
+README.html
+README.Rmd

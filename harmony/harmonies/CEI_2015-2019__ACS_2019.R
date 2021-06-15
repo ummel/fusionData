@@ -1,0 +1,69 @@
+list(
+
+  age_ref__agep = list(
+    CEI = list(
+      groups = 1,
+      levels = "Min: 16, Median: 51, Mean: 50.9, Max: 88",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: 0, Median: 43, Mean: 42.2, Max: 96",
+      breaks = "",
+      adj = "",
+      agg = "reference"),
+    ordered = FALSE,
+    comment = "",
+    modified = "2021-06-10 11:12:08"),
+
+  built__ybl = list(
+    CEI = list(
+      vars = "built",
+      groups = 1:23,
+      levels = c("Less than 1940", "[1940 to 1950)", "[1950 to 1960)", "[1960 to 1970)", "[1970 to 1980)", "[1980 to 1990)", "[1990 to 2000)", "[2000 to 2005)", "[2005 to 2006)", "[2006 to 2007)", "[2007 to 2008)", "[2008 to 2009)", "[2009 to 2010)", "[2010 to 2011)", "[2011 to 2012)", "[2012 to 2013)", "[2013 to 2014)", "[2014 to 2015)", "[2015 to 2016)", "[2016 to 2017)", "[2017 to 2018)", "[2018 to 2019)", "2019 or more"),
+      breaks = c(1940, 1950, 1960, 1970, 1980, 1990, 2000, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019),
+      adj = ""),
+    ACS = list(
+      vars = "ybl",
+      groups = 1:23,
+      levels = c("1939 or earlier", "1940 to 1949", "1950 to 1959", "1960 to 1969", "1970 to 1979", "1980 to 1989", "1990 to 1999", "2000 to 2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019"),
+      breaks = "",
+      adj = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2021-06-08 12:13:25"),
+
+  cutenure__ten = list(
+    CEI = list(
+      vars = "cutenure",
+      groups = c(1, 2, 3, 4, 4),
+      levels = c("Homeowner with mortgage", "Homeowner without mortgage", "Occupied without payment of cash rent", "Rented", "Student housing"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      vars = "ten",
+      groups = c(3, 2, 1, 4),
+      levels = c("Occupied without payment of rent", "Owned free and clear", "Owned with mortgage or loan", "Rented"),
+      breaks = "",
+      adj = ""),
+    ordered = FALSE,
+    comment = "This is my comment.",
+    modified = "2021-06-09 20:32:15"),
+
+  unistrq__bld = list(
+    CEI = list(
+      vars = "unistrq",
+      groups = 1:9,
+      levels = c("Mobile home or trailer", "One, detached", "One, attached", "2 housing units", "3-4 housing units", "5-9 housing units", "10-19 housing units", "20-49 housing units", "50 or more housing units"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      vars = "bld",
+      groups = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 1),
+      levels = c("Mobile home or trailer", "One-family house detached", "One-family house attached", "2 Apartments", "3-4 Apartments", "5-9 Apartments", "10-19 Apartments", "20-49 Apartments", "50 or more apartments", "Boat, RV, van, etc."),
+      breaks = "",
+      adj = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2021-06-08 20:30:13")
+)

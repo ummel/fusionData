@@ -1,0 +1,21 @@
+Package: fusionData
+Title: Data backend for fusionACS platform
+Version: 0.1.0
+Authors@R: 
+    person(given = "Kevin",
+           family = "Ummel",
+           role = c("aut", "cre"),
+           email = "ummel@sas.upenn.edu")
+Description: Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.
+License: proprietary
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Depends: 
+    R (>= 3.5.0),
+    shiny,
+    fst,
+    tidyverse
+Imports: 
+    labelled

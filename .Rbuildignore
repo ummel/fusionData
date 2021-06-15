@@ -1,0 +1,9 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+.gitignore
+^survey-raw$
+^spatial-raw$
+^deprecated$
+^R/deprecated$
+.fst$
+^README\.Rmd$
