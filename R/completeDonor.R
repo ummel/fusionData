@@ -54,7 +54,7 @@ completeDonor <- function(data, ..., replicates = FALSE) {
     #select(any_of(c(ids, "weight", names(data), names(d))))
 
   # Add 'fuse.vars' attribute to identify the variables that are fusion candidates
-  attr(result, "fuse.vars") <- setdiff(names(d), c(ids, "weight", reps))
+  attr(result, "fusion.vars") <- setdiff(names(d), c(ids, "weight", reps))
 
   return(result)
 
