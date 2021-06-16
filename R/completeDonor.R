@@ -39,6 +39,7 @@ completeDonor <- function(data, ..., replicates = FALSE) {
   if (!replicates) reps <- NULL
 
   # Load only the necessary data from disk
+  # NOTE: This doesn't take into account '...', so it potentially loading unnecessary data
   d <- d[c(keep, reps)]
 
   # Pass ... argument as a dplyr select() statement
@@ -47,8 +48,13 @@ completeDonor <- function(data, ..., replicates = FALSE) {
 
   # Add original donor variables to 'data'
   # Merge on household- and person-identifier(s)
-  result <- inner_join(x = data, y = d, by = ids) %>%
-    select(any_of(c(ids, "weight", vharm, keep, reps)))
+  result <- data %>%
+    inner_join(d, by = ids) %>%
+    select(any_of(c(ids, "weight")), everything())
+    #select(any_of(c(ids, "weight", names(data), names(d))))
+
+  # Add 'fuse.vars' attribute to identify the variables that are fusion candidates
+  attr(result, "fuse.vars") <- setdiff(names(d), c(ids, "weight", reps))
 
   return(result)
 
