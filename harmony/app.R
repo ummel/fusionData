@@ -695,7 +695,7 @@ server <- function(input, output, session) {
   observeEvent(input$delete, {
 
     # Load harmony file on disk
-    hfile <- paste0(input$dsvy, "_", input$dvint, "__ACS_", input$rvint, ".R")
+    hfile <- paste0("harmonies/", input$dsvy, "_", input$dvint, "__ACS_", input$rvint, ".R")
     h <- if (file.exists(hfile)) dget(hfile) else list()
 
     # Remove the selected harmony
