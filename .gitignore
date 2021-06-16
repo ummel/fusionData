@@ -11,3 +11,5 @@ fusionData.Rproj
 *.fst
 *.rds
 !*dictionary.rds
+README.html
+README_cache
