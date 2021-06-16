@@ -22,7 +22,7 @@ getProcessedData <- function(survey) {
   # TO DO: Switch to silent auth eventually:
   # See: vignette("non-interactive-auth") in gargle package
   # https://gargle.r-lib.org/articles/get-api-credentials.html
-  message("You may need to authorize the fusionACS google drive via your browser")
+  message("You may need to authorize the 'googledrive' package via your browser")
   message("Password: fusethis!")
   googledrive::drive_auth(email = "fusionacsdata@gmail.com")
 
