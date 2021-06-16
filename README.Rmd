@@ -9,8 +9,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
-                      #cache = TRUE, # Useful for testing/editing; turned off for final production
+                      cache = TRUE, # Useful for testing/editing; can be turned off for final production
                       comment = NA)
+```
+
+```{r, echo = FALSE, include = FALSE}
+library(fusionData)
 ```
 
 ## Overview
@@ -69,7 +73,7 @@ Contains subdirectories that refer to specific surveys and vintages (e.g. `/surv
 
 1. "Dictionary" files (`.rds`) that contain standardized metadata and variable descriptions for a particular survey. Example: `/survey-processed/RECS/2015/RECS_2015_H_dictionary.rds`
 
-Importantly, `/survey-processed` also contains `.fst` files with the processed microdata. Example: `/survey-processed/RECS/2015/RECS_2015_H_processed.fst`. These files are stored remotely. Use of [.fst files](http://www.fstpackage.org/) allows this data to be read very quickly from disk, in part or in full. The `*_processed.fst` files can be added to a user's local fusionData directory by calling `getSurveyProcessed()`.
+Importantly, `/survey-processed` also contains `.fst` files with the processed microdata. Example: `/survey-processed/RECS/2015/RECS_2015_H_processed.fst`. These files are stored remotely. Use of [.fst files](http://www.fstpackage.org/) allows this data to be read very quickly from disk, in part or in full. The remotely-stored `*_processed.fst` files can be added to a user's local fusionData directory by calling `getSurveyProcessed()`.
 
 <!--
 ### `/spatial-raw`
@@ -81,14 +85,20 @@ In development. Analogous to `survey-processed` but for spatial data.
 
 ## Process raw survey microdata
 
+To do.
+
 ## Document survey variables
+
+To do.
 
 ```r
 # Open "Universal Survey Dictionary" Shiny app
-dictionary()
+universe()
 ```
 
 ## Harmonize variables
+
+To do.
 
 ```r
 # Open "Survey Harmonization Tool" Shiny app
@@ -97,4 +107,77 @@ harmony()
 
 ## Create harmonized microdata
 
+To do.
+
 ## Integrate spatial data
+
+To do.
+
+## Putting it all together
+
+The following example shows how fusionData functions can be used to assemble harmonized microdata that is then passed to the [fusionModel package](https://github.com/ummel/fusionModel) to fuse donor variables to ACS microdata.
+
+We begin by using `harmonize()` to parse the information in a `.R` "harmony file" and create microdata containing the harmonized (i.e. shared) variables among the donor and recipient -- in this case, the RECS and ACS. The harmony file is produced using the Survey Harmonization Tool (`?harmony`). See `?harmonize` for details.
+
+```{r, echo = TRUE, results = 'hide'}
+# Harmonize RECS 2015 and ACS 2019 microdata
+hdata <- harmonize(harmony.file = "RECS_2015__ACS_2019.R", respondent = "household")
+```
+
+The resulting `hdata` object is a list containing two data frames.
+
+```{r, echo = TRUE}
+lapply(hdata, dim)
+```
+
+We can look at the microdata in each of the data frames to confirm that the variables are, indeed, harmonized. Note that the harmonized variable *values* are typically integers (possibly factorized); that is, they contain no intelligible labels. This is because `harmonize()` maps each original value/level to a (integer) group assignment as specified in the `.R` harmony file. The one exception is when *numeric* variables in the two surveys are conceptually identical and can be included without modification.
+
+```{r, echo = TRUE}
+head(hdata$RECS_2015[, 1:5])
+head(hdata$ACS_2019[, 1:5])
+```
+
+Since RECS and ACS are both nationally representative surveys, the distribution of the harmonized variables should look pretty similar across the two data frames. Let's confirm this for the `fuelheat__hfl` variable, which creates harmony between the RECS and ACS heating fuel variables ("fuelheat" and "hfl", respectively, in the original data).
+
+```{r, echo = TRUE}
+round(table(hdata$RECS_2015$fuelheat__hfl) / nrow(hdata[[1]]), 3)
+round(table(hdata$ACS_2019$fuelheat__hfl) / nrow(hdata[[2]]), 3)
+```
+
+Looks good. The next step is to add "fusion variables" to the harmonized RECS microdata to create our "donor" dataset. The fusion variables are those we want to "fuse" from RECS to the ACS. The `completeDonor()` function provides a convenient way to do this. By default, it will add *all* valid fusion variables; i.e. variables not already used for harmonization. But we can also use `dplyr::select()`-style arguments to return only a subset of RECS variables. Like this:
+
+```{r, echo = TRUE}
+donor <- completeDonor(data = hdata$RECS_2015, cooltype, agecenac, kwhcol)
+```
+
+The resulting `donor` data frame contains all of the harmonized variables as well as the specified fusion variables.
+
+```{r, echo = TRUE}
+head(donor)
+```
+
+At this point, we are ready to fuse! This is straightforward using the `train()` and `fuse()` functions from the fusionModel package. To make this even easier, `completeDonor()` output includes a "fusion.vars" attribute that can be passed directly to `train()` to identify the variables to be fused.
+
+```{r, echo = TRUE, results = "hide"}
+fit <- fusionModel::train(data = donor, 
+                          y = attr(donor, "fusion.vars"), 
+                          ignore = "recs_2015_hid", 
+                          weight = "weight")
+```
+
+We then `fuse()` (i.e. simulate) the fusion variables onto the harmonized ACS microdata. This is a non-trivial exercise, since the recipient ACS microdata has `r nrow(hdata$ACS_2019) ` observations.
+
+```{r, echo = TRUE, results = "hide"}
+sim <- fusionModel::fuse(data = hdata$ACS_2019, train.object = fit)
+```
+
+A quick check that everything looks plausible:
+
+```{r, echo = TRUE}
+nrow(sim)
+head(sim)
+summary(donor$kwhcol)
+summary(sim$kwhcol)
+```
+
+Onward and upward!
