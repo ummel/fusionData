@@ -21,8 +21,12 @@ createDictionary <- function(data, survey, vintage, respondent, geo = NULL) {
   stopifnot({
     is.data.frame(data)
     length(survey) == 1
-    respondent %in% c("Household", "Person")
+    respondent %in% c("H", "P")
   })
+
+  # Create 'W' vector for observation weights
+  # Scaled to avoid integer overflow
+  W <- if ("weight" %in% names(data)) data$weight / mean(data$weight) else rep(1L, nrow(data))
 
   # Formatting functions for 'values' column
   numFormat <- function(x, w) {
@@ -34,12 +38,11 @@ createDictionary <- function(data, survey, vintage, respondent, geo = NULL) {
   fctFormat <- function(x) paste(paste0("[", levels(x), "]"), collapse = ", ")
 
   # Variable summaries
-  WGT <- if ("weight" %in% names(data)) data$weight else rep(1L, nrow(data))
   var.values <- data %>%
     select(!matches("^rep_")) %>%  # Remove replicate weights
-    select(-matches("_hid$"), -one_of("pid", "weight")) %>%  # Remove ID and primary weight variables
+    select(!matches("_hid$"), !any_of(c("pid", "weight"))) %>%  # Remove ID and primary weight variables
     select(-one_of(geo)) %>%  # Remove geographic identifier; TO DO: automate detection
-    map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = WGT)} else {fctFormat(.x)})
+    map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = W)} else {fctFormat(.x)})
 
   # Variables to include in dictionary
   nm <- names(var.values)
