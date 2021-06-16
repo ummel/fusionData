@@ -3,7 +3,7 @@ source("R/utils.R")
 
 #-----
 
-# Load generic codebook
+# Load generic codebook; creates "codebook" object
 source("survey-processed/ACS/2019/01 Pre-process data dictionary.R")
 
 #-----
@@ -196,7 +196,7 @@ d <- d %>%
 #----------------
 
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2019, respondent = "P", geo = "puma")
+dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2019, respondent = "P")
 saveRDS(object = dictionary, file = "survey-processed/ACS/2019/ACS_2019_P_dictionary.rds")
 
 #----------------

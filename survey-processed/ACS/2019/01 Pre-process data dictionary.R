@@ -1,9 +1,12 @@
-# Load codebook
+# Load ACS codebook
 
 capFirst <- function(x) {str_sub(x, 1, 1) <- toupper(str_sub(x, 1, 1)); return(x)}
 
-codebook <- read_csv("survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv",
-                     col_names = c('record', 'var', 'type', 'length', 'value', 'value2', 'label')) %>%
+#-----
+
+codebook <- suppressWarnings(
+  read_csv("survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv",
+           col_names = c('record', 'var', 'type', 'length', 'value', 'value2', 'label'))) %>%
 
   distinct() %>%   # Eliminate duplicate entries (i.e. one each for household and person-records)
 
@@ -21,7 +24,7 @@ codebook <- read_csv("survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv",
                    label = if (all(.x$asis)) {.x$label[-1]} else {if (!any(.x$miss)) {NA} else {c(.x$label[.x$miss], if (any(.x$rng)) {NULL} else {.x$label[!.x$miss][-1]})}})) %>%
 
   filter(
-    !(str_sub(var, 1, 3) == "RAC" & grepl("recode", tolower(desc))),  # Remove Yes/No race recode flags, since race information captures in RAC1P
+    !(str_sub(var, 1, 3) == "RAC" & label %in% c("Yes", "No")),  # Remove Yes/No race recode variables, since race information captured in RAC1P
     !grepl("allocation flag", tolower(desc), fixed = TRUE),  # Remove allocation flag variables
     !grepl("eligibility coverage edit", desc, fixed = TRUE),  # Remove healt insurance coverage edit variables (not necessary)
     !grepl("See 'Employment Status Recode' (ESR)", desc, fixed = TRUE),  # Remove detailed employment questions since 'ESR' variable captures this information
