@@ -93,12 +93,12 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
   for (type in do.types) {
 
-    # Print message to console
-    cat("Harmonizing ", survey[1], " (", type, ") microdata at the ", respondent, "-level\n", sep = "")
-
     j <- ifelse(type == "donor", 1, 2)
     vnames <- if (j == 1) dnames else rnames
     vres <- if (j == 1) dres else rres
+
+    # Print message to console
+    cat("Harmonizing ", survey[j], " (", type, ") microdata at the ", respondent, "-level\n", sep = "")
 
     # Load household data (NULL if unavailable or unnecessary)
     hpath <- list.files(path = "survey-processed", pattern = paste(survey[j], "H", "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
