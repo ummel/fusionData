@@ -16,7 +16,7 @@
 
 # TO DO: AUTO-DETECT GEOGRAPHIC VARIABLES!!!
 
-createDictionary <- function(data, survey, vintage, respondent, geo = NULL) {
+createDictionary <- function(data, survey, vintage, respondent) {
 
   stopifnot({
     is.data.frame(data)
@@ -28,20 +28,22 @@ createDictionary <- function(data, survey, vintage, respondent, geo = NULL) {
   # Scaled to avoid integer overflow
   W <- if ("weight" %in% names(data)) data$weight / mean(data$weight) else rep(1L, nrow(data))
 
-  # Formatting functions for 'values' column
+  # Function returning summary string for numeric variable
   numFormat <- function(x, w) {
     paste(
       c("Min:", "Median:", " Mean:", "Max:"),
       cleanNumeric(c(min(x, na.rm = TRUE), weightedQuantile(x, w, p = 0.5), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
       collapse = ", ")
   }
+
+  # Function returning summary string for factor variable
   fctFormat <- function(x) paste(paste0("[", levels(x), "]"), collapse = ", ")
 
   # Variable summaries
   var.values <- data %>%
-    select(!matches("^rep_")) %>%  # Remove replicate weights
-    select(!matches("_hid$"), !any_of(c("pid", "weight"))) %>%  # Remove ID and primary weight variables
-    select(-one_of(geo)) %>%  # Remove geographic identifier; TO DO: automate detection
+    select(-matches("^rep_\\d+$")) %>%  # Remove replicate weights
+    select(-matches(paste0("^", tolower(survey), ".*_hid$"), -any_of(c("pid", "weight")))) %>%  # Remove ID and primary weight variables
+    #select(-one_of(geo)) %>%  # Remove geographic identifier; TO DO: automate detection
     map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = W)} else {fctFormat(.x)})
 
   # Variables to include in dictionary
@@ -53,10 +55,10 @@ createDictionary <- function(data, survey, vintage, respondent, geo = NULL) {
     vintage = as.character(vintage),
     respondent = respondent,
     variable = nm,
-    description = unlist(labelled::var_label(data[nm])),
+    description = unlist(labelled::var_label(data[nm], unlist = TRUE)),
     values = var.values,
     type = map_chr(data[nm], vctrs::vec_ptype_abbr),
-    n = colSums(!is.na(data[nm]))
+    n = as.integer(colSums(!is.na(data[nm])))
   ) %>%
     arrange(variable)
 
