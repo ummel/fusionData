@@ -1,5 +1,8 @@
 library(labelled)
 library(tidyverse)
+source("R/imputeMissing.R")
+source("R/detectDependence.R")
+source("R/utils.R")
 
 # Question to RECS staff: There are some cases where spending is zero on a fuel but the fuel is listed as used
 # Example: WOODAMT == 0, WDWARM == "Yes" -- is this correct?
@@ -120,8 +123,8 @@ na.values <- list(
   THERMAINAC = "No central air conditioner",
   PROTHERMAC = "No central air conditioner",
   USECENAC = "No central air conditioner",
-  WWACAGE = "No air conditioning",
-  USEWWAC = "No air conditioning",
+  WWACAGE = "No individual AC units",
+  USEWWAC = "No individual AC units",
   BASECOOL = "No",
   ATTCCOOL = "No",
   GARGCOOL = "No",
@@ -267,7 +270,7 @@ ordered.factors <- list(
   TEMPGONE = c("Do not use space heating", 50:90),
   TEMPNITE = c("Do not use space heating", 50:90),
   AGECENAC = c("No central air conditioner", "Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
-  WWACAGE = c("No air conditioning", "Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
+  WWACAGE = c("No individual AC units", "Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
   TEMPHOMEAC = c("No air conditioning", 50:90),
   TEMPGONEAC = c("No air conditioning", 50:90),
   TEMPNITEAC = c("No air conditioning", 50:90),
@@ -356,6 +359,9 @@ d <- imputeMissing(data = d,
                    weight = "NWEIGHT",
                    x_exclude = c("DOEID", "^BRRWT"))
 
+# Check for any remaining NA's
+anyNA(d)
+
 #-----
 
 # Assemble final output
@@ -372,7 +378,13 @@ d <- d %>%
   rename_with(tolower) %>%  # Convert all variable names to lowercase
   select(recs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
 
-#-----
+#----------------
 
-# Commit data to disk
-commitData(data = d, survey = "RECS", vintage = 2015, respondent = "H", geo = NULL, save_data = TRUE)
+# Create dictionary and save to disk
+dictionary <- createDictionary(data = d, survey = "RECS", vintage = 2015, respondent = "H")
+saveRDS(object = dictionary, file = "survey-processed/RECS/2015/RECS_2015_H_dictionary.rds")
+
+#----------------
+
+# Save data to disk (.fst)
+fst::write_fst(x = d, path = "survey-processed/RECS/2015/RECS_2015_H_processed.fst", compress = 100)
