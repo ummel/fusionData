@@ -30,11 +30,14 @@ compileDictionary <- function() {
   dictionary$N <- NULL
 
   # Save data outputs to disk: TWO locations
-  saveRDS(dictionary, "dictionary/dictionary.rds", compress = TRUE)
-  saveRDS(surveys, "dictionary/surveys.rds", compress = TRUE)
+  # saveRDS(dictionary, "dictionary/dictionary.rds", compress = TRUE)
+  # saveRDS(surveys, "dictionary/surveys.rds", compress = TRUE)
+  #
+  # saveRDS(dictionary, "harmony/dictionary.rds", compress = TRUE)
+  # saveRDS(surveys, "harmony/surveys.rds", compress = TRUE)
 
-  saveRDS(dictionary, "harmony/dictionary.rds", compress = TRUE)
-  saveRDS(surveys, "harmony/surveys.rds", compress = TRUE)
+  save(dictionary, file = "data/dictionary.rda", compress = TRUE)
+  save(surveys, file = "data/surveys.rda", compress = TRUE)
 
   # Print summary of data outputs
   message("dictionary.rds dimensions: ", paste(dim(dictionary), collapse = " x "))

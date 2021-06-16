@@ -8,8 +8,10 @@ library(shiny)
 #-----
 
 # Load dictionary and survey summary data
-dictionary <- readRDS("data/dictionary.rds")
-surveys <- readRDS("data/surveys.rds")
+data(dictionary, package = "fusionData")
+data(surveys, package = "fusionData")
+# dictionary <- readRDS("data/dictionary.rds")
+# surveys <- readRDS("data/surveys.rds")
 
 # Functions specific to the 'harmony' app
 source("R/harmony2dotR.R")

@@ -17,8 +17,13 @@ library(shiny)
 # dictionary <- subset(readRDS("dictionary/dictionary.rds"), select = -Type)
 # surveys <- readRDS("dictionary/surveys.rds")
 
-dictionary <- subset(readRDS("data/dictionary.rds"), select = -Type)
-surveys <- readRDS("data/surveys.rds")
+# dictionary <- subset(readRDS("data/dictionary.rds"), select = -Type)
+# surveys <- readRDS("data/surveys.rds")
+
+data(dictionary, package = "fusionData")
+data(surveys, package = "fusionData")
+
+dictionary <- subset(dictionary, select = -Type)
 
 #-----------------------------
 

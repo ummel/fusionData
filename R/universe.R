@@ -1,17 +1,17 @@
 #' Open the fusionACS Universal Survey Dictionary
 #'
 #' @description
-#' Opens the 'dictionary' Shiny app (/dictionary); i.e. fusionACS Universal Survey Dictionary.
+#' Opens the 'universe' Shiny app (/dictionary); i.e. fusionACS Universal Survey Dictionary.
 #'
 #' @return Opens the app in a new browser window. R session is occupied while that window is open.
 #'
 #' @examples
-#' dictionary()
+#' universe()
 #'
 #' @export
 
-dictionary <- function() {
-  runApp(appDir = "dictionary",
+universe <- function() {
+  runApp(appDir = "universe",
          launch.browser = TRUE,
          quiet = TRUE,
          display.mode = "normal",
