@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
-                      cache = TRUE, # Useful for testing/editing; can be turned off for final production
+                      #cache = TRUE, # Useful for testing/editing; can be turned off for final production
                       comment = NA)
 ```
 
@@ -46,22 +46,22 @@ Changes or additions to the remote files is likely to be rare, and will be done 
 Below is an overview of the top-level directories in the fusionData repository, including both Github-based and "remote" elements.
 
 ### `/R`
-`.R` scripts defining functions useful for doing "fusionData things". The exported functions become available to user after calling `library(fusionData)`.
-
-### `/data-raw`
-`.R` scripts needed to create any package-wide `.rda` objects in `/data`, as usual for R packages.
+`.R` scripts defining functions for doing "fusionData things". Not all are exported.
 
 ### `/data`
 Shared, package-wide `.rda` data files. Loadable via `data()`, as usual for R packages.
 
-### `/dictionary`
-Directory for the "Universal Survey Dictionary" Shiny app. The app itself can be run by calling `dictionary()`.
-
-### `/harmony`
-Directory for the "Survey Harmonization Tool" Shiny app. The app itself can be run by calling `harmony()`.
+### `/data-raw`
+`.R` scripts needed to create any package-wide `.rda` objects in `/data`, as usual for R packages.
 
 ### `/man`
 Documentation (i.e. "manual") of functions in `/R` and data in `/data`, as usual for R packages.
+
+### `/universe`
+Directory for the "Universal Survey Dictionary" Shiny app. The app itself can be run by calling `universe()`.
+
+### `/harmony`
+Directory for the "Survey Harmonization Tool" Shiny app. The app itself can be run by calling `harmony()`.
 
 ### `/survey-raw`
 A remote directory (i.e. not present in the Github repository) containing *raw* survey data files. Sub-directories refer to specific surveys and vintages (e.g. `/survey-raw/RECS/2015`). `/survey-raw` can be downloaded and added to a user's local fusionData directory by calling `getSurveyRaw()`.
@@ -96,7 +96,7 @@ To do.
 universe()
 ```
 
-## Harmonize variables
+## Harmonize variables across surveys
 
 To do.
 

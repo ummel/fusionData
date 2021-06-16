@@ -60,34 +60,33 @@ repository, including both Github-based and “remote” elements.
 
 ### `/R`
 
-`.R` scripts defining functions useful for doing “fusionData things”.
-The exported functions become available to user after calling
-`library(fusionData)`.
-
-### `/data-raw`
-
-`.R` scripts needed to create any package-wide `.rda` objects in
-`/data`, as usual for R packages.
+`.R` scripts defining functions for doing “fusionData things”. Not all
+are exported.
 
 ### `/data`
 
 Shared, package-wide `.rda` data files. Loadable via `data()`, as usual
 for R packages.
 
-### `/dictionary`
+### `/data-raw`
 
-Directory for the “Universal Survey Dictionary” Shiny app. The app
-itself can be run by calling `dictionary()`.
-
-### `/harmony`
-
-Directory for the “Survey Harmonization Tool” Shiny app. The app itself
-can be run by calling `harmony()`.
+`.R` scripts needed to create any package-wide `.rda` objects in
+`/data`, as usual for R packages.
 
 ### `/man`
 
 Documentation (i.e. “manual”) of functions in `/R` and data in `/data`,
 as usual for R packages.
+
+### `/universe`
+
+Directory for the “Universal Survey Dictionary” Shiny app. The app
+itself can be run by calling `universe()`.
+
+### `/harmony`
+
+Directory for the “Survey Harmonization Tool” Shiny app. The app itself
+can be run by calling `harmony()`.
 
 ### `/survey-raw`
 
@@ -141,7 +140,7 @@ To do.
 universe()
 ```
 
-## Harmonize variables
+## Harmonize variables across surveys
 
 To do.
 
@@ -324,13 +323,13 @@ nrow(sim)
 head(sim)
 ```
 
-         kwhcol              agecenac                        cooltype
-    1  906.9314 Less than 2 years old Central air conditioning system
-    2 2486.0414     20 years or older Central air conditioning system
-    3 3367.7424      2 to 4 years old Central air conditioning system
-    4 1654.6932    10 to 14 years old Central air conditioning system
-    5 2244.8653      5 to 9 years old Central air conditioning system
-    6 1494.1341    10 to 14 years old Central air conditioning system
+         kwhcol                   agecenac                        cooltype
+    1  1576.288         10 to 14 years old Central air conditioning system
+    2     0.000 No central air conditioner             No air conditioning
+    3  2007.791           2 to 4 years old Central air conditioning system
+    4     0.000 No central air conditioner             No air conditioning
+    5  6001.574           2 to 4 years old Central air conditioning system
+    6 12594.658         10 to 14 years old Central air conditioning system
 
 ``` r
 summary(donor$kwhcol)
@@ -344,6 +343,6 @@ summary(sim$kwhcol)
 ```
 
        Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-        0.0   371.9  1135.3  1864.2  2562.0 20350.0 
+        0.0   373.8  1142.5  1871.3  2575.3 20350.0 
 
 Onward and upward!
