@@ -65,5 +65,21 @@ list(
       adj = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2021-06-08 20:30:13")
+    modified = "2021-06-08 20:30:13"),
+
+  vehq__veh = list(
+    CEI = list(
+      groups = 1:7,
+      levels = c("Less than 1", "[1 to 2)", "[2 to 3)", "[3 to 4)", "[4 to 5)", "[5 to 6)", "6 or more"),
+      breaks = 1:6,
+      adj = "vehq = vehq + vehql"),
+    ACS = list(
+      groups = 1:7,
+      levels = c("No vehicles", "1 vehicle", "2 vehicles", "3 vehicles", "4 vehicles", "5 vehicles", "6 or more vehicles"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2021-06-16 12:01:15")
 )
