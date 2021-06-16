@@ -15,7 +15,7 @@
 #'
 #' @export
 
-getProcessedData <- function(survey) {
+getSurveyProcessed <- function(survey) {
 
   if (basename(getwd()) != "fusionData") stop("The current directory -- see getwd() -- must be set to local /fusionData")
 
@@ -26,7 +26,7 @@ getProcessedData <- function(survey) {
   message("Password: fusethis!")
   googledrive::drive_auth(email = "fusionacsdata@gmail.com")
 
-  # TEST values
+  # TEST 'survey' values
   # survey <- "RECS"
   # survey <- "RECS_2015"
   # survey <- "RECS_2015_H"
@@ -59,6 +59,7 @@ getProcessedData <- function(survey) {
 
   #-----
 
+  # NOT USED
   # Download dictionary (.rds) files, if requested
   # if (dictionary) {
   #   files.rds <- googledrive::drive_find(pattern = paste0(search, "_dictionary.rds$")) %>%
