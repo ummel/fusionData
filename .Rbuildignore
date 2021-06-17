@@ -5,5 +5,6 @@
 ^spatial-raw$
 ^deprecated$
 ^R/deprecated$
+^R/dev$
 .fst$
 ^README\.Rmd$
