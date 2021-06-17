@@ -5,8 +5,8 @@
 #'
 #' @param data Data frame. Survey microdata with variable descriptions stored in columns via \code{\link[labelled]{var_label}}.
 #' @param survey Character. Unique survey identifier (e.g. "RECS").
-#' @param vintage Character. Survey vintage (e.g. "2015").
-#' @param respondent Character. Respondent type; either "Household" or "Person".
+#' @param vintage Character. Survey vintage (e.g. 2015).
+#' @param respondent Character. Respondent type; either "Household" or "Person" or a string identifiable as such.
 #'
 #' @return Returns a tibble with standard "dictionary" information based on the provided microdata.
 #'
@@ -14,15 +14,16 @@
 #'
 #' @export
 
-# TO DO: AUTO-DETECT GEOGRAPHIC VARIABLES!!!
-
 createDictionary <- function(data, survey, vintage, respondent) {
 
   stopifnot({
     is.data.frame(data)
     length(survey) == 1
-    respondent %in% c("H", "P")
+    substring(tolower(respondent), 1, 1) %in% c("h", "p")
   })
+
+  # Household-level data?
+  hh <- substring(tolower(respondent), 1, 1) == "h"
 
   # Create 'W' vector for observation weights
   # Scaled to avoid integer overflow
@@ -53,7 +54,7 @@ createDictionary <- function(data, survey, vintage, respondent) {
   dict <- tibble(
     survey = survey,
     vintage = as.character(vintage),
-    respondent = respondent,
+    respondent = ifelse(respondent, "Household", "Person"),
     variable = nm,
     description = unlist(labelled::var_label(data[nm], unlist = TRUE)),
     values = var.values,

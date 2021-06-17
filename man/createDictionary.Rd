@@ -11,9 +11,9 @@ createDictionary(data, survey, vintage, respondent)
 
 \item{survey}{Character. Unique survey identifier (e.g. "RECS").}
 
-\item{vintage}{Character. Survey vintage (e.g. "2015").}
+\item{vintage}{Character. Survey vintage (e.g. 2015).}
 
-\item{respondent}{Character. Respondent type; either "Household" or "Person".}
+\item{respondent}{Character. Respondent type; either "Household" or "Person" or a string identifiable as such.}
 }
 \value{
 Returns a tibble with standard "dictionary" information based on the provided microdata.
