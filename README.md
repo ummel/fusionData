@@ -16,6 +16,53 @@ the larger fusionACS platform. It has a number of objectives:
 Each of these objectives is described in more detail below along with
 example usage.
 
+## Setup and install
+
+The fusionData *master* branch can be cloned to its own project
+directory on your local machine using RStudio and [these
+instructions](https://book.cds101.com/using-rstudio-server-to-clone-a-github-repo-as-a-new-project.html).
+
+Use the following setup parameters:
+
+``` r
+Repository URL: https://github.com/ummel/fusionData
+Project directory name: fusionData
+```
+
+You will be prompted to enter your Github username and password. After
+the repository has been cloned to your local project directory, you can
+install and load the package itself:
+
+``` r
+# Install the fusionData package locally
+devtools::install()
+
+# Load fusionData package
+library(fusionData)
+```
+
+For full functionality, it is necessary to download the remotely-stored
+processed survey microdata (.fst files). Read the following section
+(“Structure and usage”) for more information about this. See
+`?getSurveyProcessed`.
+
+``` r
+# Download remote *_processed.fst" survey microdata files
+getSurveyProcessed(survey = "all")
+```
+
+You may be prompted to enter the password for the Google Drive account
+storing the remote files (password: fusethis!). The download will take a
+few minutes. After successful download, your fusionData “system” is
+ready to go.
+
+As you modify code and files in your local `/fusionData` project
+directory, you will need to commit and push those changes to the Github
+repository for them to be accessible to other users. In addition, it is
+good practice to pull the latest version of the repository from Github
+prior to making any modifications. That way, you know you are working
+from the latest shared version.
+
 ## Structure and usage
 
 Although fusionData is structured (and loadable) as a R package, it is
@@ -323,13 +370,13 @@ nrow(sim)
 head(sim)
 ```
 
-         kwhcol                   agecenac                        cooltype
-    1  1576.288         10 to 14 years old Central air conditioning system
-    2     0.000 No central air conditioner             No air conditioning
-    3  2007.791           2 to 4 years old Central air conditioning system
-    4     0.000 No central air conditioner             No air conditioning
-    5  6001.574           2 to 4 years old Central air conditioning system
-    6 12594.658         10 to 14 years old Central air conditioning system
+         kwhcol                   agecenac                                 cooltype
+    1    0.0000 No central air conditioner                      No air conditioning
+    2    0.0000 No central air conditioner                      No air conditioning
+    3  168.6778 No central air conditioner Individual window/wall or portable units
+    4  661.7375         10 to 14 years old          Central air conditioning system
+    5 1522.9237         10 to 14 years old          Central air conditioning system
+    6  260.4313 No central air conditioner Individual window/wall or portable units
 
 ``` r
 summary(donor$kwhcol)
@@ -343,6 +390,6 @@ summary(sim$kwhcol)
 ```
 
        Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-        0.0   373.8  1142.5  1871.3  2575.3 20350.0 
+        0.0   372.7  1141.8  1868.9  2569.2 20350.0 
 
 Onward and upward!

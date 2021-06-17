@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
-                      #cache = TRUE, # Useful for testing/editing; can be turned off for final production
+                      cache = TRUE, # Faster for testing/editing; will create /README_cache directory
                       comment = NA)
 ```
 
@@ -28,6 +28,37 @@ library(fusionData)
 1. Process and integrate spatially-referenced data available to the fusion process.
 
 Each of these objectives is described in more detail below along with example usage.
+
+## Setup and install
+
+The fusionData *master* branch can be cloned to its own project directory on your local machine using RStudio and [these instructions](https://book.cds101.com/using-rstudio-server-to-clone-a-github-repo-as-a-new-project.html).
+
+Use the following setup parameters:
+```r
+Repository URL: https://github.com/ummel/fusionData
+Project directory name: fusionData
+```
+
+You will be prompted to enter your Github username and password. After the repository has been cloned to your local project directory, you can install and load the package itself:
+
+```r
+# Install the fusionData package locally
+devtools::install()
+
+# Load fusionData package
+library(fusionData)
+```
+
+For full functionality, it is necessary to download the remotely-stored processed survey microdata (.fst files). Read the following section ("Structure and usage") for more information about this. See `?getSurveyProcessed`.
+
+```r
+# Download remote *_processed.fst" survey microdata files
+getSurveyProcessed(survey = "all")
+```
+
+You may be prompted to enter the password for the Google Drive account storing the remote files (password: fusethis!). The download will take a few minutes. After successful download, your fusionData "system" is ready to go.
+
+As you modify code and files in your local `/fusionData` project directory, you will need to commit and push those changes to the Github repository for them to be accessible to other users. In addition, it is good practice to pull the latest version of the repository from Github prior to making any modifications. That way, you know you are working from the latest shared version.
 
 ## Structure and usage
 
