@@ -32,11 +32,10 @@ d <- d %>%
 d <- d %>%
   select_if(~ length(unique(.x)) > 1)
 
-# Standardize PUMA variable and remove Puerto Rico observations
+# Standardize state and PUMA variable and remove Puerto Rico observations
 d <- d %>%
   filter(ST %in% 1:56) %>%  # Ensure observations restricted to U.S. states and D.C.
-  mutate(PUMA = paste0(str_pad(ST, width = 2, pad = 0), str_pad(PUMA, width = 5, pad = 0))) %>%
-  select(-ST, -DIVISION, -REGION)
+  select(-DIVISION, -REGION)
 
 # Standardize PUMA codes for Migration and Place of work variables (MIGPUMA & POWPUMA) to include 2-digit state FIPS at front
 # Can then drop the associated state identifiers (MIGSP & POWSP)
@@ -179,11 +178,17 @@ for (v in names(na.count)) {
 d <- d %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
+  mutate(
+    ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
+    PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
+  ) %>%
   labelled::set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = TRUE) %>%
   rename(
     acs_2019_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     pid = SPORDER,
-    weight = PWGTP
+    weight = PWGTP,
+    state = ST,
+    puma10 = PUMA
   ) %>%
   rename_with(~ gsub("PWGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("PWGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase

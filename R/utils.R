@@ -41,8 +41,9 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 #------------------
 
 # Function to convert a numeric vector to integer, if possible
+# Checks if maximum value is coercible to 32-bit integer; see ?integer "Details"
 convertInteger <- function(x) {
-  if (all(x[!is.na(x)] %% 1 == 0)) {
+  if (all(x[!is.na(x)] %% 1 == 0) & max(x, na.rm = TRUE) < 2*10^9) {
     return(as.integer(round(x)))
   } else {
     return(x)
@@ -100,18 +101,36 @@ weightedQuantile <- function(x, w, p = 0.5) {
 
 #-------------------
 
-# Calculate weighted percentiles of 'x', retaining original zeros
-convertPercentile <- function(x, w) {
-  if (missing(w)) w <- rep.int(1, length(x))
-  stopifnot(length(x) == length(w))
-  z <- x != 0
-  y <- x[z]
-  n <- length(unique(y))  # Number of unique, non-zero values
-  if (n > 50) {  # Arbitrary minimum to determine when percentiles are appropriate
-    cdf <- wecdf(y, weights = w)
-    x[z] <- cdf(y)  # Replace non-zero values with weighted percentile
-    return(x)
-  } else {
-    return(x)
-  }
+# Better variable abbreviation; used within summarizeSpatialDataset()
+betterAbbreviate <- function(x) {
+  y <- str_extract_all(x, "[a-zA-Z0-9]*")
+  y <- str_squish(map_chr(y, paste, collapse = " "))
+  y <- str_to_title(paste0(y, rep_len(letters, length(y))))
+  abb <- tolower(abbreviate(y, named = FALSE))
+  stopifnot(length(unique(abb)) == length(abb))
+  return(abb)
 }
+
+#-------------------
+
+# Function returns TRUE if 'x' has only one non-NA value
+novary <- function(x) length(unique(na.omit(x))) == 1
+
+#-------------------
+
+# Calculate weighted percentiles of 'x', retaining original zeros
+# convertPercentile <- function(x, w) {
+#   if (missing(w)) w <- rep.int(1, length(x))
+#   stopifnot(length(x) == length(w))
+#   z <- x != 0
+#   y <- x[z]
+#   n <- length(unique(y))  # Number of unique, non-zero values
+#   if (n > 50) {  # Arbitrary minimum to determine when percentiles are appropriate
+#     cdf <- wecdf(y, weights = w)
+#     x[z] <- cdf(y)  # Replace non-zero values with weighted percentile
+#     return(x)
+#   } else {
+#     return(x)
+#   }
+# }
+

@@ -4,9 +4,8 @@ capFirst <- function(x) {str_sub(x, 1, 1) <- toupper(str_sub(x, 1, 1)); return(x
 
 #-----
 
-codebook <- suppressWarnings(
-  read_csv("survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv",
-           col_names = c('record', 'var', 'type', 'length', 'value', 'value2', 'label'))) %>%
+codebook <- suppressWarnings(read_csv("survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv",
+                                      col_names = c('record', 'var', 'type', 'length', 'value', 'value2', 'label'))) %>%
 
   distinct() %>%   # Eliminate duplicate entries (i.e. one each for household and person-records)
 
@@ -47,6 +46,7 @@ codebook <- suppressWarnings(
   ) %>%
 
   mutate(
+    label = ifelse(var == "ST", value, label), # Replace state text names with FIPS code
     label = gsub("/ ", "/", label, fixed = TRUE),  # Manual text error fix-ups
     label = gsub(" / ", "/", label, fixed = TRUE),  # Manual text error fix-ups
     label = gsub("//", "/", label, fixed = TRUE),  # Manual text error fix-ups
@@ -61,6 +61,7 @@ codebook <- suppressWarnings(
     label = gsub("\\s*\\([^\\)]+\\)", "", label),  # Remove parenthetical text in label
     label = capFirst(label)
   ) %>%
+
   add_count(var) %>%
   mutate(label = ifelse(n == 1 & is.na(value) & !is.na(label), 0, label),
          n = NULL) %>%

@@ -1,5 +1,6 @@
 library(labelled)
 library(tidyverse)
+
 source("R/imputeMissing.R")
 source("R/detectDependence.R")
 source("R/utils.R")
@@ -345,16 +346,7 @@ for (v in names(d)) {
 
 #-----
 
-# Remove variables that exhibit no variance in 'd' - NECESSARY?
-# novary <- d %>%
-#   map_lgl(~ length(unique(na.omit(.x))) == 1) %>%
-#   which() %>%
-#   names()
-# d <- select(d, -all_of(novary))
-
-#-----
-
-# Imputate NA values in 'd'
+# Impute NA values in 'd'
 d <- imputeMissing(data = d,
                    weight = "NWEIGHT",
                    x_exclude = c("DOEID", "^BRRWT"))
@@ -364,12 +356,34 @@ anyNA(d)
 
 #-----
 
+# Add/create variables for geographic concordance with variables in 'geolink'
+
+# Variables names prior to modification/addition of geographic identifiers
+d <- d %>%
+  rename(recs_division = DIVISION,
+         region = REGIONC,
+         recs_iecc_zone = IECC_CLIMATE_PUB,
+         recs_ba_zone = CLIMATE_REGION_PUB) %>%
+  mutate(cbsatype15 = NA,
+         cbsatype15 = ifelse(grepl("Metro", METROMICRO), "Metro", cbsatype15),
+         cbsatype15 = ifelse(grepl("Micro", METROMICRO), "Micro", cbsatype15),
+         ur12 = substring(UATYP10, 1, 1))
+
+# See which variables in 'd' are also in 'geolink' and
+ginfo <- readRDS("geo-processed/geolink_description.rds")
+gvars <- intersect(names(ginfo), names(d))
+d <- d %>%
+  mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE)) %>%  # Class any new/added geo identifiers as unordered factors
+  set_variable_labels(.labels = ginfo, .strict = FALSE)  # Set variable descriptions for geo identifiers
+
+#----------------
+
 # Assemble final output
-# NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
+# NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
 d <- d %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
-  set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = TRUE) %>%
+  set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = FALSE) %>%
   rename(
     recs_2015_hid = DOEID,  # Rename ID and weight variables to standardized names
     weight = NWEIGHT
@@ -377,6 +391,11 @@ d <- d %>%
   rename_with(~ gsub("BRRWT", "REP_", .x, fixed = TRUE), .cols = starts_with("BRRWT")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
   select(recs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
+
+#----------------
+
+# Check that all variables have descriptions assigned
+stopifnot(length(var_label(d)) == ncol(d))
 
 #----------------
 

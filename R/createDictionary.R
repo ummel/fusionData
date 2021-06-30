@@ -30,7 +30,8 @@ createDictionary <- function(data, survey, vintage, respondent) {
   W <- if ("weight" %in% names(data)) data$weight / mean(data$weight) else rep(1L, nrow(data))
 
   # Function returning summary string for numeric variable
-  numFormat <- function(x, w) {
+  numFormat <- function(x, w = NULL) {
+    if (is.null(w)) w <- rep(1, length(x))
     paste(
       c("Min:", "Median:", " Mean:", "Max:"),
       cleanNumeric(c(min(x, na.rm = TRUE), weightedQuantile(x, w, p = 0.5), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
@@ -38,7 +39,10 @@ createDictionary <- function(data, survey, vintage, respondent) {
   }
 
   # Function returning summary string for factor variable
-  fctFormat <- function(x) paste(paste0("[", levels(x), "]"), collapse = ", ")
+  fctFormat <- function(x) {
+    u <- if (is.factor(x)) levels(x) else sort(unique(x))
+    paste(paste0("[", u, "]"), collapse = ", ")
+  }
 
   # Variable summaries
   var.values <- data %>%
@@ -54,7 +58,7 @@ createDictionary <- function(data, survey, vintage, respondent) {
   dict <- tibble(
     survey = survey,
     vintage = as.character(vintage),
-    respondent = ifelse(respondent, "Household", "Person"),
+    respondent = ifelse(hh, "Household", "Person"),
     variable = nm,
     description = unlist(labelled::var_label(data[nm], unlist = TRUE)),
     values = var.values,

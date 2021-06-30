@@ -87,15 +87,16 @@ list(
       groups = 1:8,
       levels = c("Less than 20000", "[20000 to 40000)", "[40000 to 60000)", "[60000 to 80000)", "[80000 to 1e+05)", "[1e+05 to 120000)", "[120000 to 140000)", "140000 or more"),
       breaks = c(20000, 40000, 60000, 80000, 1e+05, 120000, 140000),
-      adj = "hincp * 0.93"),
+      adj = "hincp * 0.93",
+      agg = ""),
     ordered = TRUE,
-    comment = "Adjustment is to deflate hincp from 2019 to 2015 price level prior to binning.",
-    modified = "2021-06-10 08:58:24"),
+    comment = "",
+    modified = "2021-06-17 10:23:35"),
 
   numadult__agep = list(
     RECS = list(
       groups = 1,
-      levels = "Min: 1, Median: 2, Mean: 1.972, Max: 10",
+      levels = "Min: 1, Median: 2, Mean: 1.953, Max: 10",
       breaks = "",
       adj = ""),
     ACS = list(
@@ -106,7 +107,7 @@ list(
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2021-06-10 15:49:04"),
+    modified = "2021-06-17 10:25:06"),
 
   numfrig__refr = list(
     RECS = list(
@@ -179,10 +180,11 @@ list(
       groups = c(3, 5, 4, 1, 1, 2, 2, 2, 2, 3),
       levels = c("Mobile home or trailer", "One-family house detached", "One-family house attached", "2 Apartments", "3-4 Apartments", "5-9 Apartments", "10-19 Apartments", "20-49 Apartments", "50 or more apartments", "Boat, RV, van, etc."),
       breaks = "",
-      adj = ""),
+      adj = "",
+      agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2021-06-10 08:57:07"),
+    modified = "2021-06-17 10:20:24"),
 
   yearmaderange__ybl = list(
     RECS = list(

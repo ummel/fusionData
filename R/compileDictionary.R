@@ -12,13 +12,15 @@
 
 compileDictionary <- function() {
 
+  stopifnot(basename(getwd()) == "fusionData")
+
   # Extract data from /survey-processed and build codebook
   files <- list.files(path = "survey-processed", pattern = "_._dictionary.rds", recursive = TRUE, full.names = TRUE)
 
   # Compile dictionary
   dictionary <- files %>%
     map_dfr(readRDS) %>%
-    mutate(respondent = ifelse(respondent == "H", "Household", "Person")) %>%
+    mutate(respondent = ifelse(substring(tolower(respondent), 1, 1) == "h", "Household", "Person")) %>%
     rename_with(stringr::str_to_title)
 
   # Create summary of available surveys
@@ -36,8 +38,11 @@ compileDictionary <- function() {
   # saveRDS(dictionary, "harmony/dictionary.rds", compress = TRUE)
   # saveRDS(surveys, "harmony/surveys.rds", compress = TRUE)
 
-  save(dictionary, file = "data/dictionary.rda", compress = TRUE)
-  save(surveys, file = "data/surveys.rda", compress = TRUE)
+  usethis::use_data(dictionary, overwrite = TRUE)
+  usethis::use_data(surveys, overwrite = TRUE)
+
+  # save(dictionary, file = "data/dictionary.rda", compress = TRUE)
+  # save(surveys, file = "data/surveys.rda", compress = TRUE)
 
   # Print summary of data outputs
   message("dictionary.rds dimensions: ", paste(dim(dictionary), collapse = " x "))

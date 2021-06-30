@@ -19,7 +19,6 @@
 # FUNCTION INPUTS
 
 # harmony.file = "RECS_2015__ACS_2019.R"
-# harmony.file =
 #
 # # Must specify the respondent type of the desired output
 # # The harmony .R file should (in principle) include ALL harmonies with ACS - at both household and person level (if possible)
@@ -52,7 +51,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
   survey <- unlist(splitNames(gsub(".R", "", basename(harmony.file), fixed = TRUE)))
 
   # Check if donor microdata available for specified 'respondent' argument
-  temp <- list.files(path = "survey-processed/", pattern = paste(survey[1], ifelse(HH, "H", "P"), "processed.fst", sep = "_"), recursive = TRUE)
+  temp <- list.files(path = "survey-processed", pattern = paste(survey[1], ifelse(HH, "H", "P"), "processed.fst", sep = "_"), recursive = TRUE)
   if (length(temp) == 0) stop("No ", respondent, "-level microdata available for ",  survey[1], " survey")
 
   # Details about each variable involved in harmonies
@@ -94,7 +93,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
   for (type in do.types) {
 
     j <- ifelse(type == "donor", 1, 2)
-    vnames <- if (j == 1) dnames else rnames
+    vnames <- if (j == 1) dnames else c(rnames, "state", "puma10")
     vres <- if (j == 1) dres else rres
 
     # Print message to console
@@ -102,16 +101,15 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     # Load household data (NULL if unavailable or unnecessary)
     hpath <- list.files(path = "survey-processed", pattern = paste(survey[j], "H", "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
-    dh <- if (length(hpath)) fst(hpath) else NULL
+    dh <- if (length(hpath)) fst::fst(hpath) else NULL
 
     # Load person data (NULL if unavailable or unnecessary)
     ppath <- list.files(path = "survey-processed", pattern = paste(survey[j], "P", "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
-    dp <- if (length(ppath)) fst(ppath) else NULL
+    dp <- if (length(ppath)) fst::fst(ppath) else NULL
 
     # Identify the household and person identifier columns
     s <- strsplit(tolower(survey[j]), "_")[[1]][1]
-    hid <- grep(paste0("^", s, "_.*hid$"), names(if (HH) dh else dp), value = TRUE)
-    #pid <- if (!HH) "pid" else NULL  # Is this the standard name?
+    hid <- grep(paste0("^", s, ".*_hid$"), names(if (HH) dh else dp), value = TRUE)
     pid <- "pid"
 
     # Variables (and potential matching strings) to load from disk
@@ -134,7 +132,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     dp <- if (length(k) > 2) dp[c(names(which(k)), vrel)] else NULL
 
     # Ensure all data sorted by 'hid'
-    # !!! Should be done in pre-processing!
     if (!is.null(dh)) dh <- arrange(dh, across(all_of(hid)))
     if (!is.null(dp)) dp <- arrange(dp, across(all_of(hid)))
 
@@ -173,6 +170,8 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     out <- vector(mode = "list", length = length(H))
     names(out) <- names(H)
     out[[hid]] <- if (HH) dh[[hid]] else dp[[hid]]
+    out[["state"]] <- if (HH) dh[["state"]] else dp[["state"]]
+    out[["puma10"]] <- if (HH) dh[["puma10"]] else dp[["puma10"]]
     if (!HH) out[[pid]] <- dp[[pid]]
 
     #-----
@@ -181,6 +180,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     pb <- txtProgressBar(min = 0, max = length(H), style = 3)
 
     # Process each variable in sequence
+    # TO DO: I think this could be done in parallel?
     for (i in 1:length(H)) {
 
       v <- vnames[i]
@@ -301,7 +301,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     # Assemble output data frame
     out <- out %>%
       as.data.frame() %>%
-      select(any_of(c(hid, pid, names(H))))
+      select(any_of(c(hid, pid, "state", "puma10", names(H))))
 
     # Add a "survey" attribute to the data frame
     attr(out, "survey") <- survey[j]

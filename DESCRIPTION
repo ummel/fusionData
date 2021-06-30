@@ -1,6 +1,6 @@
 Package: fusionData
 Title: Data backend for fusionACS platform
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: 
     person(given = "Kevin",
            family = "Ummel",
@@ -16,6 +16,8 @@ Depends:
     R (>= 3.5.0),
     shiny,
     fst,
+    data.table,
     tidyverse
 Imports: 
-    labelled
+    labelled,
+    pbapply

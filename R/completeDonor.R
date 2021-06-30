@@ -13,6 +13,8 @@
 #'
 #' @export
 
+# TO DO: Possibly add variable labels in output?
+
 completeDonor <- function(data, ..., replicates = FALSE) {
 
   # Helper function (move to utils?)
@@ -55,6 +57,7 @@ completeDonor <- function(data, ..., replicates = FALSE) {
 
   # Add 'fuse.vars' attribute to identify the variables that are fusion candidates
   attr(result, "fusion.vars") <- setdiff(names(d), c(ids, "weight", reps))
+  attr(result, "replicate.vars") <- reps
 
   return(result)
 

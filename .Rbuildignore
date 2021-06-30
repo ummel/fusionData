@@ -1,10 +1,14 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 .gitignore
-^survey-raw$
-^spatial-raw$
 ^deprecated$
 ^R/deprecated$
 ^R/dev$
-.fst$
+^README_cache$
 ^README\.Rmd$
+^README\.md$
+^README\.html$
+^survey-raw$
+^survey-processed$
+^geo-raw$
+^geo-processed$

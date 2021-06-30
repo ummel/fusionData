@@ -7,8 +7,7 @@ fusionData.Rproj
 /R/deprecated
 /R/dev
 /survey-raw
-/spatial-raw
-/spatial-processed
+/geo-raw
 *.fst
 *.rds
 !*dictionary.rds
