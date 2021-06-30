@@ -323,12 +323,12 @@ in the ACS), it would have have an additional “pid” integer variable to
 uniquely identify each person within the household.
 
 The variable “recs\_iecc\_zone” tells us something about a respondent’s
-location (their [IECC climate
+location ([IECC climate
 zone](https://basc.pnnl.gov/images/iecc-climate-zone-map)). This and
 other spatially-referenced variables are defined and named to be
 consistent with variables in the `geo-processed/geo_concordance.fst`
 file (more on this file below). This allows subsequent operations to
-intelligenty impute each respondent’s location (see `?imputePUMA`).
+intelligently impute each respondent’s location (see `?imputePUMA`).
 
 The name of the other variable (“sizeofgarage”) comes from the RECS
 codebook. In the case of “sizeofgarage”, the raw data contained NA’s
@@ -456,12 +456,74 @@ can browse the universe of available fusion variables.
 
 ## Harmonize variables
 
-Describe how the harmony() tool works.
+The statistical linchpin of the fusion process is the set of
+“harmonized” variables common to a donor survey and the ACS. Identifying
+conceptually similar variables across surveys and determining how they
+can be modified to measure similar concepts is one of the most important
+steps in the process. It is also potentially time-consuming and
+error-prone.
+
+The “Survey Harmonization Tool” was created to address these problems.
+It is a Shiny app that makes it easier to detect, create, and save
+“harmonies” among the variables of donor surveys and the ACS. The app
+launches in a browser window with the following call:
 
 ``` r
 # Open "Survey Harmonization Tool" Shiny app
 harmony()
 ```
+
+TO DO: Recording demonstrating app functionality.
+
+When a user clicks “Submit harmony” within the app, the
+currently-specified “harmony” (as defined by the selected variables and
+settings) is saved to disk. Specifically, the details of that particular
+harmony are added to the appropriate .R “harmony file” located at
+`/harmony/harmonies`. For example, the file describing how to harmonize
+RECS 2015 and ACS 2019 variables is
+[RECS\_2015\_\_ACS\_2019.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2019.R).
+When `dget`-d, harmony files return a list of lists, where each element
+defines a harmony. Like this one, defining the harmony between the
+“fuelheat” variable in the RECS and the “hfl” variable in the ACS.
+
+``` r
+  fuelheat__hfl = list(
+    RECS = list(
+      groups = 1:7,
+      levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
+      levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
+      breaks = "",
+      adj = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2021-06-10 10:00:33"),
+```
+
+This list object contains all of the information necessary to construct
+RECS and ACS microdata containing a new variable called
+"fuelheat\_\_hfl" – the harmonized version of the two associated heating
+fuel variables. This is precisely what the `harmonize()` function does
+(typically when called by `prepare()` as explained below) using all of
+the harmonies available in the specified harmony file. Note that
+harmonized variables are always indicated by a double-underscore
+("\_\_").
+
+This strategy – using the `harmony()` app to manually define harmonies
+and then letting `harmonize()` take care of subsequent data manipulation
+– makes the construction of harmonized microdata easier, faster, and
+*much* safer.
+
+Most users will eventually find themselves constructing harmonies via
+the app. Submitted harmonies are saved to *local* harmony files, which
+means you must commit and push those changes for them to show up in the
+Github repository – and become available for others to use. This also
+means it is important to pull the most recent version of the repository
+when you begin working with fusionData. Otherwise, you risk duplicating
+the efforts of someone else.
 
 ## Compile spatial data
 
