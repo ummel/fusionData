@@ -5,16 +5,6 @@ Kevin Ummel (<ummel@sas.upenn.edu>)
 -   [Overview](#overview)
 -   [Setup and install](#setup-and-install)
 -   [Usage and structure](#usage-and-structure)
-    -   [`/R`](#r)
-    -   [`/data`](#data)
-    -   [`/data-raw`](#data-raw)
-    -   [`/man`](#man)
-    -   [`/universe`](#universe)
-    -   [`/harmony`](#harmony)
-    -   [`/survey-processed`](#survey-processed)
-    -   [`/survey-raw`](#survey-raw)
-    -   [`/geo-processed`](#geo-processed)
-    -   [`/geo-raw`](#geo-raw)
 -   [Ingest survey data](#ingest-survey-data)
 -   [Document variables](#document-variables)
 -   [Harmonize variables](#harmonize-variables)
@@ -39,9 +29,6 @@ overall fusionACS workflow:
 5.  **Prepare for fusion**: Prepare donor and ACS/recipient microdata
     inputs for the [fusionModel
     package](https://github.com/ummel/fusionModel).
-
-Each of these objectives is described in more detail below along with
-example usage.
 
 ## Setup and install
 
@@ -305,53 +292,63 @@ goal is to produce a data.frame containing microdata observations that
     `labelled::var_label` attribute
 -   Standard names for unique household/person identifiers and
     observation weights (including replicate weights)
+-   Variables identifying respondent location are consistent with those
+    defined in `geo-processed/geo_concordance.fst`
 
-Let’s look at few of the variables in the processed RECS 2015 microdata
-to get a sense for what the preferred output looks like. Note that the
-file name includes a “*H*” identifier, indicating that the microdata in
-question is household-level. Surveys that include both household and
+Let’s look at a few of the variables in the processed RECS 2015
+microdata to get a sense of what preferred output looks like. Note that
+the file name includes a `_H_` identifier, indicating that the microdata
+in question is household-level. Surveys that include both household and
 person-level respondent information have two such files – both “H” and
 “P” microdata. The RECS has only household (“H”) microdata.
 
 ``` r
 recs <- fst::read_fst("survey-processed/RECS/2015/RECS_2015_H_processed.fst")
-head(select(recs, recs_2015_hid, weight, totrooms, sizfreez, rep_1))
+head(select(recs, recs_2015_hid, weight, sizeofgarage, recs_iecc_zone, rep_1))
 ```
 
-      recs_2015_hid weight totrooms                         sizfreez rep_1
-    1         10001  12090        7  Small (17.5 cubic feet or less) 16560
-    2         10002  14400        4  Small (17.5 cubic feet or less) 21500
-    3         10003  23330        9                       No freezer 12300
-    4         10004  12170        7 Medium (17.6 to 22.5 cubic feet) 18550
-    5         10005  16720        6                       No freezer  8080
-    6         10006  26060        1                       No freezer 37000
+      recs_2015_hid weight   sizeofgarage           recs_iecc_zone rep_1
+    1         10001  12090 Two-car garage IECC climate zones 3B-4B 16560
+    2         10002  14400      No garage IECC climate zones 1A-2A 21500
+    3         10003  23330      No garage     IECC climate zone 3A 12300
+    4         10004  12170 Two-car garage     IECC climate zone 4A 18550
+    5         10005  16720 One-car garage     IECC climate zone 5A  8080
+    6         10006  26060      No garage IECC climate zones 6A-6B 37000
 
 Notice that the household ID variable has a standardized name
 (“recs\_2015\_hid”), as does the observation weights column (“weight”)
-and the first of the 96 replicate weights (“rep\_1”). The names of the
-other variables (“totrooms” and “sizfreez”) come from the RECS codebook.
-In the case of “sizfreez”, the raw data contained NA’s (valid “skips”)
-for households that do not have a freezer. Those blanks are replaced
-with an intelligible label (‘No freezer’). In addition, the “sizfreez”
-variable is classed as an ordered factor, since the labels have a
+and the first of the 96 replicate weights (“rep\_1”). If the microdata
+consisted of person-level observations nested within households (e.g. as
+in the ACS), it would have have an additional “pid” integer variable to
+uniquely identify each person within the household.
+
+The variable “recs\_iecc\_zone” tells us something about a respondent’s
+location (their [IECC climate
+zone](https://basc.pnnl.gov/images/iecc-climate-zone-map)). This and
+other spatially-referenced variables are defined and named to be
+consistent with variables in the `geo-processed/geo_concordance.fst`
+file (more on this file below). This allows subsequent operations to
+intelligenty impute each respondent’s location (see `?imputePUMA`).
+
+The name of the other variable (“sizeofgarage”) comes from the RECS
+codebook. In the case of “sizeofgarage”, the raw data contained NA’s
+(valid “skips”) for households without a garage. Those blanks are
+replaced with an intelligible label (‘No garage’). In addition,
+“sizeofgarage” is classed as an ordered factor, since the labels have a
 natural ordering.
 
 ``` r
-class(recs$sizfreez)
+class(recs$sizeofgarage)
 ```
 
     [1] "ordered" "factor" 
 
 ``` r
-levels(recs$sizfreez)
+levels(recs$sizeofgarage)
 ```
 
-    [1] "No freezer"                              
-    [2] "Half-size or compact"                    
-    [3] "Small (17.5 cubic feet or less)"         
-    [4] "Medium (17.6 to 22.5 cubic feet)"        
-    [5] "Large (22.6 to 29.5 cubic feet)"         
-    [6] "Very large (bigger than 29.5 cubic feet)"
+    [1] "No garage"                "One-car garage"          
+    [3] "Two-car garage"           "Three-or-more-car garage"
 
 You can see how, exactly, the raw data was transformed by viewing the
 associated code in
@@ -468,20 +465,127 @@ harmony()
 
 ## Compile spatial data
 
-To do.
+fusionData allows for spatially-referenced data to be merged with survey
+microdata, thereby expanding the set of potential predictor variables
+available in the fusion process. The geographic “unit of analysis” in
+this case consists of
+[PUMA’s](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/pumas.html),
+which are observed for ACS households and can be imputed (see
+`?imputePUMA`) for donor households.
 
-1.  `geo_predictors.fst`: a file produced by `compileSpatial()` that
-    contains PUMA-level estimates of all spatial variables. Used by
-    `prepare()`.
+Ingestion of spatial datasets is generally less onerous than for survey
+data; there are fewer requirements that the processed data must meet.
+The general strategy will look familiar: Raw spatial data is stored in
+`/geo-raw`. The raw data is transformed to a "\*\_processed.rds" file
+stored in `/geo-processed`. The associated .R file is stored in the same
+location.
 
-2.  `concordance/geo_concordance.fst`: a file specifying concordance
-    between a variety of geographic entities and PUMA’s. Used by
-    `prepare()`.
+A processed spatial .rds file has only two hard requirements it must
+meet.
 
-3.  `concordance/bg_centroids.rds`: a `sf` points data frame containing
-    latitude and longitude of population-weighted block group centroids.
-    Not currently used but expected to be necessary for point-based
-    spatial datasets in future.
+1.  It must contain a “vintage” column indicating the time period of
+    each observation. The vintage can be a year, a year range
+    (“2015-2016”), or the special value “always”. The “always” value
+    indicates that a measurement is time-invariant (e.g. a long-term
+    climate “normal”).
+2.  It must contain a column (or columns) whose name and values are also
+    found in the “geo\_concordance.fst” file.
+
+Ordered factor variables should be classed as such; other categorical
+variables can be character. It is not (currently) necessary to document
+the variables, name them a certain way, or create a dictionary. Let’s
+look at an example.
+
+``` r
+irs <- readRDS("geo-processed/IRS-SOI/IRS-SOI_2018_processed.rds")
+head(irs[, 1:5])
+```
+
+    # A tibble: 6 x 5
+      zcta10 vintage `Mean income per ret… `Mean income per pe… `Mean people per re…
+      <chr>    <int>                 <int>                <int>                <dbl>
+    1 35004     2018                 58600                28760                 2.04
+    2 35005     2018                 41200                21200                 1.94
+    3 35006     2018                 53100                25300                 2.10
+    4 35007     2018                 62300                29240                 2.13
+    5 35010     2018                 52900                25700                 2.06
+    6 35014     2018                 50300                25900                 1.94
+
+The `irs` object contains processed spatial data constructed from the
+[IRS Statistics of Income
+(SOI)](https://www.irs.gov/statistics/soi-tax-stats-individual-income-tax-statistics-zip-code-data-soi)
+zip code tax return data for 2018. The underlying raw data is stored
+remotely at `/geo-raw/IRS-SOI/2018`. The script used to create the
+“processed.rds” file is [available
+here](https://github.com/ummel/fusionData/blob/master/geo-processed/IRS-SOI/IRS-SOI_AllVintages_processed.R).
+The “zcta10” column indicates the Zip Code Tabulation Area (circa 2010)
+associated with each observation.
+
+The “zcta10” variable is also found in the “geo\_concordance.fst” file,
+which contains information about how to link geographic units to PUMA’s.
+Its creation relies heavily on data from the Missouri Census Data
+Center’s [Geocorr
+engine](https://mcdc.missouri.edu/applications/geocorr.html) (code
+[here](https://github.com/ummel/fusionData/blob/master/geo-processed/concordance/02%20geo_concordance.R)).
+The information on how to link zip codes to PUMA’s is used to aggregate
+the IRS-SOI data to PUMA-level prior to merging with survey microdata.
+
+The “geo\_concordance.fst” file contains a variety of variables that can
+be used to identify the location of observations in a processed spatial
+data file. Most of these are documented by
+[Geocorr](https://mcdc.missouri.edu/applications/docs/maggot2014.html).
+Others were added within the
+`geo-processed/concordance/02 geo_concordance.R` file to allow
+concordance with variables found in particular datasets. The concordance
+file can be expanded over time as necessary.
+
+``` r
+concordance <- fst::fst("geo-processed/concordance/geo_concordance.fst")
+names(concordance)
+```
+
+     [1] "puma10"           "puma_weight"      "state"            "state_name"      
+     [5] "state_postal"     "county10"         "cousubfp10"       "tract10"         
+     [9] "bg10"             "zcta10"           "cbsa10"           "cbsatype10"      
+    [13] "metdiv10"         "csa10"            "sldu10"           "sldl10"          
+    [17] "sdbest10"         "sdbesttype10"     "sldu12"           "sldl12"          
+    [21] "ur12"             "ua12"             "cbsa13"           "cbsatype13"      
+    [25] "metdiv13"         "csa13"            "county14"         "cousubfp14"      
+    [29] "sldu14"           "sldl14"           "sdbest14"         "sdbesttype14"    
+    [33] "cbsa15"           "cbsatype15"       "metdiv15"         "csa15"           
+    [37] "sldu16"           "sldl16"           "cd111"            "cd113"           
+    [41] "cd114"            "cd115"            "cd116"            "region"          
+    [45] "division"         "recs_domain"      "recs_division"    "recs_ba_zone"    
+    [49] "recs_iecc_zone"   "climate_division"
+
+In some cases, the processed .rds file will include multiple variables
+to achieve concordance. For example, a spatial dataset with block group
+observations must include columns for “state”, “county10”, “tract10”,
+and “bg10” in order to allow a smooth merge with the concordance file
+(this is the case for the EPA-SLD dataset).
+
+Unlike with processed *survey* data, the naming convention for processed
+spatial data files is quite relaxed. The function `compileSpatial()`
+automatically detects and compiles all files in `/geo-processed` ending
+with "\_processed.rds". As long as a processed spatial data file has the
+necessary suffix – and meets the two requirements above – it will be
+compiled into the `geo_predictors.fst` file. Whenever a processed .rds
+file is added or updated, it is necessary to run `compileSpatial()` to
+update the `geo_predictors.fst` file.
+
+The `geo_predictors.fst` file contains all variables and vintages across
+available spatial datasets, aggregated to PUMA-level in preparation for
+merging with survey microdata. The structure of this file is unusual,
+but it is not intended to be worked with directly. It is designed to
+allow the `prepare()` function (demonstrated below) to efficiently read
+the necessary data from disk when it merges spatial variables for
+particular donor and recipient surveys.
+
+Consequently, unless a user is actively adding or editing processed
+spatial data, the only “geo files” that are strictly necessary for the
+fusion process are `geo_predictors.rds` and `geo_concordance.rds`, both
+of which can be obtained by calling
+`getGeoProcessed(dataset = "essential")`.
 
 ## Prepare for fusion
 
