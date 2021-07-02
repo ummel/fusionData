@@ -1,6 +1,6 @@
 # data: data frame to be imputed
 # N: number of iterations
-# y_exclude: variables not to be imputated, even if NA values are present
+# y_exclude: variables not to be imputed, even if NA values are present
 # x_exclude: variables not to be used as potential predictors in imputation models
 # weight: name of variable providing observation weights
 # grouping: used to enforce consistent imputation within certain subsets of the data (e.g. within households)
@@ -321,7 +321,7 @@ imputeMissing <- function(data,
                         weights = d.fit[[w]],
                         method = ifelse(is.numeric(d.fit[[v]]), "anova", "class"),
                         minbucket = max(30, ceiling(0.0001 * nrow(d.fit))),
-                        cp = 0.001,  # Set sufficiently low without imposing computing cost
+                        cp = 0.01,  # Set sufficiently low without imposing computing cost
                         xval = 0)
 
       # OPTIONAL: Prune rpart model using minimum cross-validation (NOT USED)
@@ -579,12 +579,15 @@ imputeMissing <- function(data,
 
   # Replace NA values in 'data' with imputed values in 'xm'
   vimp <- unlist(vimp.groups)
-  data[vimp] <- map2(data[vimp], xm[vimp], ~ replace(.x, is.na(.x), updateNA(.x, .y)))
+  #data[vimp] <- map2(data[vimp], xm[vimp], ~ replace(.x, is.na(.x), updateNA(.x, .y)))
+  # Return only the imputed variables
+  result <- map2_dfc(data[vimp], xm[vimp], ~ replace(.x, is.na(.x), updateNA(.x, .y)))
 
   # Final check; everything should be fully imputed except columns identified in 'y.exclude'
-  stopifnot(!anyNA(select(data, -one_of(y.exclude))))
+  #stopifnot(!anyNA(select(data, -one_of(y.exclude))))
+  stopifnot(!anyNA(result))
 
-  return(data)
+  return(result)
 
 }
 
