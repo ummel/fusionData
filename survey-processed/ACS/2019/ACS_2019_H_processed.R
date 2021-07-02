@@ -1,22 +1,31 @@
+library(fusionModel)
 library(tidyverse)
+
 source("R/utils.R")
 
 #-----
 
-# Load generic codebook
-source("survey-processed/ACS/2019/01 Pre-process data dictionary.R")
+# Load generic codebook processing function
+source("survey-processed/ACS/processACScodebook.R")
+
+# Process 2019 codebook into standard format
+codebook <- processACScodebook("survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv")
 
 #-----
 
-# Load household PUMS data
-
-dir <- tempdir()
-unzip("survey-raw/ACS/2019/csv_hus.zip", exdir = dir, overwrite = TRUE)
-hus.files <- list.files(path = dir, pattern = "_hus..csv$", full.names = TRUE)
+# Unzip raw .zip file
+unzip("survey-raw/ACS/2019/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
+hus.files <- list.files(path = tempdir(), pattern = "hus..csv$", full.names = TRUE)
 
 d <- hus.files %>%
   map_dfr(data.table::fread) %>%
   as_tibble()
+
+# Replace literal empty strings ("") with NA for character type columns
+# fread() does not convert empty strings to NA, as they are ambiguous
+for (i in 1:ncol(d)) {
+  if (is.character(d[[i]])) d[[i]] <- na_if(d[[i]], "")
+}
 
 # Delete temporary files
 unlink(hus.files, recursive = TRUE)
@@ -45,16 +54,11 @@ d <- d %>%
   filter(ST %in% 1:56) %>%  # Ensure observations restricted to U.S. states and D.C.
   select(-DIVISION, -REGION)
 
-# Only retain variables found in the codebook
-# This principally drops flag variables
-d <- d[intersect(names(d), codebook$var)]
-
 gc()
 
 #-----
 
 # Fix-up codebook for household records
-
 codebook <- codebook %>%
   filter(var %in% names(d)) %>%
   add_count(var) %>%
@@ -97,6 +101,11 @@ stopifnot(length(extras) == 0)
 
 #----------------
 
+# Only retain variables remaining in the codebook
+d <- d[intersect(names(d), codebook$var)]
+
+#----------------
+
 # Update variable values with associated labels from 'codebook'
 
 # Loop through each variable in 'd', assigning labels when applicable
@@ -123,8 +132,18 @@ for (v in names(d)) {
   # Apply type.convert() to 'x'; leave ordered factors unchanged
   x <- if (is.ordered(x)) x else type.convert(x, as.is = FALSE)
 
-  # Ensure unordered factor levels are sorted alphabetically
-  if (is.factor(x) & !is.ordered(x)) x <- factor(x, levels = sort(unique(x)))
+  # Ensure unordered factor levels are sorted according to codebook order of levels
+  # Originally, unordered factors were sorted alphabetically -- but there is often useful information in the codebook ordering
+  # This retains a valid codebook ordering if one exists; otherwise sort levels alphabetically
+  if (is.factor(x) & !is.ordered(x)) {
+    num.na <- sum(is.na(x))
+    if (all(x %in% cb$label)) {
+      x <- factor(x, levels = intersect(cb$label, unique(x)))
+    } else {
+      x <- factor(x, levels = sort(unique(x)))
+    }
+    stopifnot(sum(is.na(x)) == num.na)  # This is a final safety check to ensure no NA's introduced inadvertently
+  }
 
   # Update column in 'd'
   d[[v]] <- x
@@ -135,17 +154,19 @@ gc()
 
 #----------------
 
-# This should retain NA's only for "suppressed" observations
-# There are so few that it doesn't make sense to do full imputation
+# Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-# Simple random imputation of remaining NA's
+# Simple random imputation of missing values
+# This is appropriate if the number of NA's is low and the variables requiring imputation are not particularly related
 for (v in names(na.count)) {
   ind <- is.na(d[[v]])
   d[[v]][ind] <- sample(na.omit(d[[v]]), size = sum(ind), prob = d$WGTP[!ind], replace = TRUE)
 }
+
+anyNA(d)
 
 #----------------
 
@@ -170,14 +191,15 @@ d <- d %>%
   select(acs_2019_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
 
 # Manual removal of variables without useful information
-d <- d %>%
-  select(-srnt, -sval)
+# d <- d %>%
+#   select(-srnt, -sval)
 
 #----------------
 
 # Create dictionary and save to disk
 dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2019, respondent = "H")
 saveRDS(object = dictionary, file = "survey-processed/ACS/2019/ACS_2019_H_dictionary.rds")
+gc()
 
 #----------------
 

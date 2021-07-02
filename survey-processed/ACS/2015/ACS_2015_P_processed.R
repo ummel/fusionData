@@ -1,21 +1,32 @@
+library(fusionData)
 library(tidyverse)
 source("R/utils.R")
 
 #-----
 
-# Load generic codebook; creates "codebook" object
-source("survey-processed/ACS/2019/01 Pre-process data dictionary.R")
+# Load generic codebook processing function
+source("survey-processed/ACS/processACScodebook.R")
+
+# Process 2015 codebook into standard format
+codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
 
 #-----
 
 # Unzip raw .zip file
-unzip("survey-raw/ACS/2019/csv_pus.zip", exdir = tempdir(), overwrite = TRUE)
-pus.files <- list.files(path = tempdir(), pattern = "_pus..csv$", full.names = TRUE)
+unzip("survey-raw/ACS/2015/csv_pus.zip", exdir = tempdir(), overwrite = TRUE)
+pus.files <- list.files(path = tempdir(), pattern = "pus..csv$", full.names = TRUE)
 
 # Read household PUMS data
 d <- pus.files %>%
   map_dfr(data.table::fread) %>%
-  as_tibble()
+  as_tibble() %>%
+  rename_with(toupper)  # Ensure upper-case names for consistency for 'codebook'; replicate weights are sometimes lower-case in the raw data
+
+# Replace literal empty strings ("") with NA for character type columns
+# fread() does not convert empty strings to NA, as they are ambiguous
+for (i in 1:ncol(d)) {
+  if (is.character(d[[i]])) d[[i]] <- na_if(d[[i]], "")
+}
 
 # Delete temporary files
 unlink(pus.files)
@@ -34,20 +45,8 @@ d <- d %>%
 
 # Standardize state and PUMA variable and remove Puerto Rico observations
 d <- d %>%
-  filter(ST %in% 1:56) %>%  # Ensure observations restricted to U.S. states and D.C.
-  select(-DIVISION, -REGION)
-
-# Standardize PUMA codes for Migration and Place of work variables (MIGPUMA & POWPUMA) to include 2-digit state FIPS at front
-# Can then drop the associated state identifiers (MIGSP & POWSP)
-d <- d %>%
-  mutate(MIGPUMA = paste0(str_pad(MIGSP, 2, pad = 0), str_pad(MIGPUMA, width = 5, pad = 0)),
-         MIGSP = NULL,
-         POWPUMA = paste0(str_pad(POWSP, 2, pad = 0), str_pad(POWPUMA, width = 5, pad = 0)),
-         POWSP = NULL)
-
-# Only retain variables found in the codebook
-# This principally drops flag variables
-d <- d[intersect(names(d), codebook$var)]
+  filter(ST %in% 1:56)  # Ensure observations restricted to U.S. states and D.C.
+#select(-DIVISION, -REGION)  # Not present in 2015 microdata
 
 gc()
 
@@ -58,7 +57,7 @@ gc()
 codebook <- codebook %>%
   filter(var %in% names(d)) %>%
   add_count(var) %>%
-  filter(!(n > 1 & is.na(value) & var %in% names(which(!map_lgl(d, anyNA))))) %>%
+  filter(!(n > 1 & is.na(value) & var %in% names(which(!map_lgl(d, anyNA))))) %>%  # Remove entries where value = NA but there are no NA's in the actual data
   mutate(
     label = ifelse(var == "LANP" & is.na(value), "English", label),  # Manual edit: Based on questionnaire, it looks like NA's for LANP are English speakers
     label = ifelse(var == "CITWP" & is.na(value), "Not naturalized", label),
@@ -74,17 +73,6 @@ codebook <- codebook %>%
     desc = ifelse(var == "CITWP", "Year of naturalization", desc),
     desc = ifelse(desc == "VA", "Veterans Administration health care", desc)
 
-    # label = ifelse(var == "WRK" & is.na(value), "Not reported", label),  # Retain legit "Not reported" entry for "Worked last week?" variable
-    # label = ifelse(var == "ANC" & value == 4, "Not reported", label),  # Retain legit "Not reported" entries for ancestry variables
-    # label = ifelse(var == "ANC1P" & value == 999, "Not reported", label),  # Retain legit "Not reported" entries for ancestry variables
-    # label = ifelse(var == "ANC2P" & value == 999, "Not reported", label)  # Retain legit "Not reported" entries for ancestry variables
-
-    # Convert departure/arrival time at work variables to numeric minutes past midnight - NOT TERRIBLY USEFUL; still has to be treated as ordered factor
-    # tdiff = as.POSIXct(gsub(".", "", map_chr(str_split(label, " to "), 1), fixed = TRUE), format = "%I:%M %p") - as.POSIXct("12:00 am", format = "%I:%M %p"),
-    # label = ifelse(var %in% c("JWAP", "JWDP") & !is.na(value), as.double(tdiff, units = "mins") , label),  # Minutes past midnight
-    # tdiff = NULL,
-    # desc = ifelse(var == "JWAP", "Time of arrival at work (minutes past midnight)", desc),
-    # desc = ifelse(var == "JWDP", "Time of departure for work (minutes past midnight)", desc)
   )
 
 # Check for possible remaining issues in 'codebook'
@@ -120,6 +108,11 @@ stopifnot(length(extras) == 0)
 
 #----------------
 
+# Only retain variables remaining in the codebook
+d <- d[intersect(names(d), codebook$var)]
+
+#----------------
+
 # Update variable values with associated labels from 'codebook'
 
 # Loop through each variable in 'd', assigning labels when applicable
@@ -146,8 +139,18 @@ for (v in names(d)) {
   # Apply type.convert() to 'x'; leave ordered factors unchanged
   x <- if (is.ordered(x)) x else type.convert(x, as.is = FALSE)
 
-  # Ensure unordered factor levels are sorted alphabetically
-  if (is.factor(x) & !is.ordered(x)) x <- factor(x, levels = sort(unique(x)))
+  # Ensure unordered factor levels are sorted according to codebook order of levels
+  # Originally, unordered factors were sorted alphabetically -- but there is often useful information in the codebook ordering
+  # This retains a valid codebook ordering if one exists; otherwise sort levels alphabetically
+  if (is.factor(x) & !is.ordered(x)) {
+    num.na <- sum(is.na(x))
+    if (all(x %in% cb$label)) {
+      x <- factor(x, levels = intersect(cb$label, unique(x)))
+    } else {
+      x <- factor(x, levels = sort(unique(x)))
+    }
+    stopifnot(sum(is.na(x)) == num.na)  # This is a final safety check to ensure no NA's introduced inadvertently
+  }
 
   # Update column in 'd'
   d[[v]] <- x
@@ -184,7 +187,7 @@ d <- d %>%
   ) %>%
   labelled::set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = TRUE) %>%
   rename(
-    acs_2019_hid = SERIALNO,  # Rename ID and weight variables to standardized names
+    acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     pid = SPORDER,
     weight = PWGTP,
     state = ST,
@@ -192,19 +195,23 @@ d <- d %>%
   ) %>%
   rename_with(~ gsub("PWGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("PWGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(acs_2019_hid, pid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
+  select(acs_2015_hid, pid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
 
 # Manual removal of variables without useful information
 d <- d %>%
   select(-anc, -dratx, -mig, -racnum, -sciengp, -sciengrlp)
 
+# Remaining manual fix-ups
+labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"
+
 #----------------
 
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2019, respondent = "P")
-saveRDS(object = dictionary, file = "survey-processed/ACS/2019/ACS_2019_P_dictionary.rds")
+dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2015, respondent = "P")
+saveRDS(object = dictionary, file = "survey-processed/ACS/2015/ACS_2015_P_dictionary.rds")
+gc()
 
 #----------------
 
 # Save data to disk (.fst)
-fst::write_fst(x = d, path = "survey-processed/ACS/2019/ACS_2019_P_processed.fst", compress = 100)
+fst::write_fst(x = d, path = "survey-processed/ACS/2015/ACS_2015_P_processed.fst", compress = 100)
