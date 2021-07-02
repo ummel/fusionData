@@ -13,4 +13,4 @@ bg_centroids <- "https://www2.census.gov/geo/docs/reference/cenpop2010/blkgrp/Ce
   select(-POPULATION)
 
 # Save 'sf' object to disk
-saveRDS(bg_centroids, "geo-processed/concordance/bg_centroids.rds")
+usethis::use_data(bg_centroids)
