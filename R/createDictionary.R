@@ -16,8 +16,17 @@
 
 createDictionary <- function(data, survey, vintage, respondent) {
 
+  # Check for complete variable labels/descriptions
+  v <- compact(labelled::var_label(data))
+  miss <- setdiff(names(data), names(v))
+  if (any(miss)) {
+    stop("The following columns are missing labels (see ?labelled::var_label): ", paste(miss, collapse = ", "))
+  }
+
+  # Check for valid inputs
   stopifnot({
     is.data.frame(data)
+    !any(map_lgl(d, is.character))  # There should not be any character columns (must be factor)
     length(survey) == 1
     substring(tolower(respondent), 1, 1) %in% c("h", "p")
   })
@@ -40,15 +49,14 @@ createDictionary <- function(data, survey, vintage, respondent) {
 
   # Function returning summary string for factor variable
   fctFormat <- function(x) {
-    u <- if (is.factor(x)) levels(x) else sort(unique(x))
-    paste(paste0("[", u, "]"), collapse = ", ")
+    #u <- if (is.factor(x)) levels(x) else sort(unique(x))
+    paste(paste0("[", levels(x), "]"), collapse = ", ")
   }
 
   # Variable summaries
   var.values <- data %>%
     select(-matches("^rep_\\d+$")) %>%  # Remove replicate weights
     select(-matches(paste0("^", tolower(survey), ".*_hid$"), -any_of(c("pid", "weight")))) %>%  # Remove ID and primary weight variables
-    #select(-one_of(geo)) %>%  # Remove geographic identifier; TO DO: automate detection
     map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = W)} else {fctFormat(.x)})
 
   # Variables to include in dictionary
@@ -58,7 +66,7 @@ createDictionary <- function(data, survey, vintage, respondent) {
   dict <- tibble(
     survey = survey,
     vintage = as.character(vintage),
-    respondent = ifelse(hh, "Household", "Person"),
+    respondent = ifelse(hh, "H", "P"),
     variable = nm,
     description = unlist(labelled::var_label(data[nm], unlist = TRUE)),
     values = var.values,
