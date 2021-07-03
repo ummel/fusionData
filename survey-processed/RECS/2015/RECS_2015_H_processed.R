@@ -1,9 +1,10 @@
-library(labelled)
 library(tidyverse)
-
+source("R/utils.R")
+source("R/createDictionary.R")
 source("R/imputeMissing.R")
 source("R/detectDependence.R")
-source("R/utils.R")
+
+#-----
 
 # Question to RECS staff: There are some cases where spending is zero on a fuel but the fuel is listed as used
 # Example: WOODAMT == 0, WDWARM == "Yes" -- is this correct?
@@ -15,10 +16,13 @@ source("R/utils.R")
 
 #-----
 
+# Load raw RECS 2015 data
 d <- read_csv("survey-raw/RECS/2015/recs2015_public_v4.csv")
 
 #-----
 
+# Load and process and codebook
+# NOTE: Warning about "New names: is OK
 codebook <- readxl::read_excel("survey-raw/RECS/2015/codebook_publicv4.xlsx", skip = 3) %>%
   setNames(c('var', 'type', 'length', 'desc', 'value', 'label')) %>%
   select(var, desc, value, label) %>%
@@ -299,6 +303,7 @@ stopifnot(length(extras) == 0)
 # Safety check
 # Check for a precise match between levels specified in 'ordered.factors' and the codebook labels
 # Will return helpful message if a discrepancy is detected; some discrepancies may be allowable
+# NOTE: The "TEMP*" variables will be flagged here, but that's OK: They are an odd case where we have a numeric mixed with a categorical
 for (v in names(ordered.factors)) {
   of <- sort(ordered.factors[[v]])
   cb <- sort(unique(filter(codebook, var == v)$label))
@@ -307,11 +312,12 @@ for (v in names(ordered.factors)) {
 
 #-----
 
+# Only retain variables remaining in the codebook
+d <- d[intersect(names(d), codebook$var)]
+
+#-----
+
 # Update variable values with associated labels from 'codebook'
-
-# Restrict 'd' to variables remaining in 'codebook'
-d <- select(d, all_of(unique(codebook$var)))
-
 # Loop through each variable in 'd', assigning labels when applicable
 for (v in names(d)) {
 
@@ -336,8 +342,18 @@ for (v in names(d)) {
   # Apply type.convert() to 'x'; leave ordered factors unchanged
   x <- if (is.ordered(x)) x else type.convert(x, as.is = FALSE)
 
-  # Ensure unordered factor levels are sorted alphabetically
-  if (is.factor(x) & !is.ordered(x)) x <- factor(x, levels = sort(unique(x)))
+  # Ensure unordered factor levels are sorted according to codebook order of levels
+  # Originally, unordered factors were sorted alphabetically -- but there is often useful information in the codebook ordering
+  # This retains a valid codebook ordering if one exists; otherwise sort levels alphabetically
+  if (is.factor(x) & !is.ordered(x)) {
+    num.na <- sum(is.na(x))
+    if (all(x %in% cb$label)) {
+      x <- factor(x, levels = intersect(cb$label, unique(x)))
+    } else {
+      x <- factor(x, levels = sort(unique(x)))
+    }
+    stopifnot(sum(is.na(x)) == num.na)  # This is a final safety check to ensure no NA's introduced inadvertently
+  }
 
   # Update column in 'd'
   d[[v]] <- x
@@ -346,17 +362,27 @@ for (v in names(d)) {
 
 #-----
 
-# Impute NA values in 'd'
-d <- imputeMissing(data = d,
-                   weight = "NWEIGHT",
-                   x_exclude = c("DOEID", "^BRRWT"))
+# Which variables have missing values and how frequent are they?
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count  # See which variables have NA's
 
-# Check for any remaining NA's
+# Impute NA values in 'd'
+imp <- imputeMissing(data = d,
+                     N = 2,
+                     weight = "NWEIGHT",
+                     x_exclude = c("DOEID", "^BRRWT"))
+
+# Replace NA's in 'd' with the imputed values
+d[names(imp)] <- imp
+rm(imp)
+gc()
+
 anyNA(d)
 
 #-----
 
-# Add/create variables for geographic concordance with variables in 'geolink'
+# Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
 
 # Variables names prior to modification/addition of geographic identifiers
 d <- d %>%
@@ -369,33 +395,32 @@ d <- d %>%
          cbsatype15 = ifelse(grepl("Micro", METROMICRO), "Micro", cbsatype15),
          ur12 = substring(UATYP10, 1, 1))
 
-# See which variables in 'd' are also in 'geolink' and
-ginfo <- readRDS("geo-processed/geolink_description.rds")
-gvars <- intersect(names(ginfo), names(d))
+# See which variables in 'd' are also in 'geo_concordance' and
+gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
+gvars <- intersect(gnames, names(d))
+
+# Class new/added geo identifiers as unordered factors
 d <- d %>%
-  mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE)) %>%  # Class any new/added geo identifiers as unordered factors
-  set_variable_labels(.labels = ginfo, .strict = FALSE)  # Set variable descriptions for geo identifiers
+  mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE))
 
 #----------------
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
 d <- d %>%
+  mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
-  set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = FALSE) %>%
+  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
+  labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
   rename(
     recs_2015_hid = DOEID,  # Rename ID and weight variables to standardized names
     weight = NWEIGHT
   ) %>%
   rename_with(~ gsub("BRRWT", "REP_", .x, fixed = TRUE), .cols = starts_with("BRRWT")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(recs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
-
-#----------------
-
-# Check that all variables have descriptions assigned
-stopifnot(length(var_label(d)) == ncol(d))
+  select(recs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(recs_2015_hid)
 
 #----------------
 
