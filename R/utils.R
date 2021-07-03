@@ -118,6 +118,37 @@ novary <- function(x) length(unique(na.omit(x))) == 1
 
 #-------------------
 
+# Function tries to make sure the returned factor is only ASCII-compliant characters
+# This is mainly for future safety to prevent cross-platform of database issues with non-ASCII characters
+safeCharacters <- function(x) {
+
+  stopifnot(is.factor(x) | is.character(x))
+  y <- as.character(x)
+
+  # This code chunk attempts to ensure that the factor levels are all ASCII-compliant
+  # If it detects non-ASCII strings, it attemps to convert using stringi::stri_trans_general()
+  # However, this conversion may not work as-is on a Windows machine (see here: https://github.com/gagolews/stringi/issues/269)
+  enc <- stringi::stri_enc_mark(y)
+  fix <- which(!is.na(y) & enc != "ASCII")
+  y[fix] <- stringi::stri_trans_general(y[fix], "Latin-ASCII")
+  ascii <- stringi::stri_enc_mark(y) == "ASCII"  # Attempt to confirm that characters are all ASCII
+  if (any(!ascii, na.rm = TRUE)) stop("Couldn't fix non-ASCII character(s) for strings:\n", paste(na.omit(unique(y[!ascii])), collapse = "\n"))
+
+  # General text fix-ups for obvious/common errors
+  y <- gsub('"', "", y, fixed = TRUE)  # Replace double-quote with blank
+  y <- gsub(" ,", ",", y, fixed = TRUE)  # Remove space ahead of a comma
+  y <- str_squish(y)
+
+  if (is.factor(x)) {
+    factor(y, levels = y[match(levels(x), x)], ordered = is.ordered(x))
+  } else {
+    y
+  }
+
+}
+
+#-------------------
+
 # Calculate weighted percentiles of 'x', retaining original zeros
 # convertPercentile <- function(x, w) {
 #   if (missing(w)) w <- rep.int(1, length(x))
