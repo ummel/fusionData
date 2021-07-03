@@ -10,7 +10,7 @@ A \code{sf} spatial data frame.
 \item{state}{State code}
 \item{county10}{County code}
 \item{tract10}{Tract code}
-\item{bg10}{Blcok group code}
+\item{bg10}{Block group code}
 \item{geometry}{Centroid coordinates as \code{sfc_POINT} class}
 }
 }
