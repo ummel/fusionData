@@ -3,6 +3,7 @@
 export(compileDictionary)
 export(compileSpatial)
 export(completeDonor)
+export(conveyHarmony)
 export(createDictionary)
 export(getGeoProcessed)
 export(getSurveyProcessed)
