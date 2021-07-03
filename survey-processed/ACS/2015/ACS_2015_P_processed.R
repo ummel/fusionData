@@ -1,11 +1,11 @@
-library(fusionData)
 library(tidyverse)
+source("R/createDictionary.R")
 source("R/utils.R")
-
-#-----
 
 # Load generic codebook processing function
 source("survey-processed/ACS/processACScodebook.R")
+
+#-----
 
 # Process 2015 codebook into standard format
 codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
@@ -16,7 +16,7 @@ codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
 unzip("survey-raw/ACS/2015/csv_pus.zip", exdir = tempdir(), overwrite = TRUE)
 pus.files <- list.files(path = tempdir(), pattern = "pus..csv$", full.names = TRUE)
 
-# Read household PUMS data
+# Read person PUMS data
 d <- pus.files %>%
   map_dfr(data.table::fread) %>%
   as_tibble() %>%
@@ -179,13 +179,14 @@ for (v in names(na.count)) {
 # Assemble final output
 # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
 d <- d %>%
+  mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   mutate(
     ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
     PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
   ) %>%
-  labelled::set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = TRUE) %>%
+  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
   rename(
     acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     pid = SPORDER,
@@ -195,7 +196,8 @@ d <- d %>%
   ) %>%
   rename_with(~ gsub("PWGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("PWGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(acs_2015_hid, pid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
+  select(acs_2015_hid, pid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(acs_2015_hid, pid)
 
 # Manual removal of variables without useful information
 d <- d %>%

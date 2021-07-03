@@ -90,6 +90,7 @@ processACScodebook <- function(dictionary.file) {
       desc = gsub("\\s*\\([^\\)]+\\)", "", desc),  # Remove parenthetical text in description
       desc = gsub("recode", "", desc),  # Remove word 'recode' as it doesn't seem necessary (might induce confusion)
       desc = gsub("HH", "household", desc),  # Replace 'HH' with 'household' to avoid confusion
+      desc = ifelse(var == "RMSP", "Number of rooms, excluding bathrooms", desc),  # Helpful for RMSP variable to note that it excludes bathrooms in room count
       desc = capFirst(desc)
     ) %>%
 
@@ -98,8 +99,7 @@ processACScodebook <- function(dictionary.file) {
       label = gsub("/ ", "/", label, fixed = TRUE),  # Manual text error fix-ups
       label = gsub(" / ", "/", label, fixed = TRUE),  # Manual text error fix-ups
       label = gsub("//", "/", label, fixed = TRUE),  # Manual text error fix-ups
-      #label = ifelse(str_sub(label, 1, 3) == "N/A", gsub("\\(([^()]*)\\)|.", "\\1", label, perl = TRUE), label),   # Extract subsequent parenthetical text when 'value' starts with "N/A"
-      label = ifelse(str_sub(label, 1, 3) == "N/A", parText(label), label),   # This is a bit safer than above, since it allows the closing ")" to be missing
+      label = ifelse(str_sub(label, 1, 3) == "N/A", parText(label), label),   # For N/A labels, replace with parenthetical text
       label = gsub(" FT", " full-time", label, fixed = TRUE),
       label = gsub("NILF ", "Not in labor force ", label, fixed = TRUE),
       label = gsub("<", "less than", label, fixed = TRUE),

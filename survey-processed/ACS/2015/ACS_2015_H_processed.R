@@ -1,14 +1,16 @@
-library(fusionModel)
 library(tidyverse)
-
+source("R/utils.R")
+source("R/createDictionary.R")
 source("R/imputeMissing.R")
 source("R/detectDependence.R")
-source("R/utils.R")
-
-#-----
 
 # Load generic codebook processing function
 source("survey-processed/ACS/processACScodebook.R")
+
+# Load utility cost flag function (only prior to 2018)
+source("survey-processed/ACS/utilityCostFlags.R")
+
+#-----
 
 # Process 2015 codebook into standard format
 codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
@@ -19,6 +21,7 @@ codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
 unzip("survey-raw/ACS/2015/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
 hus.files <- list.files(path = tempdir(), pattern = "hus..csv$", full.names = TRUE)
 
+# Read household PUMS data
 d <- hus.files %>%
   map_dfr(data.table::fread) %>%
   as_tibble() %>%
@@ -195,13 +198,14 @@ anyNA(d)
 # Assemble final output
 # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
 d <- d %>%
+  mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   mutate(
     ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
     PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
   ) %>%
-  labelled::set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = TRUE) %>%
+  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
   rename(
     acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     weight = WGTP,
@@ -210,11 +214,16 @@ d <- d %>%
   ) %>%
   rename_with(~ gsub("WGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("WGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(acs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
+  select(acs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(acs_2015_hid)
 
 # Manual removal of variables without useful information
 # d <- d %>%
 #   select(-srnt, -sval)
+
+# Add utility cost flag variables (only prior to 2018)
+# See "utilityCostFlags.R" for details
+d <- utilityCostFlags(d)
 
 # Remaining manual fix-ups
 labelled::var_label(d$dsl) <- "DSL service"
