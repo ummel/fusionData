@@ -16,20 +16,20 @@
 
 createDictionary <- function(data, survey, vintage, respondent) {
 
-  # Check for complete variable labels/descriptions
-  v <- compact(labelled::var_label(data))
-  miss <- setdiff(names(data), names(v))
-  if (any(miss)) {
-    stop("The following columns are missing labels (see ?labelled::var_label): ", paste(miss, collapse = ", "))
-  }
-
   # Check for valid inputs
   stopifnot({
     is.data.frame(data)
-    !any(map_lgl(d, is.character))  # There should not be any character columns (must be factor)
+    !any(map_lgl(data, is.character))  # There should NOT be any character columns (must be factor)
     length(survey) == 1
     substring(tolower(respondent), 1, 1) %in% c("h", "p")
   })
+
+  # Check for complete variable labels/descriptions
+  v <- compact(labelled::var_label(data))
+  miss <- setdiff(names(data), names(v))
+  if (length(miss) > 0) {
+    stop("The following columns are missing labels (see ?labelled::var_label): ", paste(miss, collapse = ", "))
+  }
 
   # Household-level data?
   hh <- substring(tolower(respondent), 1, 1) == "h"
