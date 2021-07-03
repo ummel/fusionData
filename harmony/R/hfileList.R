@@ -1,4 +1,5 @@
-#hfile <- dget("harmony/RECS_2015__ACS_2019.R")
+# Example input
+#hfile <- dget("harmony/harmonies/RECS_2015__ACS_2019.R")
 
 hfileList <- function(hfile) {
 

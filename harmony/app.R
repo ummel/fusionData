@@ -723,8 +723,6 @@ server <- function(input, output, session) {
   # What to do when "Submit" is clicked
   observeEvent(input$submit, {
 
-    # x <- hot_to_r(input$donor.df)
-    # y <- hot_to_r(input$acs.df)
     x <- hot()$x
     y <- hot()$y
 
@@ -741,17 +739,19 @@ server <- function(input, output, session) {
     out[[1]]$levels = x[[dvar()]]
     out[[1]]$breaks <- parseNumbers(input$dbin)
     out[[1]]$adj <- input$dadj
+    # Note that no 'agg' field is necessary for the donor
 
     out[[2]]$groups = y$Group
     out[[2]]$levels = y[[rvar()]]
     out[[2]]$breaks <- parseNumbers(input$rbin)
     out[[2]]$adj <- input$radj
-    out[[2]]$agg <- ifelse(input$ragg == "none", "", input$ragg)  # Set "none" to blank
+    out[[2]]$agg <- ifelse(input$ragg == "none" | length(input$ragg) == 0, "", input$ragg)  # Set too blank if none specified
 
     names(out) <- c(input$dsvy, "ACS")
 
     out$ordered <- ifelse(length(x$Group) == 1 | length(y$Group) == 1, "", input$ordered)  # Set to blank if numeric variable present
-    out$comment <- gsub('"', "", gsub("'", "", input$comment, fixed = TRUE), fixed = TRUE)  # Removes any ' or " from the string (causes parsing errors)
+    #out$comment <- gsub('"', "'", gsub("'", "", input$comment, fixed = TRUE), fixed = TRUE)  # Removes any ' or " from the string (causes parsing errors)
+    out$comment <- gsub('"', "'", input$comment, fixed = TRUE)  # Replace any double-quotes in 'comment' with single quotes
     out$modified <- as.character(Sys.time())
 
     # Add result to existing harmonization list OR create a new one
@@ -764,7 +764,7 @@ server <- function(input, output, session) {
     # Alphabetize harmonies
     h <- h[sort(names(h))]
 
-    # Save harmonizaton .R file to disk
+    # Save harmonization .R file to disk
     submit <- harmony2dotR(h, hfile)
 
     # If styler::style_file() inside harmony2dotR() reports successful change, send success message

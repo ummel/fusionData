@@ -1,12 +1,18 @@
+# Example input
+# X <- dget("harmony/harmonies/CEI_2015-2019__ACS_2019.R")
+# X <- dget("harmony/harmonies/RECS_2015__ACS_2019.R")
+# file.out <- "test.R"
+
 harmony2dotR <- function(X, file.out) {
 
   dput(X, file = file.out, control = c("niceNames"))
 
   d <- readLines(file.out)
-  d <- gsub('"', "'", d, fixed = TRUE)
-  #d <- gsub(",", ", ", d, fixed = TRUE)
   d <- paste(d, collapse = " ")
   d <- stringr::str_squish(d)
+
+  # Legacy code to ensure older harmony file are updated with single quote instead of apostrophe
+  d <- gsub("’", "'", d, fixed = TRUE)
 
   level.names <- lapply(0:3, function(i) {
     map_depth(X, .depth = i, names) %>%
@@ -19,14 +25,10 @@ harmony2dotR <- function(X, file.out) {
     for (j in v) {
       d <- gsub(paste0("list(", j, " = "), paste0("list(\n", j, " = "), d, fixed = TRUE)
       d <- gsub(paste0(" ", j, " = "), paste0("\n", j, " = "), d, fixed = TRUE)
-      #if (i == 1) d <- gsub(paste0("\\n", j), paste0("\n\n", j), d)
     }
   }
 
   d <- sub("list(", "list(\n", d, fixed = TRUE)
-  # d <- sub("link = list(", "\nlink = list(\n", d, fixed = TRUE)
-  # d <- gsub("ordered = FALSE),", "ordered = FALSE),\n", d, fixed = TRUE)
-  # d <- gsub("ordered = TRUE),", "ordered = TRUE),\n", d, fixed = TRUE)
   d <- gsub(")))", ")\n))", d, fixed = TRUE)
   d <- gsub("))", ")\n)", d, fixed = TRUE)
 
