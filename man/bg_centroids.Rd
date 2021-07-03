@@ -11,7 +11,7 @@ A \code{sf} spatial data frame.
 \item{county10}{County code}
 \item{tract10}{Tract code}
 \item{bg10}{Block group code}
-\item{geometry}{Centroid coordinates as \code{sfc_POINT} class}
+\item{geometry}{Centroid coordinates as \code{`sfc_POINT`} class}
 }
 }
 \source{
