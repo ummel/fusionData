@@ -6,7 +6,7 @@
 #' @param donor Character. Donor survey identifier (e.g. `"RECS_2015"`).
 #' @param recipient Character. Recipient (ACS) survey identifier (e.g. `"ACS_2019"`).
 #' @param respondent Character. Desired respondent level of microdata. Either `"household"` or `"person"`.
-#' @param ... Optional arguments passed to \code{\link[dplyr]{select}} for selecting (or excluding) particular donor variables. Passed to \link{completeDonor}.
+#' @param ... Optional arguments passed to \code{\link[dplyr]{select}} for selecting (or excluding) particular donor variables.
 #' @param implicates Integer. Number of PUMA implicates to return for the donor microdata.
 #' @param spatial.datasets Character. Vector of requested spatial datasets to merge (e.g. `"EPA-SLD"`) or either of two special values: `"all"` (default) or `"none"`.
 #' @param window Integer. Size of allowable temporal window, in years, when merging spatial variables. `window = 0` (default) means that a spatial variable is only included if it has the same vintage as the survey. See Details.
@@ -15,13 +15,13 @@
 #'
 #' @details Spatial variables are included if the associated vintage is within +/- `window` years of the survey vintage. In cases where the spatial variable has multiple vintages equidistant from the survey vintage, the older vintage is selected. Variables with `vintage = "always"` are, of course, always included.
 #'
-#' @details PCA is restricted to numeric spatial variables and is computed using \code{\link[stats]{prcomp}}. The first number in \code{pca} is passed to argument \code{rank.}. The returned number of principal components is the lesser of \code{pca[1]} or the number of components that explain at least \code{pca[2]} proportion of the variance. For example, \code{pca = c(50, 0.95)} will select the fewest number of components that explain 95% of the variance, up to 50 components maximum. NA's in numeric spatial variables are replaced with median value prior to computing the principal components.
+#' @details PCA is restricted to numeric spatial variables and is computed using \code{\link[stats]{prcomp}}. The returned number of principal components is the lesser of \code{pca[1]} or the number of components that explain at least \code{pca[2]} proportion of the variance. For example, \code{pca = c(50, 0.95)} will select the fewest number of components that explain 95% of the variance, up to 50 components maximum. NA's in numeric spatial variables are imputed using median value prior to computing the principal components.
 #'
 #' @return A list of length two containing donor and recipient microdata.
 #'
 #' @examples
 #' data <- prepare(donor = "RECS_2015",
-#'                 recipient = "ACS_2019",
+#'                 recipient = "ACS_2015",
 #'                 respondent = "household",
 #'                 cooltype, agecenac, kwhcol,
 #'                 window = 3)
@@ -34,12 +34,28 @@
 #
 # Example usage
 # test <- prepare(donor = "RECS_2015",
-#                 recipient = "ACS_2019",
+#                 recipient = "ACS_2015",
 #                 respondent = "household",
 #                 cooltype, agecenac, kwhcol,
 #                 implicates = 5,
 #                 window = 3,
 #                 pca = c(100, 0.95))
+#
+# Example inputs
+# donor = "RECS_2015"
+# recipient = "ACS_2015"
+# respondent = "household"
+# implicates = 5
+# spatial.datasets = "all"
+# window = 3
+# pca = c(100, 0.95)
+# replicates = FALSE
+#
+# Possible future argument for spatially-explicit donor variables that match a spatial predictor
+# spatial.harmony <- list(cdd65 = "climate..cddb6",
+#                         hdd65 = "climate..hddb6",
+#                         cdd30yr = "climate..cdd12b6",
+#                         hdd30yr = "climate..hdd12b6")
 
 #-----
 
@@ -55,15 +71,17 @@ prepare <- function(donor,
 
   stopifnot(basename(getwd()) == "fusionData")
 
-  #-----
-
+  # Identify spatial variables and datasets available in 'geo_predictors.fst'
   geo <- fst::fst("geo-processed/geo_predictors.fst")
   gvars <- setdiff(names(geo), c('state', 'puma10', 'vintage'))
   gsets <- map_chr(strsplit(gvars, "..", fixed = TRUE), 1L)
 
+  #-----
+
   # Validate arguments
   stopifnot({
     respondent %in% c("household", "person")
+    !missing(...)
     implicates >= 1 & implicates %% 1 == 0
     spatial.datasets[1] %in% c("all", "none") | all(spatial.datasets %in% unique(gsets))
     window >= 0 & window %% 1 == 0
@@ -76,47 +94,63 @@ prepare <- function(donor,
   data <- harmonize(harmony.file = paste0(donor, "__", recipient, ".R"), respondent = respondent)
 
   # Names of harmonized variables
-  hvars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), "pid")
+  # TO DO: This should be set as an attribute in harmonize(); safer
+  hvars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), c("pid", "weight"))
 
-  # Respondent identifier variables in donor and recipient
-  did <- setdiff(names(data[[1]]), hvars)
-  rid <- setdiff(names(data[[2]]), c(hvars, "state", "puma10"))
+  # Respondent identifier variables in donor and recipient (possibly including 'pid')
+  # TO DO: This should be set as an attribute in harmonize(); safer
+  did <- setdiff(names(data[[1]]), c(hvars, "weight"))
+  rid <- setdiff(names(data[[2]]), c(hvars, "weight", "state", "puma10"))
+
+  #-----
+
+  # Get the requested donor fusion vars and replicate weights (if requested)
+  cat("Loading donor fusion variables...\n")
+
+  # Load household data (NULL if unavailable or unnecessary)
+  fpath <- list.files(path = "survey-processed", pattern = paste(donor, ifelse(respondent == "household", "H", "P"), "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
+  d <- fst::fst(fpath)
+
+  # Pass ... argument for selecting fusion variables as a dplyr select() statement
+  fusevars <- names(dplyr::select(d[1, ], ...))
+
+  # Names of replicate weight variables, if requested
+  repvars <- if (replicates) grep("^rep_\\d+$", names(d), value = TRUE) else NULL
+
+  # Load requested variables from disk
+  fusion.data <- d[c(did, fusevars, repvars)]
 
   #-----
 
   # Impute PUMA for the donor
-  dpuma <- imputePUMA(survey = donor, m = implicates)
+  location.data <- assignLocation(harmonized = data, m = implicates)
+
+  # Location variables; everything in the recipient data returned by assignLocation(), except HH ID in the first position
+  lvars <- attr(location.data, "location.vars")
 
   #-----
 
-  # Add donor variables to be fused
-  # Includes harmonized predictors
-  cat("Loading donor fusion variables...\n")
-  dout <- completeDonor(data = data[[1]], ..., replicates = replicates)
-  fusevars <- attr(dout, "fusion.vars")  # fusion variables
-  repvars <- attr(dout, "replicate.vars")  # replicate weight variables
-  dout <- select(dout, -any_of(attr(dpuma, "geo.vars")))
-  dout <- dpuma %>%
-    left_join(dout, by = names(dpuma)[1]) %>%
+  # Merge donor microdata components: harmonized variables, fusion variables, and location variables
+  dout <- data[[1]] %>%
+    left_join(fusion.data, by = did) %>%
+    left_join(location.data[[1]], by = did[1]) %>%
     mutate(weight = weight * weight_adjustment) %>%
     select(-weight_adjustment)
 
   #-----
 
-  # Recipient output
-  rout <- data[[2]]
+  # Merge recipient microdata components: harmonized variables and location variables
+  rout <- data[[2]] %>%
+    left_join(location.data[[2]], by = rid[1])
 
   #-----
 
   # Function to load requested spatial predictor variables, based on specified 'spatial.datasets' and 'window'
-
   loadSpatial <- function(datasets, survey) {
 
     # Survey vintage (year); returns midpoint in case of range (e.g. "2015-2016" returns 2015.5)
     svintage <- sub("-", ":", str_extract(survey, "\\d{4}.*"), fixed = TRUE)
     svintage <- median(eval(parse(text = svintage)))
-
-    strsplit(survey, "_", fixed = TRUE)
 
     # Vintage of each row in 'geo' fst object assumed to be in outer environment
     gvintage <- geo[["vintage"]]
@@ -240,11 +274,11 @@ prepare <- function(donor,
     #-----
 
     # Merge spatial data at PUMA level to DONOR
-    cat("Merging donor spatial variables...\n")
+    cat("Merging donor spatial predictor variables...\n")
     dout <- left_join(dout, dgeo, by = mvars)
 
     # Merge spatial data at PUMA level to RECIPIENT
-    cat("Merging recipient spatial variables...\n")
+    cat("Merging recipient spatial predictor variables...\n")
     rout <- left_join(rout, rgeo, by = mvars)
 
   } else {
@@ -255,24 +289,26 @@ prepare <- function(donor,
 
   #-----
 
-  # FIX -- dropping vars here! update svars!
-
-  # Reorder variables for nicer viewing
-  # Also coerces from data.table to data.frame (NECESSARY?)
+  # Reorder output variables for nicer viewing
+  # Note that numeric 'hvars' are converted to percentile in certain cases; see convertPercentile() in R/utils.R
+  # Also coerces from data.table to data.frame
 
   dout <- dout %>%
-    select(any_of(c(did, "weight", fusevars, hvars, svars, repvars))) %>%
+    select(any_of(c(did, "weight", fusevars, hvars, lvars, svars, repvars))) %>%
+    mutate_at(hvars, convertPercentile) %>%
     as.data.frame()
 
   rout <- rout %>%
-    select(any_of(c(rid, hvars, svars))) %>%
+    select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
+    mutate_at(hvars, convertPercentile) %>%
     as.data.frame()
 
   #-----
 
   # SAFETY CHECKS: Confirm validity of predictor variables
+  # These are identical to the safety checks performed by fusionModel::fuse()
   cat("Performing validation checks...\n")
-  xvars <- intersect(names(dout), names(rout))
+  xvars <- setdiff(intersect(names(dout), names(rout)), "weight")
 
   dclass <- lapply(dout[xvars], class)
   rclass <- lapply(rout[xvars], class)
@@ -288,17 +324,21 @@ prepare <- function(donor,
 
   #-----
 
+  # Set attributes for the returned objects
+
   # Assign "fusion.vars" "harmonized.vars", and "spatial.vars" attributes to 'dout'
-  attr(dout, "fusion.vars") <- fusevars
-  attr(dout, "harmonized.vars") <- hvars
-  attr(dout, "spatial.vars") <- svars
-  attr(dout, "replicate.vars") <- repvars
+  setattr(dout, "fusion.vars", fusevars)
+  setattr(dout, "harmonized.vars", hvars)
+  setattr(dout, "location.vars", lvars)
+  setattr(dout, "spatial.vars", svars)
+  setattr(dout, "replicate.vars", repvars)
 
   # Same for recipient, but excluding "fusion.vars"
-  attr(rout, "harmonized.vars") <- hvars
-  attr(rout, "spatial.vars") <- svars
+  setattr(rout, "harmonized.vars", hvars)
+  setattr(rout, "location.vars", lvars)
+  setattr(rout, "spatial.vars", svars)
 
-  # Return as list...
+  # Return as list
   result <- setNames(list(dout, rout), c(donor, recipient))
 
   return(result)

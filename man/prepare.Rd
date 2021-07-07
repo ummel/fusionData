@@ -23,7 +23,7 @@ prepare(
 
 \item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
 
-\item{...}{Optional arguments passed to \code{\link[dplyr]{select}} for selecting (or excluding) particular donor variables. Passed to \link{completeDonor}.}
+\item{...}{Optional arguments passed to \code{\link[dplyr]{select}} for selecting (or excluding) particular donor variables.}
 
 \item{implicates}{Integer. Number of PUMA implicates to return for the donor microdata.}
 
@@ -44,11 +44,11 @@ Prepares data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link
 \details{
 Spatial variables are included if the associated vintage is within +/- \code{window} years of the survey vintage. In cases where the spatial variable has multiple vintages equidistant from the survey vintage, the older vintage is selected. Variables with \code{vintage = "always"} are, of course, always included.
 
-PCA is restricted to numeric spatial variables and is computed using \code{\link[stats]{prcomp}}. The first number in \code{pca} is passed to argument \code{rank.}. The returned number of principal components is the lesser of \code{pca[1]} or the number of components that explain at least \code{pca[2]} proportion of the variance. For example, \code{pca = c(50, 0.95)} will select the fewest number of components that explain 95\% of the variance, up to 50 components maximum. NA's in numeric spatial variables are replaced with median value prior to computing the principal components.
+PCA is restricted to numeric spatial variables and is computed using \code{\link[stats]{prcomp}}. The returned number of principal components is the lesser of \code{pca[1]} or the number of components that explain at least \code{pca[2]} proportion of the variance. For example, \code{pca = c(50, 0.95)} will select the fewest number of components that explain 95\% of the variance, up to 50 components maximum. NA's in numeric spatial variables are imputed using median value prior to computing the principal components.
 }
 \examples{
 data <- prepare(donor = "RECS_2015",
-                recipient = "ACS_2019",
+                recipient = "ACS_2015",
                 respondent = "household",
                 cooltype, agecenac, kwhcol,
                 window = 3)
