@@ -20,4 +20,5 @@ Depends:
     tidyverse
 Imports: 
     labelled,
-    pbapply
+    pbapply,
+    spatstat.geom
