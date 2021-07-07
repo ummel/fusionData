@@ -81,44 +81,46 @@ prepare <- function(donor,
   # Validate arguments
   stopifnot({
     respondent %in% c("household", "person")
-    !missing(...)
     implicates >= 1 & implicates %% 1 == 0
     spatial.datasets[1] %in% c("all", "none") | all(spatial.datasets %in% unique(gsets))
     window >= 0 & window %% 1 == 0
     is.null(pca) | (is.numeric(pca) & length(pca) == 2)
+    is.logical(replicates)
   })
 
   #-----
 
-  # This could be one-time call stored remotely? Can store as .rds
-  data <- harmonize(harmony.file = paste0(donor, "__", recipient, ".R"), respondent = respondent)
-
-  # Names of harmonized variables
-  # TO DO: This should be set as an attribute in harmonize(); safer
-  hvars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), c("pid", "weight"))
-
-  # Respondent identifier variables in donor and recipient (possibly including 'pid')
-  # TO DO: This should be set as an attribute in harmonize(); safer
-  did <- setdiff(names(data[[1]]), c(hvars, "weight"))
-  rid <- setdiff(names(data[[2]]), c(hvars, "weight", "state", "puma10"))
-
-  #-----
-
-  # Get the requested donor fusion vars and replicate weights (if requested)
-  cat("Loading donor fusion variables...\n")
+  # Determine which donor fusion variables to load from disk
+  cat("Identifying donor fusion variables...\n")
 
   # Load household data (NULL if unavailable or unnecessary)
   fpath <- list.files(path = "survey-processed", pattern = paste(donor, ifelse(respondent == "household", "H", "P"), "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
   d <- fst::fst(fpath)
 
-  # Pass ... argument for selecting fusion variables as a dplyr select() statement
-  fusevars <- names(dplyr::select(d[1, ], ...))
-
   # Names of replicate weight variables, if requested
-  repvars <- if (replicates) grep("^rep_\\d+$", names(d), value = TRUE) else NULL
+  rvars <- if (replicates) grep("^rep_\\d+$", names(d), value = TRUE) else NULL
 
-  # Load requested variables from disk
-  fusion.data <- d[c(did, fusevars, repvars)]
+  # Pass ... argument for selecting fusion variables as a dplyr select() statement
+  fvars <- if (missing(...)) names(d) else names(dplyr::select(d[1, ], ...))
+
+  #-----
+
+  # Harmonize data for specified donor and recipient surveys
+  data <- harmonize(harmony.file = paste0(donor, "__", recipient, ".R"), respondent = respondent)
+
+  # Names of harmonized variables
+  hvars <- attr(data, "harmonized.vars")
+
+  # Respondent identifier variables in donor and recipient (possibly including 'pid')
+  did <- attr(data[[1]], "identifier")
+  rid <- attr(data[[2]], "identifier")
+
+  #-----
+
+  # Load requested donor fusion variables from disk
+  # This action is delayed until after harmonize() is called, so that the 'did' object is available
+  fvars <- setdiff(fvars, c(did, "weight", rvars))
+  fusion.data <- d[c(did, fvars, rvars)]
 
   #-----
 
@@ -294,7 +296,7 @@ prepare <- function(donor,
   # Also coerces from data.table to data.frame
 
   dout <- dout %>%
-    select(any_of(c(did, "weight", fusevars, hvars, lvars, svars, repvars))) %>%
+    select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
     mutate_at(hvars, convertPercentile) %>%
     as.data.frame()
 
@@ -309,16 +311,15 @@ prepare <- function(donor,
   # These are identical to the safety checks performed by fusionModel::fuse()
   cat("Performing validation checks...\n")
   xvars <- setdiff(intersect(names(dout), names(rout)), "weight")
-
   dclass <- lapply(dout[xvars], class)
   rclass <- lapply(rout[xvars], class)
   miss <- !map2_lgl(dclass, rclass, identical)
   if (any(miss)) stop("Incompatible data type for the following predictor variables:\n", paste(names(miss)[miss], collapse = ", "))
 
   # Check for appropriate levels of factor predictor variables
-  fvars <- names(select_if(dout[xvars], is.factor))
-  dlevels <- lapply(dout[fvars], levels)
-  rlevels <- lapply(rout[fvars], levels)
+  fxvars <- names(select_if(dout[xvars], is.factor))
+  dlevels <- lapply(dout[fxvars], levels)
+  rlevels <- lapply(rout[fxvars], levels)
   miss <- !map2_lgl(dlevels, rlevels, identical)
   if (any(miss)) stop("Incompatible levels for the following predictor variables\n", paste(names(miss)[miss], collapse = ", "))
 
@@ -327,11 +328,11 @@ prepare <- function(donor,
   # Set attributes for the returned objects
 
   # Assign "fusion.vars" "harmonized.vars", and "spatial.vars" attributes to 'dout'
-  setattr(dout, "fusion.vars", fusevars)
+  setattr(dout, "fusion.vars", fvars)
   setattr(dout, "harmonized.vars", hvars)
   setattr(dout, "location.vars", lvars)
   setattr(dout, "spatial.vars", svars)
-  setattr(dout, "replicate.vars", repvars)
+  setattr(dout, "replicate.vars", rvars)
 
   # Same for recipient, but excluding "fusion.vars"
   setattr(rout, "harmonized.vars", hvars)

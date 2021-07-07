@@ -20,6 +20,6 @@ When \code{output = "both"}, a list of length 2 containing the donor and recipie
 Parses a specified .R "harmony file" produced by the Survey Harmonization Tool (\link{harmony}) to produce associated microdata with all available harmonized variables. The resulting harmonized data frame(s) can be used with \link{completeDonor}, \code{\link[fusionModel]{train}}, and \code{\link[fusionModel]{fuse}} to complete the data fusion process.
 }
 \examples{
-test <- harmonize(harmony.file = "CEI_2015-2019__ACS_2019.R", respondent = "household")
+test <- harmonize(harmony.file = "CEI_2015-2019__ACS_2015.R", respondent = "household")
 
 }

@@ -10,23 +10,15 @@
 #' @return When \code{output = "both"}, a list of length 2 containing the donor and recipient data frames. Otherwise, a single data frame.
 #'
 #' @examples
-#' test <- harmonize(harmony.file = "CEI_2015-2019__ACS_2019.R", respondent = "household")
+#'test <- harmonize(harmony.file = "CEI_2015-2019__ACS_2015.R", respondent = "household")
 #'
 #' @export
 
 #-----
 
-# FUNCTION INPUTS
-
-# harmony.file = "RECS_2015__ACS_2019.R"
-#
-# # Must specify the respondent type of the desired output
-# # The harmony .R file should (in principle) include ALL harmonies with ACS - at both household and person level (if possible)
-# # The desired type of fusion determines if the output microdata should be at household or person level
-# # This is specified via 'respondent' argument
-# # The output microdata contain per-row observations consistent with 'respondent'
+# Example inputs
+# harmony.file = "RECS_2015__ACS_2015.R"
 # respondent = "household"
-#
 # output = "both"
 
 #-----
@@ -42,7 +34,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     output %in% c("both", "donor", "recipient")
   })
 
-  HH <- respondent == "household"
+  HH <- tolower(respondent) == "household"
 
   # Internal helper function
   splitNames <- function(x) strsplit(x, "__", fixed = TRUE)
@@ -83,9 +75,9 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
   #-----
 
-  # Sequentially process donor and/or recipient microdata
-  # Results assigned to
+  # Sequentially process donor and/or recipient microdata by 'type' (donor or recipient)
 
+  # Placeholder results list
   do.types <- if (output == "both") c("donor", "recipient") else output
   result <- vector(mode = "list", length = length(do.types))
   names(result) <- do.types
@@ -97,7 +89,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     vres <- if (j == 1) dres else rres
 
     # Print message to console
-    cat("Harmonizing ", survey[j], " (", type, ") microdata at the ", respondent, "-level\n", sep = "")
+    cat("Harmonizing ", survey[j], " (", type, ") microdata at ", respondent, " level\n", sep = "")
 
     # Load household data (NULL if unavailable or unnecessary)
     hpath <- list.files(path = "survey-processed", pattern = paste(survey[j], "H", "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
@@ -110,11 +102,10 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     # Identify the household and person identifier columns
     s <- strsplit(tolower(survey[j]), "_")[[1]][1]
     hid <- grep(paste0("^", s, ".*_hid$"), names(if (HH) dh else dp), value = TRUE)
-    pid <- "pid"
 
     # Variables (and potential matching strings) to load from disk
     # This includes standard household and person identifier variables
-    m <- paste(c(vnames, adj, hid, pid), collapse = " ")
+    m <- paste(c(vnames, adj, hid, "pid", "weight"), collapse = " ")
 
     # Load household data (NULL if unavailable or unnecessary)
     # Note that 'k' should ALWAYS return at least 1 column (hid), but > 1 needed to pull any data from disk
@@ -126,7 +117,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     # Note that 'k' should ALWAYS return at least 2 columns (hid and pid), but > 2 needed to pull any data from disk
     # Also retains 'vrel' in the ACS case
     # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dp'
-    #vrel <- if (HH) intersect(names(dp), c("rel", "relp", "relshipp")) else NULL  # Identify the ACS "Relationship" variable (variable name changed over time)
     vrel <- if (type == "recipient") intersect(names(dp), c("rel", "relp", "relshipp")) else NULL  # Identify the ACS "Relationship" variable (variable name changed over time)
     k <- sapply(names(dp), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
     dp <- if (length(k) > 2) dp[c(names(which(k)), vrel)] else NULL
@@ -148,7 +138,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     # HH replicator index vector
     # Used to replicate household observations when 'respondent' = "Person"
-    #hh.rep <- if (!HH & any(vres == "Household")) match(dp[[hid]], dh[[hid]]) else NULL
     hh.rep <- if (!HH) match(dp[[hid]], dh[[hid]]) else NULL
 
     # Update relationship variable to logical indicating reference person (or GQ observation), if necessary
@@ -166,25 +155,11 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     #-----
 
-    # Create placeholder list for output variables
-    out <- vector(mode = "list", length = length(H))
-    names(out) <- names(H)
-    out[[hid]] <- if (HH) dh[[hid]] else dp[[hid]]
-    out[["state"]] <- if (HH) dh[["state"]] else dp[["state"]]
-    out[["puma10"]] <- if (HH) dh[["puma10"]] else dp[["puma10"]]
-    if (!HH) out[[pid]] <- dp[[pid]]
-
-    #-----
-
-    # Progress bar printed to console
-    pb <- txtProgressBar(min = 0, max = length(H), style = 3)
-
-    # Process each variable in sequence
-    # TO DO: I think this could be done in parallel?
-    for (i in 1:length(H)) {
+    # Function to peform harmonization of actual data for harmony 'i' in H
+    makeHarmony <- function(i) {
 
       v <- vnames[i]
-      hh <- vres[i] == "Household"
+      hh <- vres[i] == "Household"  # Is the variable being process household-level?
       h <- H[[i]][[j]]
 
       # Assign "" value for 'agg' slot if none exists
@@ -235,10 +210,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
       # Either aggregate or replicate the result in accordance with 'respondent'
 
-      # NOT CORRECT: If we want HH-level output and 'x' is person-level, aggregate 'x' using either standard or specified technique
-      #if (HH & !hh) {
-
-      # RETURN to this to document better...
+      # Cases where we need to aggregate to household level...
       if (!hh & (HH | dres[i] == "Household")) {
 
         # Determine the default aggregation function when none is specified
@@ -248,15 +220,14 @@ harmonize <- function(harmony.file, respondent, output = "both") {
           if (is.ordered(x)) h$agg <- 'max'
         }
 
-        # Aggregate person-level 'x' up to household level using specified method in h$agg
+        # Aggregate person-level 'x' up to household level using specified method in h$agg (or default)
         if (h$agg == "reference") {
           ind <- which(dp[[vrel]])
           x <- x[ind]
         } else {
 
           # Aggregate 'x' for each household using h$agg as the aggregator function
-          y <- as.vector(tapply(X = x, INDEX = dp[[hid]], FUN = get(h$agg)))  # To confirm we get same result
-          #y <- fastmatch::ctapply(X = x, INDEX = dp[[hid]], FUN = get(h$agg))  # This doesn't appear to be any faster (?)
+          y <- as.vector(tapply(X = x, INDEX = dp[[hid]], FUN = get(h$agg)))
 
           # If 'x' is a factor, preserve levels and ordering of the output
           if (is.factor(x)) {
@@ -271,40 +242,51 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
       }
 
-      #---
-
-      # If we want person-level output and 'x' is HH-level, replicate 'x' for each household
-      if (!HH & hh) {
-
-        x <- x[hh.rep]
-
-      }
+      # Cases where we want person-level output and 'x' is HH-level; replicate 'x' for each household
+      if (!HH & hh) x <- x[hh.rep]
 
       #---
 
       # Check for valid length in 'x'
       if (anyNA(x) | length(x) != N) stop("There is a problem with output 'x' for variable ", v, " (type = ", type, ")")
 
-      # Assign final output vector
-      out[[i]] <- x
-
-      # Update progress bar
-      setTxtProgressBar(pb, i)
+      return(x)
 
     }
 
-    # End of for() loop
-    close(pb)
-
     #-----
 
-    # Assemble output data frame
-    out <- out %>%
-      as.data.frame() %>%
-      select(any_of(c(hid, pid, "state", "puma10", names(H))))
+    # Make harmonies, in parallel
 
-    # Add a "survey" attribute to the data frame
-    attr(out, "survey") <- survey[j]
+    # Move elsewhere
+    mc.cores <- max(1L, parallel::detectCores() - 1L)
+
+    # Process in parallel and combine results into data frame
+    out <- pbapply::pblapply(X = 1:length(H), FUN = makeHarmony, cl = mc.cores) %>%
+      setNames(names(H)) %>%
+      as.data.frame()
+
+    # Other variables to retain in output
+    other <- list(
+      if (HH) dh[[hid]] else dp[[hid]],
+      if (!HH) dp[["pid"]] else NULL,
+      if (HH) dh$weight else {if (is.null(dh)) dp$weight else dh$weight[hh.rep]}, # Not entirely sure this is correct when respondent = "person" (should test)
+      if (HH) dh$state else dh$state[hh.rep],
+      if (HH) dh$puma10 else dh$puma10[hh.rep]
+    ) %>%
+      setNames(c(hid, "pid", "weight", "state", "puma10")) %>%
+      compact() %>%
+      as.data.frame()
+
+    # Safety check
+    stopifnot(nrow(out) == nrow(other))
+
+    # Combine 'out' and 'other' and order variables
+    out <- cbind(other, out)
+
+    # Add attributes to the output data frame
+    setattr(out, "survey", survey[j])
+    setattr(out, "identifier", c(hid, intersect(names(out), "pid")))
 
     # Assign data frame to final 'result' list
     result[[type]] <- out
@@ -318,6 +300,9 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
   # Return data frame rather than list if only one dataset is requested
   if (length(result) == 1) result <- result[[1]]
+
+  # Set attribute giving the harmonized variable names
+  setattr(result, "harmonized.vars", names(H))
 
   return(result)
 
