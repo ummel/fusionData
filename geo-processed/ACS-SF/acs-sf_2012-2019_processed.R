@@ -74,4 +74,4 @@ result <- map_dfr(setNames(years, years),
 #-----
 
 # Save result to disk
-saveRDS(result, file = "geo-processed/ACS/acs_puma10_2012-2019_processed.rds")
+saveRDS(result, file = "geo-processed/ACS-SF/acs-sf_2012-2019_processed.rds")
