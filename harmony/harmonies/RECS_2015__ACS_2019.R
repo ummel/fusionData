@@ -15,6 +15,55 @@ list(
     comment = "",
     modified = "2021-06-10 09:37:04"),
 
+  desktop__laptop = list(
+    RECS = list(
+      groups = 1:2,
+      levels = c("Less than 1", "1 or more"),
+      breaks = 1,
+      adj = "desktop + numlaptop"),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = ""
+    ),
+    ordered = TRUE,
+    comment = "Add 'desktop' and 'laptop' variables in RECS, since ACS variable refers to presence of either one.",
+    modified = "2021-07-03 06:26:03"),
+
+  education__schl = list(
+    RECS = list(
+      groups = 1:5,
+      levels = c("Less than high school diploma or GED", "High school diploma or GED", "Some college or Associate's degree", "Bachelor's degree (for example: BA, BS)", "Master's, Professional, or Doctorate degree (for example: MA, MS, MBA, MD, JD, PhD)"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 5, 5, 5),
+      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
+      breaks = "",
+      adj = "",
+      agg = "reference"),
+    ordered = TRUE,
+    comment = "",
+    modified = "2021-07-03 06:20:24"),
+
+  elpay__elefp = list(
+    RECS = list(
+      groups = c(1, 2, 3, 2),
+      levels = c("All used in this home is included in the rent or condo fee", "Household is responsible for paying for all used in this home", "Paid for some other way", "Some is paid by the household, some is included in the rent or condo fee"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 3, 2),
+      levels = c("Included in rent or in condo fee", "No charge or electricity not used", "Valid monthly electricity cost in ELEP"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2021-07-03 06:37:22"),
+
   fuelheat__hfl = list(
     RECS = list(
       groups = 1:7,
@@ -62,6 +111,22 @@ list(
     comment = "",
     modified = "2021-06-10 12:07:32"),
 
+  internet__access = list(
+    RECS = list(
+      groups = 1:2,
+      levels = c("No", "Yes"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(2, 2, 1),
+      levels = c("Yes, by paying a cell phone company or Internet service provider", "Yes, without paying a cell phone company or Internet service provider", "No access to the Internet at this house, apartment, or mobile home"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2021-07-03 06:26:53"),
+
   kownrent__ten = list(
     RECS = list(
       groups = 1:3,
@@ -70,7 +135,7 @@ list(
       adj = ""),
     ACS = list(
       groups = c(1, 2, 2, 3),
-      levels = c("Occupied without payment of rent", "Owned free and clear", "Owned with mortgage or loan", "Rented"),
+      levels = c("Occupied without payment of rent", "Owned free and clear", "Owned with mortgage or loan (include home equity loans)", "Rented"),
       breaks = "",
       adj = ""),
     ordered = FALSE,
@@ -92,6 +157,22 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2021-06-17 10:23:35"),
+
+  ngpay__gasfp = list(
+    RECS = list(
+      groups = c(1, 2, 3, 3, 2),
+      levels = c("All used in this home is included in the rent or condo fee", "Household is responsible for paying for all used in this home", "No natural gas", "Paid for some other way", "Some is paid by the household, some is included in the rent or condo fee"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 2, 3, 2),
+      levels = c("Included in rent or in condo fee", "Included in electricity payment", "No charge or gas not used", "Valid monthly gas cost in GASP"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2021-07-03 06:39:26"),
 
   numadult__agep = list(
     RECS = list(
@@ -123,6 +204,38 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2021-06-10 09:58:25"),
+
+  numsmphone__smartphone = list(
+    RECS = list(
+      groups = 1:2,
+      levels = c("Less than 1", "1 or more"),
+      breaks = 1,
+      adj = ""),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2021-07-03 06:21:29"),
+
+  numtablet__tablet = list(
+    RECS = list(
+      groups = 1:2,
+      levels = c("Less than 1", "1 or more"),
+      breaks = 1,
+      adj = ""),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2021-07-03 06:27:43"),
 
   sdescent__hisp = list(
     RECS = list(
