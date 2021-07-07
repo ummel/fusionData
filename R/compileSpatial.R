@@ -29,7 +29,10 @@ compileSpatial <- function() {
   cat("Summarizing spatial datasets...\n")
   result <- pbapply::pblapply(spatial.dsets, summarizeSpatialDataset, cl = max(1L, parallel::detectCores() - 1L))
 
-  # Merge the individual data frames in 'data' (on keyed variables set in previous step)
+  # Troubleshooting; identify which spatial dataset is giving trouble
+  #for (v in spatial.dsets) summarizeSpatialDataset(v)
+
+  # Merge the individual data frames in 'data' (on keyed variables set by summarizeSpatialDataset)
   result <- Reduce(function(...) merge(..., all = TRUE), result)
 
   # Remove columns with no variation
@@ -39,7 +42,10 @@ compileSpatial <- function() {
 
   # Coerce character variables to unordered factor
   # Any truly ordered factors should be made so in the upstream script that generates the assocaited "*_processed.rds" file
+  # Extract the var_labels so they can be reassigned after factor coercion (dropped by coercion step)
+  vlabs <- labelled::var_label(result)
   result <- mutate_if(result, is.character, factor)
+  result <- labelled::set_variable_labels(result, .labels = vlabs)
 
   # Remove columns with large number of levels (>30; HARD CODED!)
   # This helps prevent factor variables producing excessive dummy variables in train() and fuse()
@@ -50,7 +56,36 @@ compileSpatial <- function() {
   # Ensure 'result' is sorted properly
   setorder(result, state, puma10, vintage)
 
-  # TO DO: Could do the data dictionary creation here instead of inside summarizeSpatialDataset()
+  #-----
+
+  # Extract spatial variable metadata
+
+  # Vintages available for each spatial predictor
+  var.vintages <- result %>%
+    map(~ as.character(sort(unique(result$vintage[!is.na(.x)]))))
+
+  # Variable summaries
+  var.values <- result %>%
+    map_chr(~ if (is.numeric(.x)) {numFormat(x = na.omit(.x))} else {fctFormat(.x)})
+
+  # Basic spatial predictor dictionary
+  spatial <- labelled::var_label(result) %>%
+    enframe(name = "predictor", value = "variable_rds") %>%
+    mutate(variable_rds = as.character(variable_rds),
+           vintage = as.character(var.vintages),
+           values = var.values,
+           type = map_chr(result, vctrs::vec_ptype_abbr)) %>%
+    filter(!predictor %in% c("state", "puma10", "vintage"))
+
+  # Save spatial dictionary to disk
+  usethis::use_data(spatial, overwrite = TRUE)
+
+  #-----
+
+  # Variable summaries
+  # var.values <- result %>%
+  #   select(-any_of(c(gtarget, 'vintage'))) %>%  # Remove geo target variables and vintage
+  #   map_chr(~ if (is.numeric(.x)) {numFormat(x = .x)} else {fctFormat(.x)})
 
   # Save final result to disk
   cat("Writing 'geo_predictors.fst' to disk...\n")
@@ -58,7 +93,7 @@ compileSpatial <- function() {
 
 }
 
-#-----
+#-----------------------------------
 
 # Example usage
 # summarizeSpatialDataset("climate")
@@ -162,8 +197,6 @@ summarizeSpatialDataset <- function(dataset) {
 
   }
 
-  #---
-
   # Apply summarizePUMA() to each individual data frame in 'data'
   data <- lapply(data, summarizePUMA)
 
@@ -187,19 +220,6 @@ summarizeSpatialDataset <- function(dataset) {
 
   #---
 
-  # NOT USED
-  # # Assign all unique years too rows where 'vintage' = "always"
-  # allv <- map(data, ~ unique(unlist(.x$vintage)))
-  # allv <- unique(unlist(allv))
-  # allv <- if ("always" %in% allv) allv[!is.na(suppressWarnings(as.integer(unlist(allv))))] else NULL
-  # if (!is.null(allv)) {
-  #   data <- map(data, ~ .x %>%
-  #                 mutate(vintage = ifelse(vintage == "always", list(allv), vintage)) %>%
-  #                 unnest(vintage))
-  # }
-
-  #---
-
   # Determine which list elements in 'data' can be safely 'rbind'-ed (appended) and which need to be merged
   result <- rbindlist(data, use.names = TRUE, fill = TRUE, idcol = "_id")
 
@@ -208,7 +228,7 @@ summarizeSpatialDataset <- function(dataset) {
     mutate_if(is.logical, ~ if (sum(.x) > 1) {TRUE} else {.x})
 
   # List identifying groups of 'data' elements that can be safely 'rbind'-ed (appended)
-  grps <- split(check$`_id`, check[, ..gvars], drop = TRUE)
+  grps <- split(x = check[["_id"]], f = check[, ..gvars], drop = TRUE)
 
   #-----
 
@@ -239,15 +259,6 @@ summarizeSpatialDataset <- function(dataset) {
   vlabs <- setNames(as.list(gvars), vnames)
   names(result) <- c(gtarget, 'vintage', vnames)
   result <- labelled::set_variable_labels(result, .labels = vlabs)
-
-  #-----
-
-  # TO DO SOMEDAY: Extract dictionary info...
-
-  # Variable summaries
-  # var.values <- result %>%
-  #   select(-any_of(c(gtarget, 'vintage'))) %>%  # Remove geo target variables and vintage
-  #   map_chr(~ if (is.numeric(.x)) {numFormat(x = .x)} else {fctFormat(.x)})
 
   #-----
 
