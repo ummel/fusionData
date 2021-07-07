@@ -50,13 +50,6 @@ convertInteger <- function(x) {
   }
 }
 
-#------------------
-
-# Weighted empirical cumulative distribution function
-# Code take from spatstat.geom::ewcdf()
-# See here: https://github.com/spatstat/spatstat.geom/blob/main/R/ewcdf.R
-#wecdf <- spatstat.geom::ewcdf
-
 #-------------------
 
 # Weighted quantile function
@@ -149,19 +142,40 @@ safeCharacters <- function(x) {
 
 #-------------------
 
-# Calculate weighted percentiles of 'x', retaining original zeros
-# convertPercentile <- function(x, w) {
-#   if (missing(w)) w <- rep.int(1, length(x))
-#   stopifnot(length(x) == length(w))
-#   z <- x != 0
-#   y <- x[z]
-#   n <- length(unique(y))  # Number of unique, non-zero values
-#   if (n > 50) {  # Arbitrary minimum to determine when percentiles are appropriate
-#     cdf <- wecdf(y, weights = w)
-#     x[z] <- cdf(y)  # Replace non-zero values with weighted percentile
-#     return(x)
-#   } else {
-#     return(x)
-#   }
-# }
+# Weighted empirical cumulative distribution function
+# Code take from spatstat.geom::ewcdf()
+# See here: https://github.com/spatstat/spatstat.geom/blob/main/R/ewcdf.R
+#wecdf <- spatstat.geom::ewcdf
+
+#------------------
+
+# Function to return weighted percentiles of 'x'
+# Percentiles are returned only if number of unique 'x' is at least 'min.unique'
+# Otherwise, the original values are returned
+convertPercentile <- function(x, w = NULL, min.unique = 100) {
+  if (is.numeric(x) & length(unique(x)) >= min.unique) {
+    i <- !is.na(x)
+    cdf <- if (is.null(w)) ecdf(x[i]) else spatstat.geom::ewcdf(x[i], w[i])
+    x <- round(cdf(x), 4)
+  }
+  return(x)
+}
+
+#-------------------
+
+# Function returning summary string for numeric variable
+numFormat <- function(x, w = NULL) {
+  if (is.null(w)) w <- rep(1, length(x))
+  paste(
+    c("Min:", "Median:", " Mean:", "Max:"),
+    cleanNumeric(c(min(x, na.rm = TRUE), weightedQuantile(x, w, p = 0.5), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
+    collapse = ", ")
+}
+
+#-------------------
+
+# Function returning summary string for factor variable
+fctFormat <- function(x) {
+  paste(paste0("[", levels(x), "]"), collapse = ", ")
+}
 
