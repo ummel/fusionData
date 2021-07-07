@@ -12,5 +12,5 @@ bg_centroids <- "https://www2.census.gov/geo/docs/reference/cenpop2010/blkgrp/Ce
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4269) %>%   # CRS matches that returned for Census geometry -- e.g. urban_areas()
   select(-POPULATION)
 
-# Save 'sf' object to disk
+# Save block groups centroids 'sf' object to disk
 usethis::use_data(bg_centroids)
