@@ -368,9 +368,7 @@ assemble the necessary microdata. There is no limit on the number or
 nature of .R files that can be used to ingest a survey. If multiple .R
 files are used, the file names should include a two-digit sequence at
 the front to indicate the order in which the scripts are employed
-(`01*.R`, `02*.R`, etc.). The .R files located at
-[survey-processed/ACS/2019](https://github.com/ummel/fusionData/tree/master/survey-processed/ACS/2019)
-are an example of this.
+(`01*.R`, `02*.R`, etc.).
 
 *The .R files should include liberal use of comments to help others
 understand the code later. Good practice is for comments to explain
@@ -394,12 +392,12 @@ head(recs.dictionary)
     # A tibble: 6 x 8
       survey vintage respondent variable  description   values           type      n
       <chr>  <chr>   <chr>      <chr>     <chr>         <chr>            <chr> <int>
-    1 RECS   2015    Household  adqinsul  Level of ins… [Not insulated]… ord    5686
-    2 RECS   2015    Household  agecdryer Age of cloth… [No clothes dry… ord    5686
-    3 RECS   2015    Household  agecenac  Age of centr… [No central air… ord    5686
-    4 RECS   2015    Household  agecwash  Age of cloth… [No clothes was… ord    5686
-    5 RECS   2015    Household  agedw     Age of dishw… [No dishwasher]… ord    5686
-    6 RECS   2015    Household  agefrzr   Age of most-… [No freezer], [… ord    5686
+    1 RECS   2015    H          adqinsul  Level of ins… [Not insulated]… ord    5686
+    2 RECS   2015    H          agecdryer Age of cloth… [No clothes dry… ord    5686
+    3 RECS   2015    H          agecenac  Age of centr… [No central air… ord    5686
+    4 RECS   2015    H          agecwash  Age of cloth… [No clothes was… ord    5686
+    5 RECS   2015    H          agedw     Age of dishw… [No dishwasher]… ord    5686
+    6 RECS   2015    H          agefrzr   Age of most-… [No freezer], [… ord    5686
 
 In practice, there is no reason for a typical user to ever open a
 survey’s dictionary file. The preferred and much more useful way to
@@ -428,9 +426,9 @@ compileDictionary()
 
     • Document your data (see 'https://r-pkgs.org/data.html')
 
-    dictionary.rds dimensions: 738 x 7
+    dictionary.rds dimensions: 926 x 7
 
-    surveys.rds dimensions: 5 x 5
+    surveys.rds dimensions: 7 x 5
 
 As the console output tells us, `compileDictionary()` updates two files:
 `data/dictionary.rda` and `data/surveys.rda`. These files are part of
@@ -480,14 +478,14 @@ currently-specified “harmony” (as defined by the selected variables and
 settings) is saved to disk. Specifically, the details of that particular
 harmony are added to the appropriate .R “harmony file” located at
 `/harmony/harmonies`. For example, the file describing how to harmonize
-RECS 2015 and ACS 2019 variables is
-[RECS\_2015\_\_ACS\_2019.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2019.R).
+RECS 2015 and ACS 2015 variables is
+[RECS\_2015\_\_ACS\_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R).
 When `dget`-d, harmony files return a list of lists, where each element
 defines a harmony. Like this one, defining the harmony between the
 “fuelheat” variable in the RECS and the “hfl” variable in the ACS.
 
 ``` r
-  fuelheat__hfl = list(
+fuelheat__hfl = list(
     RECS = list(
       groups = 1:7,
       levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
@@ -500,7 +498,8 @@ defines a harmony. Like this one, defining the harmony between the
       adj = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2021-06-10 10:00:33"),
+    modified = "2021-07-03 12:10:17"),
+    
 ```
 
 This list object contains all of the information necessary to construct
@@ -659,72 +658,72 @@ to ACS microdata.
 
 The simplest usage is shown below. In this case, we are requesting
 microdata outputs at the household-level that will allow us to
-(subsequently) fuse RECS 2015 donor variables to ACS 2019 recipient
+(subsequently) fuse RECS 2015 donor variables to ACS 2015 recipient
 microdata.
 
 ``` r
-# Prepare RECS 2015 household microdata for fusion with ACS 2019 microdata
-data <- prepare(donor = "RECS_2015", recipient = "ACS_2019", respondent = "household")
+# Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata
+data <- prepare(donor = "RECS_2015", recipient = "ACS_2015", respondent = "household")
 ```
 
 The resulting `data` object is a list containing two data frames. The
 first slot contains the “prepared” donor microdata. The second slot
 contains the “prepared” ACS recipient microdata. Notice that the RECS
-microdata has many more variables/columns than the ACS data. This is
-because `prepare` donor output includes – by default – both the
-“harmonized” variables as well as any other donor variables not used to
-create harmonies. The latter are potential candidates for fusion (and
-there are many in the case of RECS).
+microdata has more variables/columns than the ACS data. This is because
+`prepare` donor output includes – by default – any variables in the
+donor survey not used to create harmonies. The latter are potential
+candidates for fusion (and there are many in the case of RECS).
 
 ``` r
 lapply(data, dim)
 ```
 
     $RECS_2015
-    [1] 5686  457
+    [1] 5686  769
 
-    $ACS_2019
-    [1] 1276716      35
+    $ACS_2015
+    [1] 1226728     233
 
 A key purpose of `prepare()` is to harmonize the donor and recipient
 “shared” variables. This is done internally by the `harmonize()`
 function, using the variable harmonies created by users via the
 `harmony()` tool. In this case, `harmonize()` is using the
-[RECS\_2015\_\_ACS\_2019.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2019.R)
-file to harmonize the donor and recipient microdata. Let’s confirm that
-a few of the shared variables are, indeed, harmonized.
+[RECS\_2015\_\_ACS\_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R)
+file to harmonize the donor and recipient microdata. Let’s look at a few
+of the shared variables after harmonization.
 
 ``` r
-v <- names(data$ACS_2019)[2:6]
+v <- names(data$ACS_2015)[2:6]
 head(data$RECS_2015[v])
 ```
 
-      bedrooms__bdsp fuelheat__hfl hhage__agep hhsex__sex kownrent__ten
-    1              3             4          42          2             2
-    2              2             2          60          1             2
-    3              4             4          73          1             2
-    4              3             5          69          1             2
-    5              3             4          51          2             2
-    6              0             5          33          2             3
+      weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp
+    1  12090              3               2               2            2
+    2  14400              2               1               2            2
+    3  23330              4               2               1            2
+    4  12170              3               2               4            2
+    5  16720              3               2               2            2
+    6  26060              0               2               1            1
 
 ``` r
-head(data$ACS_2019[v])
+head(data$ACS_2015[v])
 ```
 
-      bedrooms__bdsp fuelheat__hfl hhage__agep hhsex__sex kownrent__ten
-    1              4             2          68          1             2
-    2              3             4          80          2             2
-    3              4             4          42          2             2
-    4              2             4          47          1             2
-    5              2             2          87          2             2
-    6              4             4          54          1             2
+      weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp
+    1    110              5               2               4            2
+    2     91              4               2               5            2
+    3    112              4               2               2            2
+    4     80              3               2               3            2
+    5    156              3               2               3            2
+    6    100              1               2               4            2
 
 Notice that the harmonized variable *values* are typically integers
 (possibly factorized); that is, they contain no intelligible labels.
 This is because `harmonize()` maps each original value/level to a
 (integer) group assignment as specified in the relevant `.R` harmony
 file. The one exception is when *numeric* variables in the two surveys
-are conceptually identical and can be included without modification.
+are conceptually identical and can be included “as is” or
+(automatically) converted to percentiles.
 
 Since RECS and ACS are both nationally representative surveys, the
 distribution of the harmonized variables should look pretty similar
@@ -742,46 +741,152 @@ round(table(data$RECS_2015$fuelheat__hfl) / nrow(data[[1]]), 3)
     0.045 0.347 0.043 0.491 0.042 0.001 0.030 
 
 ``` r
-round(table(data$ACS_2019$fuelheat__hfl) / nrow(data[[2]]), 3)
+round(table(data$ACS_2015$fuelheat__hfl) / nrow(data[[2]]), 3)
 ```
 
 
         1     2     3     4     5     6     7 
-    0.011 0.375 0.049 0.467 0.067 0.009 0.023 
+    0.012 0.364 0.055 0.469 0.064 0.008 0.028 
 
 `prepare()` also merges spatial variables with both the donor and
-recipient microdata. The function `imputePUMA()` is used internally to
-randomly assign a plausible PUMA to each donor household. Pre-compiled
-spatial variables (those in `geo-processed/geo_predictors.fst`) are then
-merged onto both the donor and recipient microdata at the PUMA level.
-Spatial variables are indicated by the double-dot (“..”) in the variable
-name, analogous to the way that harmonized variables are indicated by
-the double-underscore ("\_\_").
+recipient microdata. The function `assignLocation()` is used internally
+to – among other things – impute one or more plausible PUMA’s for each
+donor household. Pre-compiled spatial variables (those in
+`geo_predictors.fst`) are then merged onto both the donor and recipient
+microdata at the PUMA level. Spatial variables are indicated by the
+double-dot (“..”) in the variable name, analogous to the way that
+harmonized variables are indicated by the double-underscore ("\_\_").
 
 Let’s look at the variables in the recipient ACS microdata.
 
 ``` r
-names(data$ACS_2019)
+names(data$ACS_2015)
 ```
 
-     [1] "acs_2019_hid"       "bedrooms__bdsp"     "fuelheat__hfl"     
-     [4] "hhage__agep"        "hhsex__sex"         "kownrent__ten"     
-     [7] "moneypy__hincp"     "numadult__agep"     "numfrig__refr"     
-    [10] "sdescent__hisp"     "stoven__stov"       "totrooms__rmsp"    
-    [13] "typehuq__bld"       "yearmaderange__ybl" "acs..b010"         
-    [16] "acs..b060"          "acs..b080"          "acs..b1900"        
-    [19] "acs..b1910"         "acs..b1920"         "acs..b25010"       
-    [22] "acs..b250350"       "acs..b250390"       "acs..b25060"       
-    [25] "acs..b250710"       "acs..b250770"       "acs..b25080"       
-    [28] "acs..b25090"        "acs..b2510"         "climate..cddb6"    
-    [31] "climate..hddb6"     "climate..cdd12b6"   "climate..hdd12b6"  
-    [34] "climate..iccz"      "climate..bznf"     
+      [1] "acs_2015_hid"            "weight"                 
+      [3] "bedrooms__bdsp"          "desktop__laptop"        
+      [5] "education__schl"         "elpay__elefp"           
+      [7] "employhh__wkhp"          "fuelheat__hfl"          
+      [9] "hhage__agep"             "hhsex__sex"             
+     [11] "householder_race__rac1p" "internet__access"       
+     [13] "kownrent__ten"           "moneypy__hincp"         
+     [15] "ngpay__gasfp"            "numadult__agep"         
+     [17] "numchild__agep"          "numfrig__refr"          
+     [19] "numtablet__handheld"     "occupyyrange__mv"       
+     [21] "sdescent__hisp"          "stoven__stov"           
+     [23] "totrooms__rmsp"          "typehuq__bld"           
+     [25] "yearmaderange__ybl"      "loc..ur12"              
+     [27] "loc..cbsatype15"         "loc..region"            
+     [29] "loc..recs_division"      "loc..recs_ba_zone"      
+     [31] "loc..recs_iecc_zone"     "acs.pums..npa"          
+     [33] "acs.pums..accssywstsb"   "acs.pums..accssywstsc"  
+     [35] "acs.pums..acrn"          "acs.pums..acrhl"        
+     [37] "acs.pums..acrht"         "acs.pums..anf1"         
+     [39] "acs.pums..agsn"          "acs.pums..bthy"         
+     [41] "acs.pums..bdsp"          "acs.pums..bldm"         
+     [43] "acs.pums..bldofhd"       "acs.pums..bldofhm"      
+     [45] "acs.pums..bld5"          "acs.pums..brdy"         
+     [47] "acs.pums..bsnf"          "acs.pums..bsys"         
+     [49] "acs.pums..cmpy"          "acs.pums..dlpy"         
+     [51] "acs.pums..dsly"          "acs.pums..elep"         
+     [53] "acs.pums..fbry"          "acs.pums..fsys"         
+     [55] "acs.pums..flpx"          "acs.pums..gspy"         
+     [57] "acs.pums..hndy"          "acs.pums..hflu"         
+     [59] "acs.pums..hfle"          "acs.pums..hflf"         
+     [61] "acs.pums..insp"          "acs.pums..lpty"         
+     [63] "acs.pums..mdmy"          "acs.pums..mrgnb"        
+     [65] "acs.pums..mrgyp"         "acs.pums..mrgp"         
+     [67] "acs.pums..mrgtn"         "acs.pums..mrgty"        
+     [69] "acs.pums..mrgxn"         "acs.pums..mrgm"         
+     [71] "acs.pums..mrgc"          "acs.pums..othy"         
+     [73] "acs.pums..rfry"          "acs.pums..rmsp"         
+     [75] "acs.pums..rntn"          "acs.pums..rntp"         
+     [77] "acs.pums..rwty"          "acs.pums..stly"         
+     [79] "acs.pums..snky"          "acs.pums..stvy"         
+     [81] "acs.pums..tlysx"         "acs.pums..tnow"         
+     [83] "acs.pums..tnof"          "acs.pums..tnrn"         
+     [85] "acs.pums..tlysb"         "acs.pums..vlpc"         
+     [87] "acs.pums..vhnv"          "acs.pums..vh1v"         
+     [89] "acs.pums..vh2v"          "acs.pums..vh3v"         
+     [91] "acs.pums..wtph"          "acs.pums..yb19"         
+     [93] "acs.pums..y194"          "acs.pums..y195"         
+     [95] "acs.pums..y196"          "acs.pums..y197"         
+     [97] "acs.pums..y198"          "acs.pums..y199"         
+     [99] "acs.pums..y202"          "acs.pums..fsnf"         
+    [101] "acs.pums..fsmcfhw"       "acs.pums..fsmcfhl"      
+    [103] "acs.pums..fsmcfn"        "acs.pums..fsof"         
+    [105] "acs.pums..fncp"          "acs.pums..fprn"         
+    [107] "acs.pums..fwr5"          "acs.pums..fw51"         
+    [109] "acs.pums..fw55"          "acs.pums..grnt"         
+    [111] "acs.pums..grpp"          "acs.pums..hhle"         
+    [113] "acs.pums..hhls"          "acs.pums..hhtm"         
+    [115] "acs.pums..hhto"          "acs.pums..hhtnhm"       
+    [117] "acs.pums..hhtnhf"        "acs.pums..hncp"         
+    [119] "acs.pums..hgch"          "acs.pums..hwc6"         
+    [121] "acs.pums..hw61"          "acs.pums..hw66"         
+    [123] "acs.pums..hpc6"          "acs.pums..hpc61"        
+    [125] "acs.pums..hpc661"        "acs.pums..hpr6"         
+    [127] "acs.pums..hpr61"         "acs.pums..hpr661"       
+    [129] "acs.pums..ktyh"          "acs.pums..lal1"         
+    [131] "acs.pums..mltn"          "acs.pums..mv1m"         
+    [133] "acs.pums..m1t2"          "acs.pums..m2t4"         
+    [135] "acs.pums..m5t9"          "acs.pums..m1t1"         
+    [137] "acs.pums..m2t2"          "acs.pums..nocc"         
+    [139] "acs.pums..npfd"          "acs.pums..nppn"         
+    [141] "acs.pums..nrnn"          "acs.pums..nrcg"         
+    [143] "acs.pums..ocpp"          "acs.pums..prtn"         
+    [145] "acs.pums..plmy"          "acs.pums..psfn"         
+    [147] "acs.pums..r18n"          "acs.pums..r60n"         
+    [149] "acs.pums..r601"          "acs.pums..r65n"         
+    [151] "acs.pums..r651"          "acs.pums..rsmm"         
+    [153] "acs.pums..rsmc"          "acs.pums..smcp"         
+    [155] "acs.pums..smxnbb"        "acs.pums..smxnob"       
+    [157] "acs.pums..ssmh"          "acs.pums..txpn"         
+    [159] "acs.pums..wfnn"          "acs.pums..wfnw"         
+    [161] "acs.pums..wf1w"          "acs.pums..wf2w"         
+    [163] "acs.pums..wkxn"          "acs.pums..wkxrlhs"      
+    [165] "acs.pums..wkxrlhwftsw"   "acs.pums..wkxrlhwftsd"  
+    [167] "acs.pums..wkxrlhd"       "acs.pums..wkxf"         
+    [169] "acs.pums..wrksttnf"      "acs.pums..wrkstthw"     
+    [171] "acs.pums..wrkstthl"      "acs.pums..wrksttnh"     
+    [173] "acs.pums..wrkf"          "acs.pums..elfv"         
+    [175] "acs.pums..flfi"          "acs.pums..flfn"         
+    [177] "acs.pums..gsfpip"        "acs.pums..gsfpir"       
+    [179] "acs.pums..gsfn"          "acs.pums..wtfi"         
+    [181] "acs.pums..wtfn"          "acs.sf..b010"           
+    [183] "acs.sf..b060"            "acs.sf..b080"           
+    [185] "acs.sf..b1900"           "acs.sf..b1910"          
+    [187] "acs.sf..b1920"           "acs.sf..b25010"         
+    [189] "acs.sf..b250350"         "acs.sf..b250390"        
+    [191] "acs.sf..b25060"          "acs.sf..b250710"        
+    [193] "acs.sf..b250770"         "acs.sf..b25080"         
+    [195] "acs.sf..b25090"          "acs.sf..b2510"          
+    [197] "climate..cddb6"          "climate..hddb6"         
+    [199] "climate..cdd12b6"        "climate..hdd12b6"       
+    [201] "climate..iccz"           "climate..bznf"          
+    [203] "eia.seds..gslp"          "eia.seds..elcp"         
+    [205] "eia.seds..ntgp"          "eia.seds..lpgp"         
+    [207] "eia.seds..fllp"          "eia.seds..elmh"         
+    [209] "eia.seds..ntth"          "eia.seds..lpgh"         
+    [211] "eia.seds..flgh"          "irs.soi..mipr"          
+    [213] "irs.soi..mipp"           "irs.soi..mppr"          
+    [215] "irs.soi..mdpr"           "irs.soi..prsr"          
+    [217] "irs.soi..prjr"           "irs.soi..phohr"         
+    [219] "irs.soi..pppr"           "irs.soi..pvpr"          
+    [221] "irs.soi..prcntelr"       "irs.soi..prfr"          
+    [223] "irs.soi..prcntetr"       "irs.soi..prie"          
+    [225] "irs.soi..priu"           "irs.soi..eftr"          
+    [227] "irs.soi..palt2"          "irs.soi..pa2t5"         
+    [229] "irs.soi..pa5t7"          "irs.soi..pa7t1"         
+    [231] "irs.soi..pa1t2"          "irs.soi..pa2om"         
+    [233] "nrel.urdb..rsed"        
 
-The string to the left of the “..” identifies the spatial dataset; the
-string to the right is a unique, syntactically-valid identifier. It’s
-not critical that specific spatial variables be identifiable in the
-fusion process. And because pre-processing of spatial datasets does not
-impose a stringent naming/documentation convention (by design), these
+The string to the left of the “..” identifies the spatial dataset that
+the variable comes from. The string to the right is a unique,
+syntactically-valid identifier. It’s not critical that specific spatial
+variables be identifiable in the fusion process. And because
+pre-processing of spatial datasets does not impose a stringent
+naming/documentation convention (it is flexible by design), these
 non-nonsensical-but-unique names are the safest way to identify spatial
 variables.
 
@@ -790,7 +895,7 @@ Now let’s explore some of the additional arguments to `prepare()`:
 1.  We can pass unquoted donor variable names and/or selectize
     statements to the `...` argument if we want to return a specific set
     of fusion variables for the donor (instead of all variables, the
-    default behavior). This is passed internally to `completeDonor()`.
+    default behavior).
 
 2.  The `implicates` argument controls how many PUMA’s are imputed for
     each donor household. Setting `implicates` higher results in more
@@ -819,9 +924,9 @@ The following shows a more complex (and realistic) call to `prepare()`,
 making use of the optional arguments.
 
 ``` r
-# Prepare RECS 2015 household microdata for fusion with ACS 2019 microdata
+# Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata
 data <- prepare(donor = "RECS_2015", 
-                recipient = "ACS_2019", 
+                recipient = "ACS_2015", 
                 respondent = "household",
                 cooltype, agecenac, kwhcol,  # Request specific donor variables
                 implicates = 5,
@@ -834,53 +939,65 @@ lapply(data, dim)
 ```
 
     $RECS_2015
-    [1] 26317    50
+    [1] 26274    66
 
-    $ACS_2019
-    [1] 1276716      46
+    $ACS_2015
+    [1] 1226728      63
 
 The number of observations in the donor microdata is now higher,
 reflecting the use of `implicates = 5`. Note that the number of rows has
-increased by less than a factor of five. This is because `imputePUMA()`
-collapses duplicate household-PUMA observations and adjusts the sample
-“weight” column accordingly. This reduces the amount of data without
-affecting subsequent statistical results.
-
-There are now more spatial variables merged to both the donor and
-recipient due to setting `window = 3`. There would be even more spatial
-variables if we had not specified the `pca` argument. Doing so collapsed
-the *numeric* spatial variables into a smaller number of components –
-now identified by the “pca..” prefix – which we can confirm by looking
-at the recipient column names.
-
-``` r
-names(data$ACS_2019)
-```
-
-     [1] "acs_2019_hid"       "bedrooms__bdsp"     "fuelheat__hfl"     
-     [4] "hhage__agep"        "hhsex__sex"         "kownrent__ten"     
-     [7] "moneypy__hincp"     "numadult__agep"     "numfrig__refr"     
-    [10] "sdescent__hisp"     "stoven__stov"       "totrooms__rmsp"    
-    [13] "typehuq__bld"       "yearmaderange__ybl" "climate..iccz"     
-    [16] "climate..bznf"      "pca..PC1"           "pca..PC2"          
-    [19] "pca..PC3"           "pca..PC4"           "pca..PC5"          
-    [22] "pca..PC6"           "pca..PC7"           "pca..PC8"          
-    [25] "pca..PC9"           "pca..PC10"          "pca..PC11"         
-    [28] "pca..PC12"          "pca..PC13"          "pca..PC14"         
-    [31] "pca..PC15"          "pca..PC16"          "pca..PC17"         
-    [34] "pca..PC18"          "pca..PC19"          "pca..PC20"         
-    [37] "pca..PC21"          "pca..PC22"          "pca..PC23"         
-    [40] "pca..PC24"          "pca..PC25"          "pca..PC26"         
-    [43] "pca..PC27"          "pca..PC28"          "pca..PC29"         
-    [46] "pca..PC30"         
+increased by less than a factor of five. This is because
+`assignLocation()` collapses duplicate household-PUMA observations and
+adjusts the sample “weight” column accordingly. This reduces the amount
+of data without affecting subsequent statistical results.
 
 The difference in the number of columns between the RECS and ACS
 microdata is due to the former’s inclusion of our three requested donor
-variables plus an observation “weight” column. Otherwise, both data
-frames are entirely consistent with one another. They each include a
-unique household identifier variable and an identical set of harmonized
-survey and spatial variables that can be exploited by the fusion
-process.
+variables. Otherwise, both data frames are entirely consistent with one
+another. They each include a unique household identifier variable and an
+identical set of harmonized survey and spatial variables that can be
+exploited by the fusion process.
+
+By specifying the `pca` argument, the *numeric* spatial variables are
+collapsed into a smaller number of components – indicated by the “pca..”
+prefix – which we can confirm by looking at the recipient column names.
+
+``` r
+names(data$ACS_2015)
+```
+
+     [1] "acs_2015_hid"            "weight"                 
+     [3] "bedrooms__bdsp"          "desktop__laptop"        
+     [5] "education__schl"         "elpay__elefp"           
+     [7] "employhh__wkhp"          "fuelheat__hfl"          
+     [9] "hhage__agep"             "hhsex__sex"             
+    [11] "householder_race__rac1p" "internet__access"       
+    [13] "kownrent__ten"           "moneypy__hincp"         
+    [15] "ngpay__gasfp"            "numadult__agep"         
+    [17] "numchild__agep"          "numfrig__refr"          
+    [19] "numtablet__handheld"     "occupyyrange__mv"       
+    [21] "sdescent__hisp"          "stoven__stov"           
+    [23] "totrooms__rmsp"          "typehuq__bld"           
+    [25] "yearmaderange__ybl"      "loc..ur12"              
+    [27] "loc..cbsatype15"         "loc..region"            
+    [29] "loc..recs_division"      "loc..recs_ba_zone"      
+    [31] "loc..recs_iecc_zone"     "climate..iccz"          
+    [33] "climate..bznf"           "pca..PC1"               
+    [35] "pca..PC2"                "pca..PC3"               
+    [37] "pca..PC4"                "pca..PC5"               
+    [39] "pca..PC6"                "pca..PC7"               
+    [41] "pca..PC8"                "pca..PC9"               
+    [43] "pca..PC10"               "pca..PC11"              
+    [45] "pca..PC12"               "pca..PC13"              
+    [47] "pca..PC14"               "pca..PC15"              
+    [49] "pca..PC16"               "pca..PC17"              
+    [51] "pca..PC18"               "pca..PC19"              
+    [53] "pca..PC20"               "pca..PC21"              
+    [55] "pca..PC22"               "pca..PC23"              
+    [57] "pca..PC24"               "pca..PC25"              
+    [59] "pca..PC26"               "pca..PC27"              
+    [61] "pca..PC28"               "pca..PC29"              
+    [63] "pca..PC30"              
 
 ## Make it rain
 
@@ -900,17 +1017,23 @@ fit <- fusionModel::train(data = data$RECS_2015,
                           lasso = 0.95)
 ```
 
+    Warning in fusionModel::train(data = data$RECS_2015, y = attr(data$RECS_2015, :
+    Missing values were imputed for the following variables: loc..cbsatype15
+
 We then `fuse()` (i.e. simulate) the fusion variables onto the
 harmonized ACS microdata. This is a non-trivial exercise, since the
-recipient ACS microdata has 1276716 observations. Setting
+recipient ACS microdata has 1226728 observations. Setting
 `induce = FALSE` eases the computation and memory burden considerably.
 The call below shouldn’t require more than about 5GB of RAM.
 
 ``` r
-sim <- fusionModel::fuse(data = data$ACS_2019, 
+sim <- fusionModel::fuse(data = data$ACS_2015, 
                          train.object = fit, 
                          induce = FALSE)
 ```
+
+    Warning in fusionModel::fuse(data = data$ACS_2015, train.object = fit, induce =
+    FALSE): Missing values were imputed for the following variables: loc..cbsatype15
 
 A quick check that the fusion output looks plausible:
 
@@ -918,32 +1041,32 @@ A quick check that the fusion output looks plausible:
 nrow(sim)
 ```
 
-    [1] 1276716
+    [1] 1226728
 
 ``` r
 head(sim)
 ```
 
-         kwhcol                        cooltype              agecenac
-    1 4279.3911 Central air conditioning system    10 to 14 years old
-    2  675.6778 Central air conditioning system      2 to 4 years old
-    3 1753.1402 Central air conditioning system      5 to 9 years old
-    4 1442.3536 Central air conditioning system    15 to 19 years old
-    5 2036.6455 Central air conditioning system      2 to 4 years old
-    6  878.5945 Central air conditioning system Less than 2 years old
+         kwhcol                   agecenac                                 cooltype
+    1  900.0472          20 years or older          Central air conditioning system
+    2 4704.8795 No central air conditioner Individual window/wall or portable units
+    3 1346.4376           5 to 9 years old          Central air conditioning system
+    4 2715.9629           5 to 9 years old          Central air conditioning system
+    5  439.1443         10 to 14 years old          Central air conditioning system
+    6    0.0000 No central air conditioner                      No air conditioning
 
 ``` r
 summary(data$RECS_2015$kwhcol)
 ```
 
        Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-        0.0   390.5  1110.0  1872.6  2530.0 20350.0 
+        0.0   390.5  1122.0  1882.0  2554.0 20350.0 
 
 ``` r
 summary(sim$kwhcol)
 ```
 
        Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-        0.0   401.7  1140.7  1875.9  2572.7 20350.0 
+        0.0   391.8  1113.7  1825.6  2485.1 20350.0 
 
 Onward and upward!
