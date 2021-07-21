@@ -8,9 +8,9 @@ bg_centroids <- "https://www2.census.gov/geo/docs/reference/cenpop2010/blkgrp/Ce
   rename(state= STATEFP,
          county10 = COUNTYFP,
          tract10 = TRACTCE,
-         bg10 = BLKGRPCE) %>%
-  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4269) %>%   # CRS matches that returned for Census geometry -- e.g. urban_areas()
-  select(-POPULATION)
+         bg10 = BLKGRPCE,
+         pop10 = POPULATION) %>%
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4269)   # CRS matches that returned for Census geometry -- e.g. urban_areas()
 
 # Save block groups centroids 'sf' object to disk
-usethis::use_data(bg_centroids)
+usethis::use_data(bg_centroids, overwrite = TRUE)
