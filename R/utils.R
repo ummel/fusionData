@@ -116,7 +116,7 @@ novary <- function(x) length(unique(na.omit(x))) == 1
 safeCharacters <- function(x) {
 
   stopifnot(is.factor(x) | is.character(x))
-  y <- as.character(x)
+  y <- y0 <- if (is.factor(x)) levels(x) else unique(as.character(x))
 
   # This code chunk attempts to ensure that the factor levels are all ASCII-compliant
   # If it detects non-ASCII strings, it attemps to convert using stringi::stri_trans_general()
@@ -132,33 +132,56 @@ safeCharacters <- function(x) {
   y <- gsub(" ,", ",", y, fixed = TRUE)  # Remove space ahead of a comma
   y <- str_squish(y)
 
-  if (is.factor(x)) {
-    factor(y, levels = y[match(levels(x), x)], ordered = is.ordered(x))
+  if (identical(y, y0)) {
+    x
   } else {
-    y
+    if (is.factor(x)) {
+      factor(y[as.integer(x)], levels = y, ordered = is.ordered(x))
+    } else {
+      y[match(x, y0)]
+    }
   }
 
 }
 
-#-------------------
-
-# Weighted empirical cumulative distribution function
-# Code take from spatstat.geom::ewcdf()
-# See here: https://github.com/spatstat/spatstat.geom/blob/main/R/ewcdf.R
-#wecdf <- spatstat.geom::ewcdf
-
 #------------------
 
-# Function to return weighted percentiles of 'x'
+# Function to return weighted percentiles of 'x'; used by harmonize()
 # Percentiles are returned only if number of unique 'x' is at least 'min.unique'
-# Otherwise, the original values are returned
-convertPercentile <- function(x, w = NULL, min.unique = 100) {
-  if (is.numeric(x) & length(unique(x)) >= min.unique) {
-    i <- !is.na(x)
-    cdf <- if (is.null(w)) ecdf(x[i]) else spatstat.geom::ewcdf(x[i], w[i])
-    x <- round(cdf(x), 4)
+# This leaves variables like age or household size unaffected (original 'x' returned)
+# If the proportion of zero values is >= min.zero, then zeros are preserved in output
+# If zeros are preserved, then negative values are assigned percentiles ranging from 0 to -1, which the most negative value receiving -1
+# The logic here is that respondents tend to be accurate about -/0/+ classification of the response, but we want percentiles to capture the relative ranking within these classes
+convertPercentile <- function(x, w = NULL, min.unique = 100, min.zero = 0.05) {
+
+  i <- which(!is.na(x))
+
+  if (is.numeric(x) & length(unique(x[i])) >= min.unique) {
+
+    if (is.null(w)) w <- rep(1, length(x))
+
+    zeros <- sum(x[i] == 0) / length(i) >= min.zero
+    k <- if (zeros) i[x[i] != 0] else i
+
+    q <- if (zeros & any(x[k] > 0)) k[x[k] > 0] else k
+    cdf <- suppressMessages(spatstat.geom::ewcdf(x[q], w[q]))
+    x[q] <- cdf(x[q])
+
+    # Negative values - only relevant if zeros = TRUE
+    # Otherwise,
+    if (zeros & any(x[k] < 0)) {
+      q <- k[x[k] < 0]
+      cdf <- suppressMessages(spatstat.geom::ewcdf(-x[q], w[q]))
+      x[q] <- -cdf(-x[q])
+    }
+
+    # Reduce precision of output
+    x <- cleanNumeric(x, tol = 0.001)
+
   }
+
   return(x)
+
 }
 
 #-------------------
@@ -179,3 +202,41 @@ fctFormat <- function(x) {
   paste(paste0("[", levels(x), "]"), collapse = ", ")
 }
 
+#-------------------
+
+# Function to add a valid "pid" (person ID) column to person-level microdata
+# This ensures that 'pid' is 1:n() for each household AND that the reference person is pid = 1, as expected by harmonize()
+# hid: Variable indicating the unique household identifiers
+# refvaf: Variable indicatin each person's relationship to reference person; reference person label must be the FIRST level
+addPID <- function(data, hid, refvar) {
+  stopifnot(is.factor(data[[refvar]]))
+  cat("Reference person level:", levels(data[[refvar]])[1], "\n")
+  data %>%
+    arrange(across(all_of(c(hid, refvar)))) %>%
+    group_by(across(all_of(hid))) %>%
+    mutate(pid = 1L:n()) %>%
+    ungroup() %>%
+    labelled::set_variable_labels(.labels = list(pid = "Person identifier within household"))
+}
+
+#-------------------
+
+# Function to treat integer and numeric as equal when checking for identical classes in prepare()
+sameClass <- function(x, y) {
+  if (x[1] == "integer") x <- "numeric"
+  if (y[1] == "integer") y <- "numeric"
+  identical(x, y)
+}
+
+#-------------------
+
+# # Function to automatically detect outliers and set to NA using Rosner's test
+# setOutliersNA <- function(x, ignore.zeros = TRUE) {
+#   X <- if (ignore.zeros) na_if(x, 0) else x
+#   K <- sum(0.6745 * (X - median(X, na.rm = TRUE)) / mad(X, constant = 1, na.rm = TRUE) > 3.5, na.rm = TRUE)
+#   K <- max(1, min(K, floor(sum(!is.na(X)) / 2)))
+#   rosner <- suppressWarnings(EnvStats::rosnerTest(X, k = K)$all.stats)
+#   outlier.index <- rosner$Obs.Num[rosner$Outlier]
+#   x[outlier.index] <- NA
+#   return(x)
+# }
