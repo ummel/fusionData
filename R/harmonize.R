@@ -117,9 +117,10 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     # Note that 'k' should ALWAYS return at least 2 columns (hid and pid), but > 2 needed to pull any data from disk
     # Also retains 'vrel' in the ACS case
     # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dp'
-    vrel <- if (type == "recipient") intersect(names(dp), c("rel", "relp", "relshipp")) else NULL  # Identify the ACS "Relationship" variable (variable name changed over time)
+    #vrel <- if (type == "recipient") intersect(names(dp), c("rel", "relp", "relshipp")) else NULL  # Identify the ACS "Relationship" variable (variable name changed over time)
     k <- sapply(names(dp), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
-    dp <- if (length(k) > 2) dp[c(names(which(k)), vrel)] else NULL
+    #dp <- if (length(k) > 2) dp[c(names(which(k)), vrel)] else NULL
+    dp <- if (length(k) > 2) dp[names(which(k))] else NULL
 
     # Ensure all data sorted by 'hid'
     if (!is.null(dh)) dh <- arrange(dh, across(all_of(hid)))
@@ -142,9 +143,9 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     # Update relationship variable to logical indicating reference person (or GQ observation), if necessary
     # This should/must only be applicable in the case of ACS person-data being used to generate a HH-level variable
-    #if (HH & any(vres == "Person")) {
+    vrel <- "ref__person"
     if (any(vres == "Person")) {
-      dp[[vrel]] <- dp[[vrel]] == "Reference person" | grepl("group quarters", dp[[vrel]], fixed = TRUE)
+      dp[[vrel]] <- dp$pid == 1  # The reference person is always assigned 'pid' value of 1
     }
 
     # Safety checks
@@ -159,11 +160,11 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     makeHarmony <- function(i) {
 
       v <- vnames[i]
-      hh <- vres[i] == "Household"  # Is the variable being process household-level?
+      hh <- vres[i] == "Household"  # Is the variable being processed household-level?
       h <- H[[i]][[j]]
 
       # Assign "" value for 'agg' slot if none exists
-      if (is.null(h$agg)) h$agg <- ""
+      if (length(h$agg) == 0) h$agg <- ""
 
       #---
 
@@ -260,6 +261,9 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     # Move elsewhere
     mc.cores <- max(1L, parallel::detectCores() - 1L)
+
+    # Troubleshooting
+    #for (i in 1:length(H)) test <- makeHarmony(i)
 
     # Process in parallel and combine results into data frame
     out <- pbapply::pblapply(X = 1:length(H), FUN = makeHarmony, cl = mc.cores) %>%
