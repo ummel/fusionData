@@ -17,7 +17,7 @@
 createDictionary <- function(data, survey, vintage, respondent) {
 
   # Check for valid inputs
-  stopifnot({
+  stopifnot(exprs = {
     is.data.frame(data)
     !any(map_lgl(data, is.character))  # There should NOT be any character columns (must be factor)
     length(survey) == 1
