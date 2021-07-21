@@ -13,6 +13,7 @@ library(sf)
 
 #----------
 
+# General crosswalk for geographic variables identified by state
 state.merge <- readRDS("geo-raw/miscellaneous/Geographic entities to merge on state.rds")
 
 #----------
@@ -32,9 +33,11 @@ recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
   select(state, county10, starts_with("recs_")) %>%
   labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS IECC climate zone", "RECS Building American climate zone"))
 
-#-----
+#----------
 
-geocorr.file <- readr::read_csv("geo-raw/concordance/geocorr2018_2116808121.csv.zip")
+# Unzpip the compressed geocorr file in geo-raw/concordance
+unzip(zipfile = "geo-raw/concordance/geocorr2018_2116808121.csv.zip", exdir = tempdir())
+geocorr.file <- list.files(path = tempdir(), pattern = "^geocorr", full.names = TRUE)
 
 # Read only first row to get column information
 meta <- data.table::fread(file = geocorr.file, nrow = 1)
@@ -46,6 +49,8 @@ d <- data.table::fread(file = geocorr.file,
                        colClasses = list(character = 1:(ncol(meta) - 2))) %>%
   labelled::set_variable_labels(.labels = unlist(meta[1, ])) %>%
   mutate_all(na_if, y = " ")
+
+#----------
 
 # Rename columns to include a year identifier (except for state)
 d <- d %>%
@@ -95,15 +100,14 @@ stopifnot({
   length(unique(paste0(d$state, d$puma10))) == length(unique(paste0(geocorr$state, geocorr$puma10)))
 })
 
-#-----------------
-#-----------------
+#----------
 
 # Assign NCDC climate division, by block group
 # Climate divisions are only defined for the Lower 48 states
 # Custom codes 4900 and 5000 are introduced for Alaska and Hawaii, respectively
 
 # Block group centroids
-bg_centroids <- readRDS("geo-processed/concordance/bg_centroids.rds")
+data(bg_centroids, package = "fusionData")
 
 # Shapefile of climate division boundaries
 climdiv <- st_read("geo-raw/climate/CONUS_CLIMATE_DIVISIONS/GIS.OFFICIAL_CLIM_DIVISIONS.shp") %>%
@@ -121,27 +125,50 @@ cd[bg_centroids$state == "02"] <- "4900"
 cd[bg_centroids$state == "15"] <- "5000"
 
 # Create crosswalk between block group and climate division
-climdiv.xwalk <- bg_centroids %>%
+climdiv <- bg_centroids %>%
   mutate(climate_division = cd) %>%
   st_drop_geometry()
 
 # Assign variable description
-var_label(climdiv.xwalk$climate_division) <- "NCDC climate division with custom codes for AK and HI"
+var_label(climdiv$climate_division) <- "NCDC climate division with custom codes for AK and HI"
 
-stopifnot(!anyNA(climdiv.xwalk))
+stopifnot(!anyNA(climdiv))
 
-#-----------------
-#-----------------
+#----------
+
+# Calculate population of each CBSA to create concordance with custom "cex_cbsasize" variable
+# CBSA's are groups of contiguous counties and used as the primary sampling units in the CEX
+# The CEX 'popsize' variable (from which 'cex_cbsasize' is constructed) assigns each CBSA to one of 5 population ranges
+
+# county10.pop <- bg_centroids %>%
+#   st_drop_geometry() %>%
+#   group_by(state, county10) %>%
+#   summarize(pop10 = sum(pop10), .groups = "drop")
+#
+# cbsasize <- geocorr %>%
+#   select(state, county10, cbsa13) %>%
+#   distinct() %>%
+#   filter(!is.na(cbsa13)) %>%
+#   left_join(county10.pop, by = c("state", "county10")) %>%
+#   group_by(cbsa13) %>%
+#   summarize(pop10 = sum(pop10), .groups = "drop") %>%
+#   mutate(cex_cbsasize = cut(pop10, breaks = c(0, 100e3, 500e3, 1e6, 5e6, Inf), right = FALSE, labels = FALSE),
+#          cex_cbsasize = c("Less than 100 thousand", "100-500 thousand", "0.5-1.0 million", "1-5 million", "More than 5 million")[cex_cbsasize]) %>%
+#   select(-pop10)
+
+#----------
 
 # Merge various datasets
 result <- geocorr %>%
   left_join(state.merge, by = "state") %>%
   left_join(recs.climate, by = c("state", "county10")) %>%
-  left_join(climdiv.xwalk, by = c("state", "county10", "tract10", "bg10")) %>%
+  left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
+  # left_join(cbsasize, by = "cbsa13") %>%
+  # mutate(cex_cbsasize = ifelse(ur12 == "U" & !is.na(cbsa13), cex_cbsasize, "Rural"),
+  #        cex_metro = ifelse(ur12 == "U" & !is.na(cbsa13) & cbsatype13 == "Metro", "Metro", "Not metro")) %>%
   select(puma10, puma_weight, state, state_name, state_postal, everything(), -afact)
 
-# Save 'geolink' variable descriptions to disk
-#saveRDS(var_label(result), "geo-processed/puma_concordance_dictionary.rds")
+#----------
 
 # Save processed 'geolink' .fst file to disk
 fst::write_fst(result, "geo-processed/concordance/geo_concordance.fst", compress = 100)
