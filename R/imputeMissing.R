@@ -159,7 +159,7 @@ imputeMissing <- function(data,
   #---
 
   # Detect derivatives of imputation variables
-  message("Detecting derivatives among the imputation variables...")
+  message("Detecting dependence among the imputation variables...")
   derivatives <- detectDependence(data, xvars = vimp)
 
   # Process 'derivatives' list created earlier
@@ -321,7 +321,7 @@ imputeMissing <- function(data,
                         weights = d.fit[[w]],
                         method = ifelse(is.numeric(d.fit[[v]]), "anova", "class"),
                         minbucket = max(30, ceiling(0.0001 * nrow(d.fit))),
-                        cp = 0.01,  # Set sufficiently low without imposing computing cost
+                        cp = 0.001,  # Set sufficiently low without imposing computing cost
                         xval = 0)
 
       # OPTIONAL: Prune rpart model using minimum cross-validation (NOT USED)
