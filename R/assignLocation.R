@@ -228,6 +228,7 @@ assignLocation <- function(harmonized, m = 1) {
   cat("Assigning location variables to recipient observations...\n")
 
   # NOTE: Originally, this code block referred to the 'gdonor' variables, but this was switched to 'gkeep' for simplicity and to avoid dealing with NA's for some geographic variables in donor microdata
+
   # Assign 'gkeep' variables to each recipient household
   # There is no guarantee that PUMA's are uniquely identified by the 'gdonor' variables
   # Instead, PUMA boundaries may span intersection boundaries
@@ -247,7 +248,9 @@ assignLocation <- function(harmonized, m = 1) {
   # The result is a data.table with same number of rows as 'R'
   # Order the rows by PUMA so it is aligned with 'R' and can be cbind'd below
   glink[R, N := i.N, on = gtarget]
-  glink <- glink[glink[, .I[sample(.N, size = N, prob = puma_share, replace = TRUE)], by = gtarget]$V1]
+  ind <- glink[, .I[sample(.N, size = N, prob = puma_share, replace = TRUE)], by = gtarget]$V1
+  glink <- glink[ind]
+  #glink <- glink[glink[, .I[sample(.N, size = N, prob = puma_share, replace = TRUE)], by = gtarget]$V1]
   setorderv(glink, cols = gtarget)
 
   # Assign 'gkeep' variables for each recipient household

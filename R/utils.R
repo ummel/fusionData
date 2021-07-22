@@ -164,14 +164,14 @@ convertPercentile <- function(x, w = NULL, min.unique = 100, min.zero = 0.05) {
     k <- if (zeros) i[x[i] != 0] else i
 
     q <- if (zeros & any(x[k] > 0)) k[x[k] > 0] else k
-    cdf <- suppressMessages(spatstat.geom::ewcdf(x[q], w[q]))
+    cdf <- spatstat.geom::ewcdf(x[q], w[q])
     x[q] <- cdf(x[q])
 
     # Negative values - only relevant if zeros = TRUE
     # Otherwise,
     if (zeros & any(x[k] < 0)) {
       q <- k[x[k] < 0]
-      cdf <- suppressMessages(spatstat.geom::ewcdf(-x[q], w[q]))
+      cdf <- spatstat.geom::ewcdf(-x[q], w[q])
       x[q] <- -cdf(-x[q])
     }
 

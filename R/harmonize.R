@@ -50,7 +50,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
   hnames <- names(H)
 
   # Load dictionary in order to tag each variable as household- or person-level
-  #dictionary <- readRDS("harmony/data/dictionary.rds")
   data("dictionary", package = "fusionData")
   dict.vars <- paste(paste(dictionary$Survey, dictionary$Vintage, sep = "_"), dictionary$Variable)
 
@@ -115,11 +114,8 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     # Load person data (NULL if unavailable or unnecessary)
     # Note that 'k' should ALWAYS return at least 2 columns (hid and pid), but > 2 needed to pull any data from disk
-    # Also retains 'vrel' in the ACS case
     # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dp'
-    #vrel <- if (type == "recipient") intersect(names(dp), c("rel", "relp", "relshipp")) else NULL  # Identify the ACS "Relationship" variable (variable name changed over time)
     k <- sapply(names(dp), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
-    #dp <- if (length(k) > 2) dp[c(names(which(k)), vrel)] else NULL
     dp <- if (length(k) > 2) dp[names(which(k))] else NULL
 
     # Ensure all data sorted by 'hid'
@@ -186,7 +182,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
       #---
 
       # Process/harmonize 'x' using information in 'h'
-      # If h$groups = 1, it is a numeric match and no modification is needed
+      # If h$groups = 1, it is a numeric match and no modification is needed except to apply convertPercentile()
       if (length(h$groups) > 1) {
 
         if (h$breaks[1] == "") {
@@ -259,9 +255,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
     # Make harmonies, in parallel
 
-    # Move elsewhere
-    mc.cores <- max(1L, parallel::detectCores() - 1L)
-
     # Troubleshooting
     #for (i in 1:length(H)) test <- makeHarmony(i)
 
@@ -274,7 +267,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     other <- list(
       if (HH) dh[[hid]] else dp[[hid]],
       if (!HH) dp[["pid"]] else NULL,
-      if (HH) dh$weight else {if (is.null(dh)) dp$weight else dh$weight[hh.rep]}, # Not entirely sure this is correct when respondent = "person" (should test)
+      if (HH) dh$weight else {if (is.null(dh)) dp$weight else dh$weight[hh.rep]},  # Not entirely sure this is correct when respondent = "person" (should test)
       if (HH) dh$state else dh$state[hh.rep],
       if (HH) dh$puma10 else dh$puma10[hh.rep]
     ) %>%
@@ -291,6 +284,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     # Add attributes to the output data frame
     setattr(out, "survey", survey[j])
     setattr(out, "identifier", c(hid, intersect(names(out), "pid")))
+    setattr(out, "employed.vars", setdiff(c(names(dh), names(dp)), c(hid, "pid", "weight")))  # Variables used to construct harmonies (NOT 100% safe/accurate; can include variables erroneously)
 
     # Assign data frame to final 'result' list
     result[[type]] <- out
