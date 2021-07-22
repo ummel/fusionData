@@ -224,14 +224,16 @@ processFMLI <- function(survey_years, codebook) {
   if (nrow(problems) > 0) write_csv(problems, paste0("survey-processed/CEX/errors/", Sys.Date(), " FMLI geography flagged", ".csv"))
 
   # Fix any geographic discrepancies in the state-division-region hierarchy
-  d <- d %>%
+  test <- d %>%
     mutate(state = str_pad(state, width = 2, pad = "0")) %>%
     left_join(state.hierarchy, by = "state", suffix = c("", "2")) %>%
     mutate(division = ifelse(!is.na(division2), division2, as.character(division)),
+           division = str_to_title(division),
            region = ifelse(!is.na(region2), region2, as.character(region))) %>%
     select(-division2, -region2) %>%
     left_join(state.hierarchy %>% select(division, region) %>% distinct(), by = "division", suffix = c("", "2")) %>%
-    mutate(region = ifelse(!is.na(region2), region2, as.character(region))) %>%
+    mutate(region = ifelse(!is.na(region2), region2, as.character(region)),
+           region = str_to_title(region)) %>%
     select(-region2)
 
   # Create the "concordance" geographic variables
@@ -243,7 +245,7 @@ processFMLI <- function(survey_years, codebook) {
   # NOTE use of 'cbsa13'. BLS staff (Nix.Brian@bls.gov) said they used CBSA definitions/codes from "about 2012"
   d <- d %>%
     mutate(
-      cbsa13 = str_pad(psu, width = 5, pad = 0),
+      cbsa13 = str_pad(psu, width = 5, pad = 0),  # NA's here indicate that the CBSA simply isn't known
       ur12 = substring(bls_urbn, 1, 1)  # Retain just "U" or "R"
       #cex_metro = ifelse(smsastat == "Yes" & ur12 == "U", "Metro", "Not metro"), # Either "Metro" or "Not metro"
       #popsize = rev(c("Less than 100 thousand", "100-500 thousand", "0.5-1.0 million", "1-5 million", "More than 5 million"))[as.integer(popsize)],
