@@ -14,9 +14,6 @@
 
 assignLocation <- function(harmonized, m = 1) {
 
-  # Move elsewhere?
-  mc.cores <- max(1L, parallel::detectCores() - 1L)
-
   # Variables in geolink defining the "target" geography (i.e. uniquely-identified PUMA's)
   gtarget <- c("state", "puma10")
 
@@ -271,6 +268,7 @@ assignLocation <- function(harmonized, m = 1) {
   result <- list(D, R)
   names(result) <- names(harmonized)
   setattr(result, "location.vars", lvars)
+  setattr(result, "intersection.vars", gdonor)
   return(result)
 
 }

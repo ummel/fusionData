@@ -12,8 +12,6 @@
 
 compileDictionary <- function() {
 
-  stopifnot(basename(getwd()) == "fusionData")
-
   # Extract data from /survey-processed and build codebook
   files <- list.files(path = "survey-processed", pattern = "_._dictionary.rds", recursive = TRUE, full.names = TRUE)
 

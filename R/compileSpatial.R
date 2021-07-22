@@ -14,8 +14,6 @@
 
 compileSpatial <- function() {
 
-  stopifnot(basename(getwd()) == "fusionData")
-
   # Identify all of the *processed.rds files available in /geo-processed
   flist <- list.files(path = "geo-processed", pattern = "_processed.rds$", recursive = TRUE, full.names = FALSE)
 

@@ -15,8 +15,6 @@
 
 getGeoProcessed <- function(dataset = "essential") {
 
-  if (basename(getwd()) != "fusionData") stop("The current directory -- see getwd() -- must be set to local /fusionData")
-
   # TO DO: Switch to silent auth eventually:
   # See: vignette("non-interactive-auth") in gargle package
   # https://gargle.r-lib.org/articles/get-api-credentials.html
