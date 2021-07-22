@@ -32,12 +32,7 @@ assignLocation <- function(harmonized, m = 1) {
   # Soft load the specified donor survey processed .fst file
   temp <- list.files(path = "survey-processed", pattern = paste0("^", names(harmonized)[1], "_._processed.fst"), recursive = TRUE, full.names = TRUE)
   temp <- temp[1L]  # This retains the household file in event that 'survey' has both H and P data (only H needed to sample PUMAs)
-  D <- fst::fst(temp)  # TEMP TURN OFF
-
-  # Soft load the specified donor survey processed .fst file
-  temp <- list.files(path = "survey-processed", pattern = paste0("^", names(harmonized)[2], "_._processed.fst"), recursive = TRUE, full.names = TRUE)
-  temp <- temp[1L]  # This retains the household file in event that 'survey' has both H and P data (only H needed to sample PUMAs)
-  R <- fst::fst(temp)  # TEMP TURN OFF
+  D <- fst::fst(temp)
 
   #-----
 
@@ -53,7 +48,7 @@ assignLocation <- function(harmonized, m = 1) {
     data.table(key = gv) %>%
     setnames(c("W", gv))  # Rename the 'gw' variable to "W" for ease of use in data.table operations
 
-  # Aggregate geographic weight to reduce number of observations
+  # Aggregate weight to reduce number of observations
   glink <- glink[, .(W = sum(W)), by = gv]
 
   #---
@@ -63,7 +58,11 @@ assignLocation <- function(harmonized, m = 1) {
     data.table(key = gdonor)
 
   # Ensure the factor levels are consistent between 'glink' and 'D' (possible that latter could be missing some levels)
-  for (v in gdonor) set(D, j = v, value = factor(D[[v]], levels = levels(glink[[v]]), ordered = is.ordered(glink[[v]])))
+  # Will stop with error if there are levels in 'D' not found in 'glink'
+  for (v in gdonor) {
+    stopifnot(all(levels(D[[v]]) %in% levels(glink[[v]])))
+    set(D, j = v, value = factor(D[[v]], levels = levels(glink[[v]]), ordered = is.ordered(glink[[v]])))
+  }
 
   # Which geographic intersection variables should be returned as "loc.." variables in output results?
   # This is restricted to 'gdonor' variables with no missing values in the donor microdata
@@ -111,8 +110,17 @@ assignLocation <- function(harmonized, m = 1) {
     }
 
     # Process all intersections and bind results
-    glink <- lapply(1:max(D$id), f) %>%
+    temp <- lapply(1:max(D$id), f) %>%
       rbindlist(fill = TRUE)
+
+    # Identify PUMA's that are in 'glink' but missing from 'temp'
+    missing <- glink[!temp, on = gtarget]
+    missing$id <- 0L
+    missing$puma_share <- 1
+
+    # Append the missing PUMA's to 'temp' and create new 'glink' table
+    glink <- rbind(temp, missing)
+    rm(temp, missing)
 
   } else {
 
@@ -133,11 +141,6 @@ assignLocation <- function(harmonized, m = 1) {
 
   #-----
 
-  # Restrict 'glink' to only necessary columns?
-  #glink <- subset(glink, select = c(gtarget, "id", "puma_share"))
-
-  #-----
-
   # Donor output from harmonize() with 'id' merged
   D <- harmonized[[1]] %>%
     as.data.table() %>%
@@ -155,7 +158,7 @@ assignLocation <- function(harmonized, m = 1) {
   #i <- 5
   #N <- 1000
 
-  sampleIntersection <- function(i, N = 500) {
+  sampleIntersection <- function(i, N = 1000) {
 
     # Subset 'D' for intersection 'i' and remove columns with NA values
     d <- subset(D, id == i)
@@ -219,7 +222,6 @@ assignLocation <- function(harmonized, m = 1) {
   data.table::set(D, j = rid, value = NULL)
   D[, weight_adjustment := .N / m, by = c(did, gtarget)]
   D <- unique(D)
-  #setkeyv(D, cols = did)  # Set key so it can be merged quickly on 'did' within prepare()?
 
   gc()
 
@@ -250,13 +252,11 @@ assignLocation <- function(harmonized, m = 1) {
   glink[R, N := i.N, on = gtarget]
   ind <- glink[, .I[sample(.N, size = N, prob = puma_share, replace = TRUE)], by = gtarget]$V1
   glink <- glink[ind]
-  #glink <- glink[glink[, .I[sample(.N, size = N, prob = puma_share, replace = TRUE)], by = gtarget]$V1]
   setorderv(glink, cols = gtarget)
 
   # Assign 'gkeep' variables for each recipient household
   stopifnot(nrow(R) == nrow(glink))
   R <- cbind(R[, ..rid], glink[, ..gkeep])
-  #setkeyv(R, cols = rid)  # Set key so it can be merged quickly on 'rid' within prepare()?
 
   #---
 
