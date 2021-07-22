@@ -384,13 +384,12 @@ anyNA(d)
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
 
-# Variables names prior to modification/addition of geographic identifiers
 d <- d %>%
   rename(recs_division = DIVISION,
          region = REGIONC,
          recs_iecc_zone = IECC_CLIMATE_PUB,
          recs_ba_zone = CLIMATE_REGION_PUB) %>%
-  mutate(cbsatype15 = NA,
+  mutate(cbsatype15 = "None",
          cbsatype15 = ifelse(grepl("Metro", METROMICRO), "Metro", cbsatype15),
          cbsatype15 = ifelse(grepl("Micro", METROMICRO), "Micro", cbsatype15),
          ur12 = substring(UATYP10, 1, 1))
