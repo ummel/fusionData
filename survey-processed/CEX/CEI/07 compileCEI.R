@@ -79,7 +79,7 @@ compileCEI <- function(survey_years, base.year) {
                        N = 2,
                        weight = "finlwt21",
                        #y_exclude = c("region", "division", "state", "ur12", "cbsa13", "cex_metro", "cex_cbsasize"),
-                       y_exclude = c("region", "division", "state", "ur12", "cbsa13"),
+                       y_exclude = c("state", "ur12", "cbsa13"),  # Allowing region and division to be imputed
                        x_exclude = c("cuid", "intnum", "^wtrep"),
                        sequence = map(1:4, ~ grep(paste0("_", .x, "$"), names(h), value = TRUE)))
 
