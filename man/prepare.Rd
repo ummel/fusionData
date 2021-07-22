@@ -2,19 +2,9 @@
 % Please edit documentation in R/prepare.R
 \name{prepare}
 \alias{prepare}
-\title{Prepare microdata for survey fusion}
+\title{Prepare microdata inputs for assembly}
 \usage{
-prepare(
-  donor,
-  recipient,
-  respondent,
-  ...,
-  implicates = 1,
-  spatial.datasets = "all",
-  window = 0,
-  pca = NULL,
-  replicates = FALSE
-)
+prepare(donor, recipient, respondent, implicates = 1)
 }
 \arguments{
 \item{donor}{Character. Donor survey identifier (e.g. \code{"RECS_2015"}).}
@@ -23,34 +13,18 @@ prepare(
 
 \item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
 
-\item{...}{Optional arguments passed to \code{\link[dplyr]{select}} for selecting (or excluding) particular donor variables.}
-
 \item{implicates}{Integer. Number of PUMA implicates to return for the donor microdata.}
-
-\item{spatial.datasets}{Character. Vector of requested spatial datasets to merge (e.g. \code{"EPA-SLD"}) or either of two special values: \code{"all"} (default) or \code{"none"}.}
-
-\item{window}{Integer. Size of allowable temporal window, in years, when merging spatial variables. \code{window = 0} (default) means that a spatial variable is only included if it has the same vintage as the survey. See Details.}
-
-\item{pca}{Numeric. Controls whether/how PCA is used to reduce dimensionality of spatial variables. Default (NULL) is no PCA. If non-NULL, should be a numeric vector of length two; e.g. \code{pca = c(50, 0.95)}. First number is the maximum number of components to return; second number is target proportion of variance explained. See Details.}
-
-\item{replicates}{Logical. Should replicate observation weights be included, if available? Defaults to FALSE. Passed to \link{completeDonor}.}
 }
 \value{
-A list of length two containing donor and recipient microdata.
+A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{x} argument in \code{\link{assemble}}.
 }
 \description{
-Prepares data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}} to perform survey fusion. Harmonizes common variables for the specified donor and recipient surveys, merges requested fusion variables to donor, imputes PUMA for donor records, and merges requested spatial variables to both donor and recipient.
-}
-\details{
-Spatial variables are included if the associated vintage is within +/- \code{window} years of the survey vintage. In cases where the spatial variable has multiple vintages equidistant from the survey vintage, the older vintage is selected. Variables with \code{vintage = "always"} are, of course, always included.
-
-PCA is restricted to numeric spatial variables and is computed using \code{\link[stats]{prcomp}}. The returned number of principal components is the lesser of \code{pca[1]} or the number of components that explain at least \code{pca[2]} proportion of the variance. For example, \code{pca = c(50, 0.95)} will select the fewest number of components that explain 95\% of the variance, up to 50 components maximum. NA's in numeric spatial variables are imputed using median value prior to computing the principal components.
+Prepares data inputs to pass to \code{\link{assemble}}. Harmonizes common variables for the specified donor and recipient surveys, imputes PUMA for donor records, and samples location variables for recipient records.
 }
 \examples{
-data <- prepare(donor = "RECS_2015",
+prep <- prepare(donor = "RECS_2015",
                 recipient = "ACS_2015",
                 respondent = "household",
-                cooltype, agecenac, kwhcol,
-                window = 3)
+                implicates = 3)
 
 }
