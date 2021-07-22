@@ -2,12 +2,13 @@ library(tidyverse)
 
 data("BEA_pce_national")
 data("BEA_pce_state")
-data("pce_concordance")
-data("var_info")
-data("ucc_heading")
+load("survey-processed/CEX/pce_concordance.rda")
+load("survey-processed/CEX/var_info.rda")
+load("survey-processed/CEX/ucc_heading.rda")
 
 # Identifier for the Google Sheet with consumption category information
-gs.id <- "1UDn8hGzDMgmPnX1E5D_FDk5n1UvUD6Vx5AJ5ix-8v3M"
+# This is stored in the "fusionACSdata" Google Drive
+gs.id <- "13GRKkVZXapHtP7oK1WUh0Yu7OQ_9icd17wUGuhX-WRg"
 
 #-----
 
@@ -22,6 +23,7 @@ cats <- googlesheets4::read_sheet(ss = gs.id, sheet = "Consumption Categories") 
   filter(!is.na(cat)) %>%
   mutate(component = str_split(component, ",")) %>%
   unnest(component) %>%
+  mutate(component = na_if(component, "NA")) %>%
   arrange(major, cat) %>%
   mutate_all(str_squish)
 
@@ -29,7 +31,7 @@ cats <- googlesheets4::read_sheet(ss = gs.id, sheet = "Consumption Categories") 
 stopifnot(length(unique(cats$cat)) == length(unique(cats$category)))
 stopifnot(length(unique(cats$cat)) == cats %>% select(major, cat, category) %>% distinct() %>% nrow())
 stopifnot(nrow(cats %>% group_by(cat) %>% filter(length(unique(category)) > 1)) == 0)
-stopifnot(anyDuplicated(cats$component) == 0)
+stopifnot(anyDuplicated(na.omit(cats$component)) == 0)
 
 # Check that all "aggregate" values are legitimate...
 aggs <- cats %>%
@@ -76,7 +78,7 @@ cats <- cats %>%
   mutate(ucc = ifelse(is.na(ucc) & !is.na(suppressWarnings(as.numeric(component))), component, ucc),
          ucc = ifelse(is.na(ucc), ucc_heading2[component], ucc),
          ucc_share = ifelse(is.na(ucc_share), 1, ucc_share)) %>%
-  unnest(ucc) %>%
+  unnest(ucc, keep_empty = TRUE) %>%
   select(aggregate, major, category, cat, ucc, ucc_share)
 
 #----------------------------
@@ -97,25 +99,27 @@ ucc_assignment <- cats %>%
   select(aggregate, major, category, cat, ucc_desc, ucc, ucc_share, source, file)
 
 # Which files are the UCC's sourced from?
-# As of March 2021, there should be only 1 record from ITBI (student loan interest), which is effectively ignored by subsequent processing
-table(ucc_assignment$file)
+# As of March 2021, there should be only 4 records from ITBI, which is effectively ignored by subsequent processing
+table(filter(ucc_assignment, !is.na(ucc))$file)
 
 #----------------------------
 
 # MANUAL defining of 'ucc_share' for estimated rental value UCC's
 
+# UPDATE!!!
 # UCC's in the OWNRNT 'cat' typically report monthly rental values (with one exception, see below)
 # The reported monthly rental equivalence is divided by 3 when entered in the MBTI file as a monthly transaction (unclear why)
 # Ensuring that the final OWNRNT output summed across 4 interviews reflects ANNUAL rental value requires that the raw values be multiplied by 3;
-#  i.e. set 'ucc_share' to 3, since raw MTBI values are multiplied by 'ucc_share' within aggregateCEX().
+#  i.e. set 'ucc_share' to 3, since raw MTBI values are multiplied by 'ucc_share' within processMTBI().
 # Exception: UCC 910103 ("Estimated annual rental value of timeshare") is entered as annual value in MTBI file,
 #  which requires that the raw value be divided by 12 to ensure correct annual value after processing.
 # Further: UCC "910102" ("Estimated monthly rental value of vacation home available for rent") and "910100" (deprecated) has its 'ucc_share' additionally divided by 2,
 #  to reflect partial-use of property by owner; this is how BLS staff treat this UCC when creating concordance with PCE.
+
 ucc_assignment <- ucc_assignment %>%
   mutate(ucc_share = ifelse(cat == "OWNRNT", 3, ucc_share),
-         ucc_share = ifelse(ucc == "910103", 1 / 12, ucc_share),
-         ucc_share = ifelse(ucc %in% c("910102", "910100"), ucc_share / 2, ucc_share))
+         ucc_share = ifelse(ucc == "910103", 1 / 12, ucc_share),  # Time share rental equivalence; annual values already
+         ucc_share = ifelse(ucc %in% c("910102", "910100"), ucc_share / 2, ucc_share))  # UCC's for vacation homes available for rent (50%, per BLS PCE concordance)
 
 # Check
 #filter(ucc_assignment, cat == "OWNRNT")
@@ -169,12 +173,11 @@ link <- ucc_assignment %>%
 # #stopifnot(nrow(probs1) == 3)  # In case that DFULRC fuels are split into 3 separate categories
 # stopifnot(nrow(probs1) == 0)  # In general case when DFULRC fuels are grouped into single category (i.e. Heating oil, LPG, and other fuels)
 
-link %>%
-  select(cat, pce_series, state_series) %>%
-  group_by(cat) %>%
-  mutate(n_state_series = length(unique(state_series))) %>%
-  filter(n_state_series > 1)
-
+# link %>%
+#   select(cat, pce_series, state_series) %>%
+#   group_by(cat) %>%
+#   mutate(n_state_series = length(unique(state_series))) %>%
+#   filter(n_state_series > 1)
 
 #-----
 
@@ -228,6 +231,7 @@ cat_assignment <- link %>%
 
 # Create full description of categories and upload results to Google Sheet
 out <- ucc_assignment %>%
+  filter(!is.na(ucc)) %>%
   arrange(cat, -ucc_share, ucc_desc) %>%
   mutate(description = ifelse(ucc_share == 1, ucc_desc, paste0(ucc_desc, " (", round(100 * ucc_share, 1), "%)"))) %>%
   group_by(major, cat, category) %>%
@@ -240,5 +244,6 @@ googlesheets4::write_sheet(out %>% select(major, category, cex_line_items), ss =
 #----------------------------
 
 # Save results to disk
-save(cat_assignment, file = "survey-processed/CEX/cat_assignment.RData", compress = TRUE)
-save(ucc_assignment, file = "survey-processed/CEX/ucc_assignment.RData", compress = TRUE)
+save(cat_assignment, file = "survey-processed/CEX/cat_assignment.rda")
+save(ucc_assignment, file = "survey-processed/CEX/ucc_assignment.rda")
+

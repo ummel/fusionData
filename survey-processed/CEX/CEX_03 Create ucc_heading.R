@@ -45,4 +45,4 @@ names(ucc_heading) <- temp$ucc[ind]
 #   ungroup()
 
 # Save output to disk
-save(ucc_heading, file = "survey-processed/CEX/ucc_heading.RData", compress = TRUE)
+save(ucc_heading, file = "survey-processed/CEX/ucc_heading.rda")

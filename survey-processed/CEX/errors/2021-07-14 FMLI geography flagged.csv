@@ -1,0 +1,76 @@
+cuid,intnum,state,region,division
+282024,5,10,northeast,south atlantic
+292757,4,27,midwest,east north central
+300539,3,10,northeast,south atlantic
+317226,1,10,northeast,south atlantic
+292757,5,27,midwest,east north central
+293103,5,10,northeast,south atlantic
+300539,4,10,northeast,south atlantic
+317226,2,10,northeast,south atlantic
+318711,1,10,northeast,south atlantic
+320871,1,27,midwest,east north central
+300539,5,10,northeast,south atlantic
+317226,3,10,northeast,south atlantic
+320871,2,27,midwest,east north central
+327225,1,10,northeast,south atlantic
+317226,4,10,northeast,south atlantic
+320871,3,27,midwest,east north central
+325903,2,27,midwest,east north central
+333181,1,27,midwest,east north central
+334838,1,10,northeast,south atlantic
+320871,4,27,midwest,east north central
+325903,3,27,midwest,east north central
+334838,2,10,northeast,south atlantic
+342018,1,10,northeast,south atlantic
+325903,4,27,midwest,east north central
+333181,3,27,midwest,east north central
+334838,3,10,northeast,south atlantic
+333181,4,27,midwest,east north central
+334838,4,10,northeast,south atlantic
+350552,1,27,midwest,east north central
+342018,4,10,northeast,middle atlantic
+350552,2,27,midwest,east north central
+352947,3,10,northeast,middle atlantic
+364764,1,27,midwest,east north central
+365818,1,27,midwest,east north central
+352947,4,10,northeast,middle atlantic
+364764,2,27,midwest,east north central
+365818,2,27,midwest,east north central
+371571,1,27,midwest,east north central
+372221,1,27,midwest,east north central
+374337,1,10,northeast,middle atlantic
+364764,3,27,midwest,east north central
+365818,3,27,midwest,east north central
+371571,2,27,midwest,east north central
+372221,2,27,midwest,east north central
+374337,2,10,northeast,middle atlantic
+365818,4,27,midwest,east north central
+371571,3,27,midwest,east north central
+372221,3,27,midwest,east north central
+374337,3,10,northeast,middle atlantic
+385994,1,10,northeast,middle atlantic
+371571,4,27,midwest,east north central
+372221,4,27,midwest,east north central
+374337,4,10,northeast,middle atlantic
+382077,2,27,midwest,east north central
+385994,2,10,northeast,middle atlantic
+389581,1,10,northeast,middle atlantic
+385994,3,10,northeast,middle atlantic
+389581,2,10,northeast,middle atlantic
+391017,2,27,midwest,east north central
+399055,1,27,midwest,east north central
+385994,4,10,northeast,middle atlantic
+391017,3,27,midwest,east north central
+399055,2,27,midwest,east north central
+391017,4,27,midwest,east north central
+399055,3,27,midwest,east north central
+399055,4,27,midwest,east north central
+403082,3,10,northeast,middle atlantic
+409933,2,27,midwest,east north central
+420414,1,27,midwest,east north central
+403082,4,10,northeast,middle atlantic
+409933,3,27,midwest,east north central
+409933,4,27,midwest,east north central
+427807,1,10,northeast,middle atlantic
+427106,2,27,midwest,east north central
+427807,2,10,northeast,middle atlantic

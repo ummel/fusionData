@@ -91,4 +91,4 @@ var_info <- full_join(vars, codes) %>%
   select(source, file, section, var, var_desc, code, code_desc, first_year, first_qtr, last_year, last_qtr, flag)
 
 # Save output to disk
-save(var_info, file = "survey-processed/CEX/var_info.RData", compress = TRUE)
+save(var_info, file = "survey-processed/CEX/var_info.rda")

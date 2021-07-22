@@ -1,25 +1,30 @@
+# Called manually to create pre-processed versions of raw data files for each survey year
+# Only the hard-coded variables are retained, so adding a variable to the microdata requires specifying it in the appropriate place below and re-running processRawCEI()
+
+library(fusionData)
+source("R/utils.R")
 
 # Example usage:
-# processRawCEX(2015)
-# processRawCEX(2016)
-# processRawCEX(2017)
-# processRawCEX(2018)
-# processRawCEX(2019)
+# processRawCEI(2015)
+# processRawCEI(2016)
+# processRawCEI(2017)
+# processRawCEI(2018)
+# processRawCEI(2019)
 
 #----------------------
 
 processRawCEI <- function(survey_year) {
 
   # Dependency
-  load("survey-processed/CEX/var_info.RData")
+  load("survey-processed/CEX/var_info.rda")
 
   # File-specific unique ID variables
   file.ids <- list(
 
     fmli = c("NEWID", "FINLWT21"),
     memi = c("NEWID", "MEMBNO"),
-    fmld = c("NEWID", "FINLWT21"),
-    memd = c("NEWID", "MEMBNO"),
+    #fmld = c("NEWID", "FINLWT21"),
+    #memd = c("NEWID", "MEMBNO"),
     apa = c("NEWID", "QYEAR"),
     apb = c("NEWID", "QYEAR"),
     ovb = c("NEWID", "QYEAR", "VEHICIB"),
@@ -43,15 +48,17 @@ processRawCEI <- function(survey_year) {
              "OTHREGXM", "OTHRINCM", "POPSIZE", "QINTRVMO", "QINTRVYR", "PSU",
              "REF_RACE", "REGION", "RENTEQVX", "RETSURVM", "ROOMSQ", "ROYESTXM",
              "SMSASTAT", "ST_HOUS", "STATE", "UNISTRQ", "VEHQ", "VEHQL", "WELFAREM",
-             "GASMOCQ", "GASMOPQ", "UTILCQ", "UTILPQ", "SWIMPOOL",
-             "RENDWECQ", "RENDWEPQ", "TOTEXPCQ", "TOTEXPPQ", "STUDFINX", "FMLPYYRX",
+             "SWIMPOOL", "RENDWECQ", "RENDWEPQ", "FMLPYYRX", "STUDFINX", "STUDNTX", "STUDNTB",
              "STOCKX", "STOCKB", "LIQUIDX", "LIQUIDB", "IRAX", "IRAB",
-             "WINDOWAC", "CNTRALAC",
+             "WINDOWAC", "CNTRALAC", "AS_COMP1", "AS_COMP2", "AS_COMP3", "AS_COMP4", "AS_COMP5",
+             "NO_EARNR", "PERSLT18", "PERSOT64", "SEX_REF", "EDUC_REF", "INCNONW1", "INCOMEY1", "INCWEEK1",
+             "MARITAL1", "OCCUCOD1", "OTHASTX", "OTHASTB", "WHOLIFX", "WHOLIFB",
+             "CREDFINX", "CREDITB", "CREDITX", "OTHFINX", "OTHLONB", "OTHLONX",
              paste0("WTREP", str_pad(1:44, width = 2, pad = 0))), # Replicate weight variables
 
     # currently ignored:
     #"CREDFINX", "CREDITX", "FDAWAYCQ", "FDAWAYPQ", "FDHOMECQ", "FDHOMEPQ", "ALCBEVCQ", "ALCBEVPQ", "TTOTALC", "TTOTALP"
-    #"FS_MTHI", "IRAYRB", "LUMPSUMX", "MEALSPAY", "OTHASTX", "OTHFINX", "OTHLOAN", "OTHLONX", "STUDFINX", "STUDNTX",
+    #"FS_MTHI", "IRAYRB", "LUMPSUMX", "MEALSPAY", "OTHASTX", "OTHFINX", "OTHLOAN", "OTHLONX",
     #"fftaxowe", "fstaxowe", "WHOLIFX", "FJSSDEDM", "FMLPYYRX", "TOTXEST", "MISCTAXX", "DEFBENRP", "MLPAYWKX", "MLPYQWKS"
 
     memi = c("AGE", "ARM_FORC", "CU_CODE", "EARNER", "EDUCA",
@@ -61,25 +68,24 @@ processRawCEI <- function(survey_year) {
     # currently ignored:
     # "EMPLCONT", "GOVRETX", "INDRETX", "JSSDEDXM", "PRIVPENX", "SLFEMPSM", "SSNORM"
 
-    fmld = c("HHID", "BLS_URBN", "CUTENURE", "DESCRIP", "FAM_SIZE", "FAM_TYPE", "JFS_AMTM", "FINCBEFM", "FSMPFRXM",
-             "FOODAWAY", "FOODHOME", "VEHQ", "FWAGEXM", "INTRDVXM", "FSS_RRXM", "FSUPPXM", "NETRENTM", "ROYESTXM",
-             "RETSURVM", "OTHREGXM", "HH_CU_Q", "STATE"),
-
-    memd = c("AGE", "ARM_FORC", "EDUCA", "HORIGIN", "IN_COLL", "MARITAL", "JSSDEDXM", "MEMBRACE",
-             "SEMPFRMM", "SEX", "SOCRRXM", "WAGEXM", "OCCUEARN", "HRSPERWK", "SUPPXM", "EMPLTYPE"),
+    # fmld = c("HHID", "BLS_URBN", "CUTENURE", "DESCRIP", "FAM_SIZE", "FAM_TYPE", "JFS_AMTM", "FINCBEFM", "FSMPFRXM",
+    #          "FOODAWAY", "FOODHOME", "VEHQ", "FWAGEXM", "INTRDVXM", "FSS_RRXM", "FSUPPXM", "NETRENTM", "ROYESTXM",
+    #          "RETSURVM", "OTHREGXM", "HH_CU_Q", "STATE"),
+    #
+    # memd = c("AGE", "ARM_FORC", "EDUCA", "HORIGIN", "IN_COLL", "MARITAL", "JSSDEDXM", "MEMBRACE",
+    #          "SEMPFRMM", "SEX", "SOCRRXM", "WAGEXM", "OCCUEARN", "HRSPERWK", "SUPPXM", "EMPLTYPE"),
 
     apa = c("GFTC_MAJ", "MAJAPPLY", "MAJPURX"),
 
     apb =  c("GFTCMIN", "MINAPPLY", "MINPURX"),
 
-    ovb = c("VEHICYB", "FUELTYPE", "MAKE", "VEHICYR", "NETPURX", "TRADEX", "VEHNEWU", "VPURINDV", "VEHPURYR", "VFINSTAT", "VFINANCE"),
+    ovb = c("VEHICYB", "FUELTYPE", "MAKE", "VEHICYR", "NETPURX", "TRADEX", "PRINCIPX", "VEHNEWU", "VPURINDV", "VEHPURYR", "VFINANCE", "VEHQPMT", "VINTRATE", "VPURINDV"),
 
     lsd = c("LSD_MAKE", "LSDCODE", "MODELYR", "PAYEXPX", "PMTYEAR", "NUMPAY", "LSDENDYR", "QADDOWNX", "QADFEEX", "TRADEEXP"),
 
     rnt = c("SAMP_UN", "RTWATER", "RTTRASH", "RTINTRNT", "RTHEAT", "RTGAS", "RTELECT", "PUBLHOUS", "GOVTCOST")
 
-    # Ignoring detailed tax estimation variables
-    # ntaxi = c("AGE_SP", "AGE_TP", "AMTDEDCT", "CHLDCARE", "DEPCNT", "DEPUND13", "DEPUND17", "DEPUND18",
+    # ntaxi = c("AMTDEDCT", "CHLDCARE", "DEPCNT", "DEPUND13", "DEPUND17", "DEPUND18",
     #           "DIVINC", "FILESTAT", "FTAXOWE", "NONTXINC", "OTHDEDCT", "OTHTXINC", "PROPTXPD", "RNTPAID",
     #           "SOSSECB", "STAXOWE", "TAXPENS", "WAGE_HD", "WAGE_SP", "FDAGI_CY", "FDAGI_PY")
 
@@ -157,7 +163,7 @@ processRawCEI <- function(survey_year) {
         }
 
         # Restrict to Automobiles (100) or "Truck, van, minivan, or SUV" (110); Other codes includes things like motor homes, boats, etc.
-        d <- filter(d, VEHICYB %in% c(100, 110))
+        #d <- filter(d, VEHICYB %in% c(100, 110))
 
       }
 
@@ -274,7 +280,7 @@ processRawCEI <- function(survey_year) {
     arrange(var)
 
   # Drop variables without description
-  # This usually results from some oddity/error in the raw documentation
+  # This usually results from some oddity/error in the raw documentation (or the variable simply isn't available for the requested period)
   drop <- unique(filter(dict, is.na(desc))$var)
   if (length(drop) > 0) {
     dict <- filter(dict, !var %in% drop)
@@ -282,6 +288,6 @@ processRawCEI <- function(survey_year) {
   }
 
   # Save dictionary data frame to disk
-  saveRDS(dict, paste0("survey-processed/CEX/CIE/", survey_year, "/dictionary_", survey_year, ".rds"), compress = "bzip2")
+  saveRDS(dict, paste0("survey-processed/CEX/CEI/", survey_year, "/dictionary_", survey_year, ".rds"), compress = "bzip2")
 
 }

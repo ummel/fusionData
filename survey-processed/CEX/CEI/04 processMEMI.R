@@ -1,76 +1,24 @@
-library(labelled)
-library(tidyverse)
-source("R/utils.R")
+# Called from within compileCEI()
 
-# # Load H2O model for EER pre-fitted to NHANES microdata (see: Create nhanes_eer_model.R)
-# nhanes.fit <- h2o.loadModel("data/nhanes_eer_model")
+processMEMI <- function(survey_years, codebook) {
 
-#-----
-
-processMEMI <- function(survey_years) {
-
-  #d <- readRDS(paste0("data-raw/CEX/", survey_year, "/memi_", survey_year, ".rds")) %>%
-  d <- paste0("survey-processed/CEX/", survey_years, "/memi_", survey_years, ".rds") %>%
+  d <- paste0("survey-processed/CEX/CEI/", survey_years, "/memi_", survey_years, ".rds") %>%
     map_dfr(readRDS, .id = "survey_year") %>%
     mutate(survey_year = survey_years[as.integer(survey_year)],  # Replace index value with actual survey year,
            cuid = as.integer(str_sub(NEWID, 1, -2)),
            intnum = as.integer(str_sub(NEWID, -1, -1))) %>%
-    rename_with(tolower)
-
-  #---
-
-  # DROP for convenience; these are variables I thought might be interesting down the road but not critical to current project
-  # drop <- c("emplcont", "govretx", "indretx", "jssdedxm", "privpenx", "slfempsm", "ssnorm")
-  # ddrop <- intersect(names(d), drop)
-  # d <- select(d, -ddrop)
+    rename_with(tolower) %>%
+    select(-newid)
 
   #----------------
 
-  # Load codebook
-  codebook <- paste0("survey-processed/CEX/", survey_years, "/dictionary_", survey_years, ".rds") %>%
-    map_dfr(readRDS) %>%
-    mutate(var = tolower(var)) %>%
-    filter(var %in% names(d)) %>%
-    group_by(var, value) %>%
-    slice(1) %>%
-    ungroup()
+  # Subset 'codebook' object in global environment to restrict to variables in 'd'
 
-  # Clean up the codebook
   codebook <- codebook %>%
-    mutate(
-
-      # Manual edits to variable descriptions ('desc')
-      desc = ifelse(var == "cucode", "Relation to reference person", desc),
-      desc = ifelse(var == "educa", "Highest level of schooling member has completed or highest degree received", desc),
-      desc = ifelse(var == "incnonwk", "Main reason member did not work during the past 12 months", desc),
-      desc = ifelse(var == "incomey", "Employee type; refers to job with most earnings in the past 12 months", desc),
-      desc = ifelse(var == "membno", "Member number within consumer unit", desc),
-      desc = ifelse(var == "occucode", "Occupation type; refers to job with most earnings in the past 12 months", desc),
-      desc = map_chr(strsplit(desc, ", mean of", fixed = TRUE), 1),
-      desc = str_to_sentence(desc),
-
-      # Manual edits to variable labels ('label')
-      label = ifelse(var == "earner" & value == "1", "Member earns income", label),
-      label = ifelse(var == "earner" & value == "2", "Member does not earn income", label),
-      label = ifelse(var == "educa" & value == "1", "No schooling completed", label),
-      label = ifelse(var == "educa" & value == "2", "Nursery, kindergarten, or elementary", label),
-      label = ifelse(var == "educa" & value == "3", "High school, no degree", label),
-      label = ifelse(var == "educa" & value == "4", "High school graduate (diploma or equivalent)", label),
-      label = ifelse(var == "educa" & value == "5", "Some college, no degree", label),
-      label = ifelse(var == "educa" & value == "6", "Associate's degree", label),
-      label = ifelse(var == "educa" & value == "7", "Bachelor's degree", label),
-      label = ifelse(var == "educa" & value == "8", "Master's, professional, or doctoral degree", label),
-      label = str_to_sentence(label)
-    ) %>%
-
-    # Add manual entries to the codebook
-    add_row(var = "cuid", desc = "Consumer unit unique identifier", value = NA, label = NA) %>%
-    add_row(var = "intnum", desc = "Interview number", value = NA, label = NA) %>%
-    mutate_all(str_squish)
+    filter(var %in% names(d))
 
   #----------------
 
-  # Manually constructed...
   # What value should "Valid blank" take for the following variables?
 
   # Variables with "Valid blank" values
@@ -164,8 +112,18 @@ processMEMI <- function(survey_years) {
     # Apply type.convert() to 'x'; leave ordered factors unchanged
     x <- if (is.ordered(x)) x else type.convert(x, as.is = FALSE)
 
-    # Ensure unordered factor levels are sorted alphabetically
-    if (is.factor(x) & !is.ordered(x)) x <- factor(x, levels = sort(unique(x)))
+    # Ensure unordered factor levels are sorted according to codebook order of levels
+    # Originally, unordered factors were sorted alphabetically -- but there is often useful information in the codebook ordering
+    # This retains a valid codebook ordering if one exists; otherwise sort levels alphabetically
+    if (is.factor(x) & !is.ordered(x)) {
+      num.na <- sum(is.na(x))
+      if (all(x %in% cb$label)) {
+        x <- factor(x, levels = intersect(cb$label, unique(x)))
+      } else {
+        x <- factor(x, levels = sort(unique(x)))
+      }
+      stopifnot(sum(is.na(x)) == num.na)  # This is a final safety check to ensure no NA's introduced inadvertently
+    }
 
     # Update column in 'd'
     d[[v]] <- x
@@ -185,35 +143,21 @@ processMEMI <- function(survey_years) {
     mutate(age = ifelse(is.na(age), 0, age))
 
   # Set 'educa' to plausible value based on member age
-  # Valid blanks were set to "Nursery, kindergarten, or elementary"; this sets the youngest children to "No schooling completed"
+  # Valid blanks were set to "Nursery, kindergarten, or elementary"; this sets the youngest children (age < 5) to "No schooling completed"
   d <- d %>%
     mutate(educa = replace(educa, age < 5, levels(d$educa)[1]))
 
   #----------------
 
   # Impute missing
-  # There are so few NA's in the MEMI data (currently), it makes sense to impute separately
-  d <- imputeMissing(data = d, N = 1)
+  # There are so few NA's in the MEMI data (currently), it makes sense to impute separately from the FMLI and expenditure variables
+  imp <- imputeMissing(data = d, N = 1)
 
-  #----------------
+  # Add imputed variables to 'd'
+  d <- d %>%
+    select(-any_of(names(imp))) %>%
+    cbind(imp)
 
-  # Assemble final output
-  # Restrict final output to each CU's last/final interview
-  # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
-  final <- d %>%
-    group_by(cuid) %>%
-    filter(intnum == max(intnum)) %>%
-    ungroup() %>%
-    mutate_if(is.numeric, convertInteger) %>%
-    mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
-    set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = FALSE) %>%
-    rename(
-      cei_hid = cuid,  # Rename ID variables to standardized names
-      pid = membno
-    ) %>%
-    select(-intnum, -survey_year, -newid) %>%
-    select(cei_hid, pid, everything())
-
-  return(final)
+  return(d)
 
 }

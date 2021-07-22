@@ -3,6 +3,7 @@
 # series along with any allocation factor (ucc_share) provided in the BLS concordance file
 library(tidyverse)
 
+# This file is in fusionData/data
 data(BEA_pce_national)
 
 #---
@@ -110,10 +111,21 @@ stopifnot(all(d$ucc_share <= 1 & d$ucc_share > 0))
 
 #---
 
+# Set 'ucc_share' to -1 for the "Used cars adjustment – new car trade-in" and "Used trucks adjustment – new truck trade-in" UCC's in the concordance
+# These are unique cases where BLS created "fake" UCC's to act as placeholders for -1 * the true UCC value
+# This was done to deduct trade-in value from used car net purchases, but retain positive trade-in value for gross new car purchases
+# The result is that the UCC's 450116 and 450216 are in 'pce_concordance' TWICE, once with ucc_share = 1 and once with ucc_share = -1
+d <- d %>%
+  mutate(ucc_share = ifelse(ucc %in% c("450199", "450299"), -1, ucc_share),
+         ucc = ifelse(ucc == "450199", "450116", ucc),
+         ucc = ifelse(ucc == "450299", "450216", ucc))
+
+#---
+
 # Assemble final output
 pce_concordance <- d %>%
   select(ucc, pce_series, ucc_share) %>%  # Retain only strictly unnecessary columns
   arrange(ucc)
 
 # Save output to disk
-save(pce_concordance, file = "survey-processed/CEX/pce_concordance.RData", compress = TRUE)
+save(pce_concordance, file = "survey-processed/CEX/pce_concordance.rda")
