@@ -86,6 +86,11 @@ d <- d %>%
   mutate_all(~ ifelse(grepl("^[9]*$", .x), NA, .x)) %>%   # Replace all "999", etc. (all nines) with NA
   mutate(hus10 = replace_na(hus10, 0L))
 
+# Replace any NA values with string "None"
+# This is to allow clear distinction in survey microdata between NA (unknown) and NA (not applicable); the latter should be set to "None" when survey is processed
+# For example, geographies not affiliated with a CBSA are set to "None" rather than NA
+d[is.na(d)] <- "None"
+
 # Assign clean variable labels
 stopifnot(all(names(d) == names(vlabs)))
 labelled::var_label(d) <- vlabs
@@ -126,7 +131,8 @@ cd[bg_centroids$state == "15"] <- "5000"
 
 # Create crosswalk between block group and climate division
 climdiv <- bg_centroids %>%
-  mutate(climate_division = cd) %>%
+  mutate(pop10 = NULL,
+         climate_division = cd) %>%
   st_drop_geometry()
 
 # Assign variable description
