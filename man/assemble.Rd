@@ -7,10 +7,10 @@
 assemble(
   x,
   fusion.variables = NULL,
-  replicates = FALSE,
   spatial.datasets = "all",
-  window = 1,
-  pca = NULL
+  window = 2,
+  pca = NULL,
+  replicates = FALSE
 )
 }
 \arguments{
@@ -18,19 +18,19 @@ assemble(
 
 \item{fusion.variables}{Character. Names of donor variables to be included in output as fusion candidates. If NULL (default), an attempt is made to return all donor variables not used in harmonization process.}
 
-\item{replicates}{Logical. Should replicate observation weights be included, if available? Defaults to FALSE. Passed to \link{completeDonor}.}
-
 \item{spatial.datasets}{Character. Vector of requested spatial datasets to merge (e.g. \code{"EPA-SLD"}) or either of two special values: \code{"all"} (default) or \code{"none"}.}
 
 \item{window}{Integer. Size of allowable temporal window, in years, when merging spatial variables. \code{window = 0} (default) means that a spatial variable is only included if it has the same vintage as the survey. See Details.}
 
 \item{pca}{Numeric. Controls whether/how PCA is used to reduce dimensionality of spatial variables. Default (NULL) is no PCA. If non-NULL, should be a numeric vector of length two; e.g. \code{pca = c(50, 0.95)}. First number is the maximum number of components to return; second number is target proportion of variance explained. See Details.}
+
+\item{replicates}{Logical. Should replicate observation weights be included, if available? Defaults to FALSE. Passed to \link{completeDonor}.}
 }
 \value{
 A list of length two containing donor and recipient microdata to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}}.
 }
 \description{
-Prepares data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}} to perform survey fusion.
+Assembles data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}} to perform survey fusion. Adds fusion, replicate weight, and/or spatial variables and checks that donor and recipient output data frames are consistent.
 }
 \details{
 Spatial variables are included if the associated vintage is within +/- \code{window} years of the survey vintage. In cases where the spatial variable has multiple vintages equidistant from the survey vintage, the older vintage is selected. Variables with \code{vintage = "always"} are, of course, always included.

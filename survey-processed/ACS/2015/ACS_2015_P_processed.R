@@ -43,10 +43,9 @@ d <- d %>%
 d <- d %>%
   select_if(~ length(unique(.x)) > 1)
 
-# Standardize state and PUMA variable and remove Puerto Rico observations
+# Ensure observations restricted to U.S. states and D.C.
 d <- d %>%
-  filter(ST %in% 1:56)  # Ensure observations restricted to U.S. states and D.C.
-#select(-DIVISION, -REGION)  # Not present in 2015 microdata
+  filter(ST %in% 1:56)
 
 gc()
 
@@ -183,13 +182,14 @@ d <- d %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   mutate(
-    ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
-    PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
+    ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10'
+    PUMA = factor(str_pad(PUMA, width = 5, pad = 0)),
+    RELP = relevel(RELP, "Reference person")
   ) %>%
+  addPID(hid = "SERIALNO", refvar = "RELP") %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
   rename(
     acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
-    pid = SPORDER,
     weight = PWGTP,
     state = ST,
     puma10 = PUMA

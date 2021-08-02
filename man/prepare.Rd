@@ -16,7 +16,7 @@ prepare(donor, recipient, respondent, implicates = 1)
 \item{implicates}{Integer. Number of PUMA implicates to return for the donor microdata.}
 }
 \value{
-A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{x} argument in \code{\link{assemble}}.
+A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{\link{assemble}}.
 }
 \description{
 Prepares data inputs to pass to \code{\link{assemble}}. Harmonizes common variables for the specified donor and recipient surveys, imputes PUMA for donor records, and samples location variables for recipient records.

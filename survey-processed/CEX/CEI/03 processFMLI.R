@@ -224,7 +224,7 @@ processFMLI <- function(survey_years, codebook) {
   if (nrow(problems) > 0) write_csv(problems, paste0("survey-processed/CEX/errors/", Sys.Date(), " FMLI geography flagged", ".csv"))
 
   # Fix any geographic discrepancies in the state-division-region hierarchy
-  test <- d %>%
+  d <- d %>%
     mutate(state = str_pad(state, width = 2, pad = "0")) %>%
     left_join(state.hierarchy, by = "state", suffix = c("", "2")) %>%
     mutate(division = ifelse(!is.na(division2), division2, as.character(division)),

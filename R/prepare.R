@@ -8,7 +8,7 @@
 #' @param respondent Character. Desired respondent level of microdata. Either `"household"` or `"person"`.
 #' @param implicates Integer. Number of PUMA implicates to return for the donor microdata.
 #'
-#' @return A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{x} argument in \code{\link{assemble}}.
+#' @return A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{\link{assemble}}.
 #'
 #' @examples
 #' prep <- prepare(donor = "RECS_2015",

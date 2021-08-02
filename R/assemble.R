@@ -1,7 +1,7 @@
 #' Assemble data used for survey fusion
 #'
 #' @description
-#' Prepares data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}} to perform survey fusion.
+#' Assembles data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}} to perform survey fusion. Adds fusion, replicate weight, and/or spatial variables and checks that donor and recipient output data frames are consistent.
 #'
 #' @param x List object produced by \code{\link{prepare}}.
 #' @param fusion.variables Character. Names of donor variables to be included in output as fusion candidates. If NULL (default), an attempt is made to return all donor variables not used in harmonization process.
@@ -39,10 +39,10 @@
 
 assemble <- function(x,
                      fusion.variables = NULL,
-                     replicates = FALSE,
                      spatial.datasets = "all",
-                     window = 1,
-                     pca = NULL) {
+                     window = 2,
+                     pca = NULL,
+                     replicates = FALSE) {
 
   # Names of the donor and recipient surveys
   donor <- names(x$harmonized)[1]
@@ -92,21 +92,23 @@ assemble <- function(x,
   rvars <- grep("^rep_\\d+$", names(d), value = TRUE)
 
   # Identify the fusion variables
-  # Pass ... argument for selecting fusion variables as a dplyr select() statement
   disallowed <- unique(c(did, rvars, "weight", "state", "puma10", attr(x$location, "intersection.vars")))  # Variables that are not feasible fusion candidates
+  employed <- attr(x$harmonized[[donor]], "employed.vars")
   fvars <- if (is.null(fusion.variables)) {
-    setdiff(names(d), c(disallowed, attr(x$harmonized[[donor]], "employed.vars")))  # Exclude variables known to be used for harmonization
+    setdiff(names(d), c(disallowed, employed))  # Exclude variables known to be used for harmonization
   } else {
-    invalid <- setdiff(fusion.variables, names(d))
-    if (length(invalid) > 0) stop ("The following requested fusion variables are not in the donor microdata:/n", paste(invalid, collapse = ", "))
-    invalid <- intersect(fusion.variables, disallowed)
-    if (length(invalid) > 0) stop ("The following requested fusion variables are not valid:/n", paste(invalid, collapse = ", "))
-    fusion.variables
+    invalid1 <- setdiff(fusion.variables, names(d))
+    if (length(invalid1) > 0) cat("Some requested fusion variables are not in the donor microdata:\n", paste(invalid1, collapse = ", "), "\n")
+    invalid2 <- intersect(fusion.variables, disallowed)
+    if (length(invalid2) > 0) cat("Some requested fusion variables are not feasible candidates:\n", paste(invalid2, collapse = ", "), "\n")
+    invalid3 <- intersect(fusion.variables, employed)
+    if (length(invalid3) > 0) cat("Some requested fusion variables were used to create harmonies:\n", paste(invalid3, collapse = ", "), "\n")
+    setdiff(fusion.variables, c(invalid1, invalid2, invalid3))
   }
 
   # Report which variables are being added ass fusion variables
   fvars <- sort(fvars)
-  cat("Adding the following fusion variables:\n", paste(fvars, collapse = ", "))
+  cat("Adding the following fusion variables:\n", paste(fvars, collapse = ", "), "\n")
 
   # Load necessary donor variables from disk
   rvars <- if (replicates) rvars else NULL

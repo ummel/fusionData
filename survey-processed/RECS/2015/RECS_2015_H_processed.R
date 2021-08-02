@@ -22,7 +22,7 @@ d <- read_csv("survey-raw/RECS/2015/recs2015_public_v4.csv")
 #-----
 
 # Load and process and codebook
-# NOTE: Warning about "New names: is OK
+# NOTE: Warning about "New names:" is OK
 codebook <- readxl::read_excel("survey-raw/RECS/2015/codebook_publicv4.xlsx", skip = 3) %>%
   setNames(c('var', 'type', 'length', 'desc', 'value', 'label')) %>%
   select(var, desc, value, label) %>%
@@ -69,8 +69,8 @@ na.values <- list(
   ROOFTYPE = "Unknown, large apartment building",
   HIGHCEIL = "No",
   SWIMPOOL = "No",
-  POOL = "No",
-  FUELPOOL = "No pool",
+  POOL = "No pool",
+  FUELPOOL = "No pool or not heated",
   FUELTUB = "No hot tub",
   OUTLET = "Unknown, large apartment building",
   BACKUP = "Unknown, large apartment building",
@@ -304,11 +304,11 @@ stopifnot(length(extras) == 0)
 # Check for a precise match between levels specified in 'ordered.factors' and the codebook labels
 # Will return helpful message if a discrepancy is detected; some discrepancies may be allowable
 # NOTE: The "TEMP*" variables will be flagged here, but that's OK: They are an odd case where we have a numeric mixed with a categorical
-for (v in names(ordered.factors)) {
-  of <- sort(ordered.factors[[v]])
-  cb <- sort(unique(filter(codebook, var == v)$label))
-  if (!identical(of, cb)) warning("Have a closer look at ", v, "\n-- Supplied levels:\n", paste(of, collapse = "\n"), "\n--Codebook levels:\n", paste(cb, collapse = "\n"))
-}
+# for (v in names(ordered.factors)) {
+#   of <- sort(ordered.factors[[v]])
+#   cb <- sort(unique(filter(codebook, var == v)$label))
+#   if (!identical(of, cb)) warning("Have a closer look at ", v, "\n-- Supplied levels:\n", paste(of, collapse = "\n"), "\n--Codebook levels:\n", paste(cb, collapse = "\n"))
+# }
 
 #-----
 
@@ -362,6 +362,19 @@ for (v in names(d)) {
 
 #-----
 
+# Detect structural dependencies
+
+
+
+
+
+
+
+
+
+
+#-----
+
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
@@ -369,7 +382,7 @@ na.count  # See which variables have NA's
 
 # Impute NA values in 'd'
 imp <- imputeMissing(data = d,
-                     N = 2,
+                     N = 1,
                      weight = "NWEIGHT",
                      x_exclude = c("DOEID", "^BRRWT"))
 
@@ -392,7 +405,8 @@ d <- d %>%
   mutate(cbsatype15 = "None",
          cbsatype15 = ifelse(grepl("Metro", METROMICRO), "Metro", cbsatype15),
          cbsatype15 = ifelse(grepl("Micro", METROMICRO), "Micro", cbsatype15),
-         ur12 = substring(UATYP10, 1, 1))
+         ur12 = substring(UATYP10, 1, 1)) %>%
+  select(-METROMICRO, -UATYP10)
 
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
@@ -406,7 +420,7 @@ d <- d %>%
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
-d <- d %>%
+h.final <- d %>%
   mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
@@ -424,10 +438,10 @@ d <- d %>%
 #----------------
 
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = d, survey = "RECS", vintage = 2015, respondent = "H")
+dictionary <- createDictionary(data = h.final, survey = "RECS", vintage = 2015, respondent = "H")
 saveRDS(object = dictionary, file = "survey-processed/RECS/2015/RECS_2015_H_dictionary.rds")
 
 #----------------
 
 # Save data to disk (.fst)
-fst::write_fst(x = d, path = "survey-processed/RECS/2015/RECS_2015_H_processed.fst", compress = 100)
+fst::write_fst(x = h.final, path = "survey-processed/RECS/2015/RECS_2015_H_processed.fst", compress = 100)

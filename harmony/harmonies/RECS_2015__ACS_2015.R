@@ -205,6 +205,22 @@ list(
     comment = "",
     modified = "2021-07-03 12:10:17"),
 
+  nhsldmem__np = list(
+    RECS = list(
+      groups = 1,
+      levels = "Min: 1, Median: 2, Mean: 2.547, Max: 12",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: 1, Median: 2, Mean: 2.49, Max: 20",
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = "",
+    comment = "",
+    modified = "2021-07-29 07:16:27"),
+
   numadult__agep = list(
     RECS = list(
       groups = 1,

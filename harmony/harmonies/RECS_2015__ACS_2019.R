@@ -26,8 +26,7 @@ list(
       levels = c("Yes", "No"),
       breaks = "",
       adj = "",
-      agg = ""
-    ),
+      agg = ""),
     ordered = TRUE,
     comment = "Add 'desktop' and 'laptop' variables in RECS, since ACS variable refers to presence of either one.",
     modified = "2021-07-03 06:26:03"),
@@ -173,6 +172,22 @@ list(
     ordered = FALSE,
     comment = "",
     modified = "2021-07-03 06:39:26"),
+
+  nhsldmem__np = list(
+    RECS = list(
+      groups = 1,
+      levels = "Min: 1, Median: 2, Mean: 2.547, Max: 12",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: 1, Median: 2, Mean: 2.47, Max: 20",
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = "",
+    comment = "",
+    modified = "2021-07-31 18:32:27"),
 
   numadult__agep = list(
     RECS = list(

@@ -63,17 +63,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
 
   #-----
 
-  # "adj" slot values (across all variables)
-  # Used only to load necessary variables to evaluate "adj" custom code
-  adj <- H %>%
-    unlist(recursive = FALSE) %>%
-    map("adj") %>%
-    unlist() %>%
-    unique()
-  adj <- adj[adj != ""]
-
-  #-----
-
   # Sequentially process donor and/or recipient microdata by 'type' (donor or recipient)
 
   # Placeholder results list
@@ -102,21 +91,34 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     s <- strsplit(tolower(survey[j]), "_")[[1]][1]
     hid <- grep(paste0("^", s, ".*_hid$"), names(if (HH) dh else dp), value = TRUE)
 
+    # "adj" slot values (across all variables)
+    # Used only to load necessary variables to evaluate "adj" custom code
+    adj <- H %>%
+      map(~ .x[[j]]$adj) %>%
+      map(~ strsplit(gsub("[^[:alnum:] ]", " ", .x), "\\s+")[[1]]) %>%
+      compact() %>%
+      unlist()
+
     # Variables (and potential matching strings) to load from disk
     # This includes standard household and person identifier variables
-    m <- paste(c(vnames, adj, hid, "pid", "weight"), collapse = " ")
+    #m <- paste(str_squish(c(vnames, adj, hid, "pid", "weight")), collapse = " ")
+    m <- c(vnames, adj, hid, "pid", "weight")
 
     # Load household data (NULL if unavailable or unnecessary)
     # Note that 'k' should ALWAYS return at least 1 column (hid), but > 1 needed to pull any data from disk
     # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dh'
-    k <- sapply(names(dh), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
-    dh <- if (length(k) > 1) dh[names(which(k))] else NULL
+    #k <- sapply(names(dh), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
+    #dh <- if (length(k) > 1) dh[names(which(k))] else NULL
+    k <- intersect(names(dh), m)
+    dh <- if (length(k) > 1) dh[k] else NULL
 
     # Load person data (NULL if unavailable or unnecessary)
     # Note that 'k' should ALWAYS return at least 2 columns (hid and pid), but > 2 needed to pull any data from disk
     # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dp'
-    k <- sapply(names(dp), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
-    dp <- if (length(k) > 2) dp[names(which(k))] else NULL
+    # k <- sapply(names(dp), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
+    # dp <- if (length(k) > 2) dp[names(which(k))] else NULL
+    k <- intersect(names(dp), m)
+    dp <- if (length(k) > 1) dp[k] else NULL
 
     # Ensure all data sorted by 'hid'
     if (!is.null(dh)) dh <- arrange(dh, across(all_of(hid)))
@@ -284,7 +286,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     # Add attributes to the output data frame
     setattr(out, "survey", survey[j])
     setattr(out, "identifier", c(hid, intersect(names(out), "pid")))
-    setattr(out, "employed.vars", setdiff(c(names(dh), names(dp)), c(hid, "pid", "weight")))  # Variables used to construct harmonies (NOT 100% safe/accurate; can include variables erroneously)
+    setattr(out, "employed.vars", setdiff(c(names(dh), names(dp)), c(hid, "pid", "weight")))  # Variables used to construct harmonies
 
     # Assign data frame to final 'result' list
     result[[type]] <- out

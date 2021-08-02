@@ -29,9 +29,8 @@ processACScodebook <- function(dictionary.file) {
 
   # Either read the .csv file or pre-process the .txt file
   dictionary <- if (csv) {
-    suppressWarnings(
-      read_csv(dictionary.file,
-               col_names = c('record', 'var', 'type', 'length', 'value', 'value2', 'label'))) %>%
+    read.csv(dictionary.file, header = FALSE, na.strings = "") %>%
+      setNames(c('record', 'var', 'type', 'length', 'value', 'value2', 'label')) %>%
       select(var, value, value2, label)
   } else {
     convertTXTdictionary(dictionary.file)

@@ -28,7 +28,7 @@ library(fusionData)
 1. **Document**: Document survey variables and compile a "universal" data dictionary.
 1. **Harmonize**: Harmonize variables in "donor" surveys with those in the American Community Survey (ACS).
 1. **Compile spatial data**: Compile data from multiple spatial datasets for merging with survey microdata.
-1. **Prepare for fusion**: Prepare donor and ACS/recipient microdata inputs for the [fusionModel package](https://github.com/ummel/fusionModel).
+1. **Prepare for fusion**: Prepare donor and ACS/recipient microdata inputs passed to the [fusionModel package](https://github.com/ummel/fusionModel).
 
 ## Setup and install
 
@@ -244,20 +244,20 @@ When a user clicks "Submit harmony" within the app, the currently-specified "har
 ```r
 
 fuelheat__hfl = list(
-    RECS = list(
-      groups = 1:7,
-      levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
-      levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
-      breaks = "",
-      adj = ""),
-    ordered = FALSE,
-    comment = "",
-    modified = "2021-07-03 12:10:17"),
-    
+RECS = list(
+groups = 1:7,
+levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
+breaks = "",
+adj = ""),
+ACS = list(
+groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
+levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
+breaks = "",
+adj = ""),
+ordered = FALSE,
+comment = "",
+modified = "2021-07-03 12:10:17"),
+
 ```
 This list object contains all of the information necessary to construct RECS and ACS microdata containing a new variable called "fuelheat__hfl" -- the harmonized version of the two associated heating fuel variables. This is precisely what the `harmonize()` function does (typically when called by `prepare()` as explained below) using all of the harmonies available in the specified harmony file. Note that harmonized variables are always indicated by a double-underscore ("__").
 
@@ -302,15 +302,20 @@ Consequently, unless a user is actively adding or editing processed spatial data
 
 ## Prepare for fusion
 
-The following example shows how the fusionData `prepare()` function is used to assemble complete, consistent, and harmonized microdata that can then be passed to the [fusionModel package](https://github.com/ummel/fusionModel) to fuse donor variables to ACS microdata.
+The following example shows how the fusionData `prepare()` and `assemble()` functions to generate complete, consistent, and harmonized microdata that can then be passed to the [fusionModel package](https://github.com/ummel/fusionModel) to fuse donor variables to ACS microdata.
 
-The simplest usage is shown below. In this case, we are requesting microdata outputs at the household-level that will allow us to (subsequently) fuse RECS 2015 donor variables to ACS 2015 recipient microdata.
+The simplest usage is shown below. In this case, we are requesting microdata outputs at the household-level that will allow us to (subsequently) fuse RECS 2015 donor variables to ACS 2015 recipient microdata. `prepare()` and `assemble()` are separate functions only because `prepare()` tends to be more expensive. It can usually be called just once (possibly saving the output to disk), while `assemble()` is then invoked multiple times to debug or test different assembly options.
 
-```{r, echo = TRUE, results = 'hide'}
+```{r, echo = TRUE}
+
 # Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata
-data <- prepare(donor = "RECS_2015", recipient = "ACS_2015", respondent = "household")
+prep <- prepare(donor = "RECS_2015", recipient = "ACS_2015", respondent = "household")
+
+# Assemble using default options
+data <- assemble(prep)
+
 ```
-The resulting `data` object is a list containing two data frames. The first slot contains the "prepared" donor microdata. The second slot contains the "prepared" ACS recipient microdata. Notice that the RECS microdata has more variables/columns than the ACS data. This is because `prepare` donor output includes -- by default -- any variables in the donor survey not used to create harmonies. The latter are potential candidates for fusion (and there are many in the case of RECS).
+The resulting `data` object is a list containing two data frames. The first slot contains the "prepared" donor microdata. The second slot contains the "prepared" ACS recipient microdata. Notice that the RECS microdata has more variables/columns than the ACS data. This is because `assemble` donor output includes -- by default -- *all* valid variables in the donor survey not used to create harmonies. The latter are potential candidates for fusion (and there are many in the case of RECS).
 
 ```{r, echo = TRUE}
 lapply(data, dim)
@@ -322,7 +327,8 @@ v <- names(data$ACS_2015)[2:6]
 head(data$RECS_2015[v])
 head(data$ACS_2015[v])
 ```
-Notice that the harmonized variable *values* are typically integers (possibly factorized); that is, they contain no intelligible labels. This is because `harmonize()` maps each original value/level to a (integer) group assignment as specified in the relevant `.R` harmony file. The one exception is when *numeric* variables in the two surveys are conceptually identical and can be included "as is" or (automatically) converted to percentiles.
+
+Notice that the harmonized variable *values* are typically integers (possibly factorized); that is, they contain no intelligible labels. This is because `harmonize()` maps each original value/level to a (integer) group assignment as specified in the relevant `.R` harmony file. The one exception is when *numeric* variables in the two surveys are conceptually identical and are then included "as is" or (automatically) converted to percentiles.
 
 Since RECS and ACS are both nationally representative surveys, the distribution of the harmonized variables should look pretty similar across the two data frames. We can confirm this for the `fuelheat__hfl` variable, which creates harmony between the RECS and ACS heating fuel variables ("fuelheat" and "hfl", respectively). We can compare the proportion of cases by harmonized value.
 
@@ -330,7 +336,8 @@ Since RECS and ACS are both nationally representative surveys, the distribution 
 round(table(data$RECS_2015$fuelheat__hfl) / nrow(data[[1]]), 3)
 round(table(data$ACS_2015$fuelheat__hfl) / nrow(data[[2]]), 3)
 ```
-`prepare()` also merges spatial variables with both the donor and recipient microdata. The function `assignLocation()` is used internally to -- among other things -- impute one or more plausible PUMA's for each donor household. Pre-compiled spatial variables (those in `geo_predictors.fst`) are then merged onto both the donor and recipient microdata at the PUMA level. Spatial variables are indicated by the double-dot ("..") in the variable name, analogous to the way that harmonized variables are indicated by the double-underscore ("__"). 
+
+`assemble()` also merges spatial variables with both the donor and recipient microdata. The function `assignLocation()` is used internally to -- among other things -- impute one or more plausible PUMA's for each donor household. Pre-compiled spatial variables (those in `geo_predictors.fst`) are then merged onto both the donor and recipient microdata at the PUMA level. Spatial variables are indicated by the double-dot ("..") in the variable name, analogous to the way that harmonized variables are indicated by the double-underscore ("__"). 
 
 Let's look at the variables in the recipient ACS microdata.
 
@@ -339,33 +346,42 @@ names(data$ACS_2015)
 ```
 The string to the left of the ".." identifies the spatial dataset that the variable comes from. The string to the right is a unique, syntactically-valid identifier. It's not critical that specific spatial variables be identifiable in the fusion process. And because pre-processing of spatial datasets does not impose a stringent naming/documentation convention (it is flexible by design), these non-nonsensical-but-unique names are the safest way to identify spatial variables.
 
-Now let's explore some of the additional arguments to `prepare()`:
+The `prepare()` function includes an `implicates` argument that controls how many PUMA's are imputed for each donor household. Setting `implicates` higher results in more variability in the spatial predictors merged to a given household, reflecting our uncertainty about where the household is located. The use of implicates here mimics usage in standard multiple imputation techniques (5 implicates is typical).
 
-1. We can pass unquoted donor variable names and/or selectize statements to the `...` argument if we want to return a specific set of fusion variables for the donor (instead of all variables, the default behavior).
+Now let's explore some of the additional arguments to `assemble()`:
 
-1. The `implicates` argument controls how many PUMA's are imputed for each donor household. Setting `implicates` higher results in more variability in the spatial predictors merged to a given household, reflecting our uncertainty about where the household is located. The use of implicates here mimics usage in standard multiple imputation techniques (5 implicates is typical).
+1. We can request certain fusion variables by passing a character vector to `fusion.variables`. The input is checked internally against the data and only valuid fusion candidates are returned (with helpful message to console).
 
 1. We can limit the spatial datasets merged to the microdata via the `spatial.datasets` argument. Default is to include all available datasets, and this is sensible in most cases.
 
-1. The `window` argument controls how wide a timespan we tolerate when merging spatial variables to microdata. The default (`window = 0`) means that spatial variables are merged only when their vintage matches that of the microdata. A larger `window` will generally mean more spatial variables in the output but at some cost in terms of temporal alignment.
+1. The `window` argument controls how wide a timespan (+/- `window` years from the data vintage) is tolerated when merging spatial variables to microdata. The default (`window = 0`) means that spatial variables are merged only when their vintage matches that of the microdata. A larger `window` will generally mean more spatial variables in the output but at some cost in terms of temporal alignment.
 
 1. The `pca` argument controls whether/how principal components analysis (PCA) is used to reduce dimensionality of the spatial variables. `?prepare` provides additional details concerning the `pca` argument.
 
-The following shows a more complex (and realistic) call to `prepare()`, making use of the optional arguments.
+1. Setting `replicates = TRUE` will cause replicate observation weights to be returned along with the central/primary `weight` column.
 
-```{r, echo = TRUE, results = 'hide'}
+The following shows a more complex (and realistic) call to `prepare()` and `assemble()`, making use of the optional arguments.
+
+```{r, echo = TRUE}
+
 # Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata
-data <- prepare(donor = "RECS_2015", 
+prep <- prepare(donor = "RECS_2015", 
                 recipient = "ACS_2015", 
                 respondent = "household",
-                cooltype, agecenac, kwhcol,  # Request specific donor variables
-                implicates = 5,
-                window = 3,
-                pca = c(30, 0.9))
+                implicates = 5)
+
+data <- assemble(prep,
+                 fusion.variables = c("cooltype", "agecenac", "kwhcol"),
+                 window = 3,
+                 pca = c(30, 0.9))
+
 ```
+
+
 ```{r, echo = TRUE}
 lapply(data, dim)
 ```
+
 The number of observations in the donor microdata is now higher, reflecting the use of `implicates = 5`. Note that the number of rows has increased by less than a factor of five. This is because `assignLocation()` collapses duplicate household-PUMA observations and adjusts the sample "weight" column accordingly. This reduces the amount of data without affecting subsequent statistical results.
 
 The difference in the number of columns between the RECS and ACS microdata is due to the former's inclusion of our three requested donor variables. Otherwise, both data frames are entirely consistent with one another. They each include a unique household identifier variable and an identical set of harmonized survey and spatial variables that can be exploited by the fusion process.
@@ -378,24 +394,30 @@ names(data$ACS_2015)
 
 ## Make it rain
 
-At this point, we are ready to fuse. This is straightforward using the `train()` and `fuse()` functions from the fusionModel package. To make this even easier, `prepare()` donor output includes a "fusion.vars" attribute that can be passed directly to `train()` to identify the variables available to be fused.
+At this point, we are ready to fuse. This is straightforward using the `train()` and `fuse()` functions from the fusionModel package. To make this even easier, `assemble()` donor output includes a "fusion.vars" attribute that can be passed directly to `train()` to identify the variables available to be fused.
 
-```{r, echo = TRUE, results = "hide"}
-fit <- fusionModel::train(data = data$RECS_2015, 
-                          y = attr(data$RECS_2015, "fusion.vars"), 
-                          ignore = "recs_2015_hid", 
-                          weight = "weight",
-                          mc = TRUE,
-                          maxcats = 10,
-                          lasso = 0.95)
+```
+library(fusionModel)
 ```
 
-We then `fuse()` (i.e. simulate) the fusion variables onto the harmonized ACS microdata. This is a non-trivial exercise, since the recipient ACS microdata has `r nrow(data$ACS_2015) ` observations. Setting `induce = FALSE` eases the computation and memory burden considerably. The call below shouldn't require more than about 5GB of RAM.
+```{r, echo = FALSE}
+library(fusionModel)
+```
+
+```{r, echo = TRUE}
+fit <- train(data = data$RECS_2015, 
+             y = attr(data, "fusion.vars"), 
+             ignore = "recs_2015_hid", 
+             weight = "weight",
+             cores = 2,
+             maxcats = 10,
+             complexity = 0.01)
+```
+
+We then `fuse()` (i.e. simulate) the fusion variables onto the harmonized ACS microdata. This is a non-trivial exercise, since the recipient ACS microdata has `r nrow(data$ACS_2015) ` observations. Ensuring `induce = FALSE` (the default) eases the computation and memory burden considerably. The call below shouldn't require more than about 5GB of RAM.
 
 ```{r, echo = TRUE, results = "hide"}
-sim <- fusionModel::fuse(data = data$ACS_2015, 
-                         train.object = fit, 
-                         induce = FALSE)
+sim <- fuse(data = data$ACS_2015, train.object = fit)
 ```
 
 A quick check that the fusion output looks plausible:

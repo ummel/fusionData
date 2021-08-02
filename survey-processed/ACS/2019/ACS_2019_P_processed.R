@@ -19,7 +19,8 @@ pus.files <- list.files(path = tempdir(), pattern = "pus..csv$", full.names = TR
 # Read person PUMS data
 d <- pus.files %>%
   map_dfr(data.table::fread) %>%
-  as_tibble()
+  as_tibble() %>%
+  rename_with(toupper)  # Ensure upper-case names for consistency for 'codebook'; replicate weights are sometimes lower-case in the raw data
 
 # Replace literal empty strings ("") with NA for character type columns
 # fread() does not convert empty strings to NA, as they are ambiguous
@@ -42,10 +43,9 @@ d <- d %>%
 d <- d %>%
   select_if(~ length(unique(.x)) > 1)
 
-# Standardize state and PUMA variable and remove Puerto Rico observations
+# Ensure observations restricted to U.S. states and D.C.
 d <- d %>%
-  filter(ST %in% 1:56) %>%  # Ensure observations restricted to U.S. states and D.C.
-  select(-DIVISION, -REGION)
+  filter(ST %in% 1:56)
 
 gc()
 
@@ -144,7 +144,7 @@ for (v in names(d)) {
   if (is.factor(x) & !is.ordered(x)) {
     num.na <- sum(is.na(x))
     if (all(x %in% cb$label)) {
-    x <- factor(x, levels = intersect(cb$label, unique(x)))
+      x <- factor(x, levels = intersect(cb$label, unique(x)))
     } else {
       x <- factor(x, levels = sort(unique(x)))
     }
@@ -183,13 +183,14 @@ d <- d %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   mutate(
-    ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
-    PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
+    ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10'
+    PUMA = factor(str_pad(PUMA, width = 5, pad = 0)),
+    RELSHIPP = relevel(RELSHIPP, "Reference person")
   ) %>%
+  addPID(hid = "SERIALNO", refvar = "RELSHIPP") %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
   rename(
     acs_2019_hid = SERIALNO,  # Rename ID and weight variables to standardized names
-    pid = SPORDER,
     weight = PWGTP,
     state = ST,
     puma10 = PUMA
@@ -202,6 +203,9 @@ d <- d %>%
 # Manual removal of variables without useful information
 d <- d %>%
   select(-anc, -dratx, -mig, -racnum, -sciengp, -sciengrlp)
+
+# Remaining manual fix-ups
+labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"
 
 #----------------
 

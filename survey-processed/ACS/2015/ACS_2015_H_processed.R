@@ -4,11 +4,10 @@ source("R/createDictionary.R")
 source("R/imputeMissing.R")
 source("R/detectDependence.R")
 
-# Load generic codebook processing function
+# Load ACS-specific helper functions
 source("survey-processed/ACS/processACScodebook.R")
-
-# Load utility cost flag function (only prior to 2018)
-source("survey-processed/ACS/utilityCostFlags.R")
+source("survey-processed/ACS/adjustedRentalValue.R")
+source("survey-processed/ACS/utilityCostFlags.R")  # Only necessary prior to 2018
 
 #-----
 
@@ -55,10 +54,9 @@ d <- d %>%
   filter(TYPE == 1, NP > 0) %>%  # Remove vacant units, too
   select_if(~ length(unique(.x)) > 1)
 
-# Standardize PUMA variable and remove Puerto Rico observations
+# Ensure observations restricted to U.S. states and D.C.
 d <- d %>%
-  filter(ST %in% 1:56) %>%  # Ensure observations restricted to U.S. states and D.C.
-  select(-DIVISION, -REGION)
+  filter(ST %in% 1:56)
 
 gc()
 
@@ -166,6 +164,59 @@ gc()
 
 #----------------
 
+# Convert TAXP categorical property tax variable to estimated continuous values (only necessary prior to 2018)
+# This is less than ideal (especially for top-coded entries) but no obviously better approach comes to mind
+# This step is necessary prior to 2018, which is when a continuous property tax variable (TAXAMT) was introduced
+# The median of top-coded values is derived from the 2019 TAXAMT variable, adjusted for 2015-to-2019 inflation:
+#  x <- 0.93 * TAXAMT; median(x[x >= 10e3]) using raw 2019 ACS data
+
+x <- levels(d$TAXP)
+x[length(x)] <- 13485  # Assumed median of top-coded values
+x <- strsplit(gsub("$", "", x, fixed = TRUE), "-", fixed = TRUE)
+x <- map_dbl(x, ~ median(suppressWarnings(as.numeric(.x))))  # Use median of provided range
+x <- replace_na(x, 0)
+d$TAXP <- x[match(d$TAXP, levels(d$TAXP))]
+
+#----------------
+
+# Calculate annual mortgage payment (mortgage) with property taxes and insurance excluded
+# Determine if the annual property tax and insurance amounts are valid or need to be imputed (i.e. set to NA)
+# Set property tax (TAXP) and home insurance (INSP) to NA if expenditure is included in mortgage payment
+# Total mortgage payment is sum of MRGP (first mortgage) and SMP (all second and junior mortgages and home equity loans)
+# Variables MRGI and MRGT indicate if first mortgage payment includes insurance (MRGI) or property taxes (MRGT)
+# Assume that property taxes can be zero, but insurance payment must be positive if the property is mortgaged
+
+d <- d %>%
+  mutate(
+    smp_share = ifelse(grepl("Owned with mortgage", TEN), SMP / (SMP + MRGP), 0),  # Second/junior/HELOC mortgages as percent of total mortgage payment
+    mortgage = 12 * (MRGP + SMP),
+    mortgage = ifelse(MRGT == "Yes, taxes included in payment", mortgage - TAXP, mortgage),
+    mortgage = ifelse(MRGI == "Yes, insurance included in payment", mortgage - INSP, mortgage),
+    mortgage = ifelse(mortgage == 0 & grepl("Owned with mortgage", TEN), NA, mortgage),  # Mortgage cannot be zero if a mortgage is present
+    invalid = mortgage < 0,  # Mortgage payment cannot be negative
+    mortgage = ifelse(invalid, NA, mortgage),
+    TAXP = ifelse(invalid, NA, TAXP),
+    INSP = ifelse(invalid, NA, INSP),
+    TAXP = ifelse(TAXP == 0 & MRGT == "Yes, taxes included in payment", NA, TAXP),
+    INSP = ifelse(INSP == 0 & (MRGI == "Yes, insurance included in payment" | grepl("Owned with mortgage", TEN)), NA, INSP)
+  ) %>%
+  select(-invalid)
+
+#----------------
+
+# Create an annual "rental equivalence" (renteq) variable to be imputed for owner-occupied units
+# This is done by imputing contract rent using values available for rented units and then applying an "owner premium" post-imputation
+# The owner premium is based on owner's self-reported property values, using the technique described here:
+# https://www.bea.gov/system/files/2019-11/improving-measures-of-national-and-regional-housing-services-us-accounts.pdf
+# See the "adjustedRentalValue.R" file and function within
+# RNTP is the "contract rent"; typically the rent exclusive of utilities (but not necessarily so)
+# The GRNTP variable (not used) is "gross rent" and supposedly includes "estimated utilities" (no documentation on how this is done)
+
+d <- d %>%
+  mutate(renteq = ifelse(TEN == "Rented" & RNTP >= 100, 12 * RNTP, NA))
+
+#----------------
+
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
@@ -174,10 +225,11 @@ na.count  # See which variables have NA's
 # Use imputeMissing(), since the number are variety of NA's is non-trivial
 # To avoid memory issues, 'x_exclude' is used to restrict predictors to a reasonable set of variables
 # N = 1 means there is only one imputation iteration; more than one can cause memory issues
-imp <- imputeMissing(data = d,
+imp <- imputeMissing(data = mutate(d, ST = factor(ST)),
                      N = 1,
+                     max_ncats = 10,
                      weight = "WGTP",
-                     x_exclude = setdiff(names(d), c("NP", "BLD", "ELEP", "HFL", "OCPIP", "RMSP", "GRPIP", "TEN", "VALP", "VEH", "YBL", "HINCP", "WIF", "R18", "R65")))
+                     x_exclude = setdiff(names(d), c("WGTP", "DIVISION", "REGION", "ST", "NP", "ACR", "BLD", "FS", "HFL", "HHL", "OCPIP", "BDSP", "RMSP", "GRPIP", "TEN", "VALP", "VEH", "YBL", "HINCP", "FES", "WIF", "R18", "R65")))
 
 # Replace NA's in 'd' with the imputed values
 d[names(imp)] <- imp
@@ -192,6 +244,19 @@ gc()
 # }
 
 anyNA(d)
+
+#----------------
+
+# Update the MRGP and SMP variables so they correctly sum to 'mortgage'
+d <- d %>%
+  mutate(SMP = round(mortgage * smp_share),
+         MRGP = mortgage - SMP) %>%
+  select(-smp_share)
+
+# Apply owner premium to imputed rental value for owner-occupied units
+d <- d %>%
+  mutate(renteq = adjustedRentalValue(renteq, value = VALP, state = ST, structure = BLD, bedrooms = BDSP, weight = WGTP),
+         renteq = round(renteq))
 
 #----------------
 
@@ -215,17 +280,20 @@ d <- d %>%
   rename_with(~ gsub("WGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("WGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
   select(acs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  select(-division, -region) %>%
   arrange(acs_2015_hid)
 
-# Manual removal of variables without useful information
-# d <- d %>%
-#   select(-srnt, -sval)
-
-# Add utility cost flag variables (only prior to 2018)
+# Add utility cost flag variables (only necessary prior to 2018)
 # See "utilityCostFlags.R" for details
 d <- utilityCostFlags(d)
 
-# Remaining manual fix-ups
+# Add description labels for custom/undefined/ambiguous variables
+labelled::var_label(d$mrgp) <- "First mortgage payment, principal and interest"
+labelled::var_label(d$smp) <- "Second and junior mortgages and home equity loans, principal and interest"
+labelled::var_label(d$valp) <- "Property value, zero for renter-occupied units"
+labelled::var_label(d$mortgage) <- "Annual mortgage payment, principal and interest"
+labelled::var_label(d$renteq) <- "Annual rental value, imputed for owner-occupied units"
+
 labelled::var_label(d$dsl) <- "DSL service"
 labelled::var_label(d$ocpip) <- "Selected monthly owner costs as a percentage of household income during the past 12 months"
 labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"

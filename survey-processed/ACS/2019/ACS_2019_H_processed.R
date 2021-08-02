@@ -1,9 +1,12 @@
 library(tidyverse)
-source("R/createDictionary.R")
 source("R/utils.R")
+source("R/createDictionary.R")
+source("R/imputeMissing.R")
+source("R/detectDependence.R")
 
-# Load generic codebook processing function
+# Load ACS-specific helper functions
 source("survey-processed/ACS/processACScodebook.R")
+source("survey-processed/ACS/adjustedRentalValue.R")
 
 #-----
 
@@ -19,7 +22,8 @@ hus.files <- list.files(path = tempdir(), pattern = "hus..csv$", full.names = TR
 # Read household PUMS data
 d <- hus.files %>%
   map_dfr(data.table::fread) %>%
-  as_tibble()
+  as_tibble() %>%
+  rename_with(toupper)  # Ensure upper-case names for consistency for 'codebook'; replicate weights are sometimes lower-case in the raw data
 
 # Replace literal empty strings ("") with NA for character type columns
 # fread() does not convert empty strings to NA, as they are ambiguous
@@ -32,9 +36,6 @@ unlink(hus.files, recursive = TRUE)
 gc()
 
 #-----
-
-# The only variable in 'hus' that contains useful information about group quarter individuals is "FS" (Did anyone in household receive SNAP?)
-# Idea: Could create 'FS' version in the 'pus' data, with 1's if the household received SNAP and 0 otherwise...
 
 # Apply 'ADJHSG' and 'ADJINC' adjustment to appropriate variables
 v.adjhsg <- filter(codebook, var %in% names(d) & adj == "ADJHSG")$var
@@ -49,10 +50,9 @@ d <- d %>%
   filter(TYPE == 1, NP > 0) %>%  # Remove vacant units, too
   select_if(~ length(unique(.x)) > 1)
 
-# Standardize PUMA variable and remove Puerto Rico observations
+# Ensure observations restricted to U.S. states and D.C.
 d <- d %>%
-  filter(ST %in% 1:56) %>%  # Ensure observations restricted to U.S. states and D.C.
-  select(-DIVISION, -REGION)
+  filter(ST %in% 1:56)
 
 gc()
 
@@ -154,19 +154,84 @@ gc()
 
 #----------------
 
+# Calculate annual mortgage payment (mortgage) with property taxes and insurance excluded
+# Determine if the annual property tax and insurance amounts are valid or need to be imputed (i.e. set to NA)
+# Set property tax (TAXAMT) and home insurance (INSP) to NA if expenditure is included in mortgage payment
+# Total mortgage payment is sum of MRGP (first mortgage) and SMP (all second and junior mortgages and home equity loans)
+# Variables MRGI and MRGT indicate if first mortgage payment includes insurance (MRGI) or property taxes (MRGT)
+# Assume that property taxes can be zero, but insurance payment must be positive if the property is mortgaged
+
+d <- d %>%
+  mutate(
+    smp_share = ifelse(grepl("Owned with mortgage", TEN), SMP / (SMP + MRGP), 0),  # Second/junior/HELOC mortgages as percent of total mortgage payment
+    mortgage = 12 * (MRGP + SMP),
+    mortgage = ifelse(MRGT == "Yes, taxes included in payment", mortgage - TAXAMT, mortgage),
+    mortgage = ifelse(MRGI == "Yes, insurance included in payment", mortgage - INSP, mortgage),
+    mortgage = ifelse(mortgage == 0 & grepl("Owned with mortgage", TEN), NA, mortgage),  # Mortgage cannot be zero if a mortgage is present
+    invalid = mortgage < 0,  # Mortgage payment cannot be negative
+    mortgage = ifelse(invalid, NA, mortgage),
+    TAXAMT = ifelse(invalid, NA, TAXAMT),
+    INSP = ifelse(invalid, NA, INSP),
+    TAXAMT = ifelse(TAXAMT == 0 & MRGT == "Yes, taxes included in payment", NA, TAXAMT),
+    INSP = ifelse(INSP == 0 & (MRGI == "Yes, insurance included in payment" | grepl("Owned with mortgage", TEN)), NA, INSP)
+  ) %>%
+  select(-invalid)
+
+#----------------
+
+# Create an annual "rental equivalence" (renteq) variable to be imputed for owner-occupied units
+# This is done by imputing contract rent using values available for rented units and then applying an "owner premium" post-imputation
+# The owner premium is based on owner's self-reported property values, using the technique described here:
+# https://www.bea.gov/system/files/2019-11/improving-measures-of-national-and-regional-housing-services-us-accounts.pdf
+# See the "adjustedRentalValue.R" file and function within
+# RNTP is the "contract rent"; typically the rent exclusive of utilities (but not necessarily so)
+# The GRNTP variable (not used) is "gross rent" and supposedly includes "estimated utilities" (no documentation on how this is done)
+
+d <- d %>%
+  mutate(renteq = ifelse(TEN == "Rented" & RNTP >= 100, 12 * RNTP, NA))
+
+#----------------
+
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
+# Use imputeMissing(), since the number are variety of NA's is non-trivial
+# To avoid memory issues, 'x_exclude' is used to restrict predictors to a reasonable set of variables
+# N = 1 means there is only one imputation iteration; more than one can cause memory issues
+imp <- imputeMissing(data = mutate(d, ST = factor(ST)),
+                     N = 1,
+                     max_ncats = 10,
+                     weight = "WGTP",
+                     x_exclude = setdiff(names(d), c("WGTP", "DIVISION", "REGION", "ST", "NP", "ACR", "BLD", "FS", "HFL", "HHL", "OCPIP", "BDSP", "RMSP", "GRPIP", "TEN", "VALP", "VEH", "YBL", "HINCP", "FES", "WIF", "R18", "R65")))
+
+# Replace NA's in 'd' with the imputed values
+d[names(imp)] <- imp
+rm(imp)
+gc()
+
 # Simple random imputation of missing values
 # This is appropriate if the number of NA's is low and the variables requiring imputation are not particularly related
-for (v in names(na.count)) {
-  ind <- is.na(d[[v]])
-  d[[v]][ind] <- sample(na.omit(d[[v]]), size = sum(ind), prob = d$WGTP[!ind], replace = TRUE)
-}
+# for (v in names(na.count)) {
+#   ind <- is.na(d[[v]])
+#   d[[v]][ind] <- sample(na.omit(d[[v]]), size = sum(ind), prob = d$WGTP[!ind], replace = TRUE)
+# }
 
 anyNA(d)
+
+#----------------
+
+# Update the MRGP and SMP variables so they correctly sum to 'mortgage'
+d <- d %>%
+  mutate(SMP = round(mortgage * smp_share),
+         MRGP = mortgage - SMP) %>%
+  select(-smp_share)
+
+# Apply owner premium to imputed rental value for owner-occupied units
+d <- d %>%
+  mutate(renteq = adjustedRentalValue(renteq, value = VALP, state = ST, structure = BLD, bedrooms = BDSP, weight = WGTP),
+         renteq = round(renteq))
 
 #----------------
 
@@ -180,7 +245,7 @@ d <- d %>%
     ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
     PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
   ) %>%
-  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
+  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%
   rename(
     acs_2019_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     weight = WGTP,
@@ -190,11 +255,19 @@ d <- d %>%
   rename_with(~ gsub("WGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("WGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
   select(acs_2019_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  select(-division, -region) %>%
   arrange(acs_2019_hid)
 
-# Manual removal of variables without useful information
-# d <- d %>%
-#   select(-srnt, -sval)
+# Add description labels for custom/undefined/ambiguous variables
+labelled::var_label(d$mrgp) <- "First mortgage payment, principal and interest"
+labelled::var_label(d$smp) <- "Second and junior mortgages and home equity loans, principal and interest"
+labelled::var_label(d$valp) <- "Property value, zero for renter-occupied units"
+labelled::var_label(d$mortgage) <- "Annual mortgage payment, principal and interest"
+labelled::var_label(d$renteq) <- "Annual rental value, imputed for owner-occupied units"
+
+labelled::var_label(d$ocpip) <- "Selected monthly owner costs as a percentage of household income during the past 12 months"
+labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"
+labelled::var_label(d$tel) <- "Telephone service"
 
 #----------------
 
