@@ -2,9 +2,9 @@
 #'
 #' @description
 #'
-#' @param dataset Character. Indicate which spatial dataset(s) to download. If \code{dataset = "essential"}, only files necessary to call \link{prepare} are downloaded. If \code{dataset = "all"}, all processed spatial data files are downloaded; i.e. sufficient to call \link{prepare} and/or \link{compileSpatial}. Otherwise, a single spatial dataset identifier (e.g. "EPA-SLD") to download all associated "*_processed.rds" files.
+#' @param dataset Character. Indicate which spatial dataset(s) to download. If \code{dataset = "essential"}, only files necessary to call \link{prepare} and \link{assemble} are downloaded. If \code{dataset = "all"}, all processed spatial data files are downloaded. Otherwise, a single spatial dataset identifier (e.g. "EPA-SLD") to download all associated "*_processed.rds" files.
 #'
-#' @details The function will fail with an explanation if the current working directory is not set to \code{/fusionData}; i.e. the project directory as pulled from Github. Files are automatically placed in appropriate sub-directory of fusionData/geo_processed. When \code{dataset = "essential"}, the downloaded files are: "geo_predictors.fst", "concordance/geo_concordance.fst", and "concordance/bg_centroids.rds".
+#' @details Files are automatically placed in appropriate sub-directory of fusionData/geo_processed. When \code{dataset = "essential"}, the downloaded files are: "geo_predictors.fst" and "concordance/geo_concordance.fst".
 #'
 #' @return \code{\link[googledrive]{drive_download}} prints messages to console indicating which files were downloaded.
 #'
