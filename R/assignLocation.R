@@ -1,14 +1,8 @@
-#' Impute or assign location for survey records
-#'
-#' @description
-#' Imputes PUMA for donor microdata observations. Assigns available location variables to recipient microdata observations. Used with \link{prepare}. ADD MORE.
-#'
-#' @param harmonized Output from call to \link{harmonize}.
-#' @param m Integer. Number of implicates when imputing PUMA for donor observations.
-#'
-#' @return A list of length 2.
-#'
-#' @export
+# Impute or assign location for survey records
+# Imputes PUMA for donor microdata observations. Assigns available location variables to recipient microdata observations. Used with \link{prepare}. ADD MORE.
+#
+# harmonized: Output from call to \link{harmonize}.
+# m: Integer. Number of implicates when imputing PUMA for donor observations.
 
 #-----
 
