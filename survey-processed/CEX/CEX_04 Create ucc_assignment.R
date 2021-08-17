@@ -231,7 +231,7 @@ cat_assignment <- link %>%
 
 # Create full description of categories and upload results to Google Sheet
 out <- ucc_assignment %>%
-  filter(!is.na(ucc)) %>%
+  #filter(!is.na(ucc)) %>%
   arrange(cat, -ucc_share, ucc_desc) %>%
   mutate(description = ifelse(ucc_share == 1, ucc_desc, paste0(ucc_desc, " (", round(100 * ucc_share, 1), "%)"))) %>%
   group_by(major, cat, category) %>%
