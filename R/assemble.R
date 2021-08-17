@@ -299,7 +299,7 @@ assemble <- function(x,
 
   # SAFETY CHECKS: Confirm validity of predictor variables
   # These are identical to the safety checks performed by fusionModel::fuse()
-  cat("Performing validation checks...\n")
+  cat("Performing consistency checks...\n")
 
   xvars <- setdiff(intersect(names(dout), names(rout)), "weight")
   dclass <- lapply(dout[xvars], class)
