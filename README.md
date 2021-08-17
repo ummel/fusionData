@@ -72,11 +72,15 @@ getGeoProcessed(dataset = "essential")
 ```
 
 You will be prompted to enter the password for the Google Drive account
-storing the remote files (password: fusethis!). The download will take a
-few minutes. The files are automatically placed in the appropriate
-sub-directories of `/fusionData`, with the directories created if
-necessary. After successful download, your fusionData “system” is ready
-to go.
+storing the remote files.
+
+-   username: fusionACSdata
+-   password: fusethis!
+
+The download will take a few minutes. The files are automatically placed
+in the appropriate sub-directories of `/fusionData`, with the
+directories created if necessary. After successful download, your
+fusionData “system” is ready to go.
 
 ## Usage and structure
 
@@ -243,17 +247,16 @@ here](https://github.com/ummel/fusionData/blob/master/geo-processed/EPA-SLD/epa-
 but the .rds file is stored remotely.
 
 Importantly, the `/geo-processed` remote content *also* includes three
-essential spatial data files that are, in practice, all that most users
-will need to perform data fusion locally. These files and their roles
-are described in more detail later on.
+“essential” spatial data files that are, in practice, all that most
+users will need to perform data fusion locally. These files and their
+roles are described in more detail later on.
 
 1.  `geo_predictors.fst`
 2.  `concordance/geo_concordance.fst`
-3.  `concordance/bg_centroids.rds`
 
 For users who are not modifying or adding spatial datasets, it is
 sufficient to call `getGeoProcessed(dataset = "essential")` to load the
-three essential “geo” files.
+essential “geo” files.
 
 ### `/geo-raw`
 
@@ -268,6 +271,13 @@ directory by calling `getGeoRaw()`. However, in practice, there is no
 reason for a user to store raw spatial data locally unless it is for a
 spatial dataset that they are actively processing or editing.
 
+### `/production`
+
+Directory containing code and possibly data from “production” fusion
+runs. This is likely a temporary inclusion. As additional fusion results
+are produced, we should create a more structured way of storing and
+organizing production data outputs.
+
 ## Ingest survey data
 
 “Ingesting” a survey requires transforming raw survey data into
@@ -280,20 +290,29 @@ script (possibly multiple scripts) that must be written manually. The
 goal is to produce a data.frame containing microdata observations that
 (ideally) meet the following conditions:
 
--   Contains as many observations and variables as possible
--   Variable names and descriptions are taken from the official codebook
+-   Contains as many observations and variables as possible.
+-   Variable names and descriptions are taken from the official
+    codebook, possibly modified for clarity.
+-   Official variable names are coerced to lower-case alphanumeric,
+    possibly using single underscores.
 -   Codes used in the raw data are replaced with descriptive labels from
-    the codebook
--   All “valid blanks” in the raw data are set to plausible values
--   All “invalid blanks” or missing values in the raw data are imputed
+    the codebook; e.g. integer values are replaced with associated
+    factor levels.
+-   All “valid blanks” in the raw data are set to plausible values; NA’s
+    are often actual zeros or some other knowable value based on the
+    question structure.
+-   All “invalid blanks” or missing values in the raw data are imputed;
+    a generic imputation function is provided for this purpose.
 -   Ordered factors are used and defined whenever possible (as opposed
-    to unordered)
--   Every column contains a variable description as a
-    `labelled::var_label` attribute
--   Standard names for unique household/person identifiers and
-    observation weights (including replicate weights)
+    to unordered).
+-   Standard column names are used for unique household identifiers
+    (e.g. “acs\_2019\_hid”); for person-level microdata the
+    within-household person identifier (integer) is always “pid”.
+-   Standard column names are used for observation weights; “weight” for
+    the primary weighting variable and “rep\_1”, etc. for replicate
+    weights.
 -   Variables identifying respondent location are consistent with those
-    defined in `geo-processed/geo_concordance.fst`
+    defined in `geo-processed/concordance/geo_concordance.fst`.
 
 Let’s look at a few of the variables in the processed RECS 2015
 microdata to get a sense of what preferred output looks like. Note that
@@ -304,16 +323,16 @@ person-level respondent information have two such files – both “H” and
 
 ``` r
 recs <- fst::read_fst("survey-processed/RECS/2015/RECS_2015_H_processed.fst")
-head(select(recs, recs_2015_hid, weight, sizeofgarage, recs_iecc_zone, rep_1))
+head(select(recs, recs_2015_hid, weight, rep_1, sizeofgarage, recs_iecc_zone))
 ```
 
-      recs_2015_hid weight   sizeofgarage           recs_iecc_zone rep_1
-    1         10001  12090 Two-car garage IECC climate zones 3B-4B 16560
-    2         10002  14400      No garage IECC climate zones 1A-2A 21500
-    3         10003  23330      No garage     IECC climate zone 3A 12300
-    4         10004  12170 Two-car garage     IECC climate zone 4A 18550
-    5         10005  16720 One-car garage     IECC climate zone 5A  8080
-    6         10006  26060      No garage IECC climate zones 6A-6B 37000
+      recs_2015_hid weight rep_1   sizeofgarage           recs_iecc_zone
+    1         10001  12090 16560 Two-car garage IECC climate zones 3B-4B
+    2         10002  14400 21500      No garage IECC climate zones 1A-2A
+    3         10003  23330 12300      No garage     IECC climate zone 3A
+    4         10004  12170 18550 Two-car garage     IECC climate zone 4A
+    5         10005  16720  8080 One-car garage     IECC climate zone 5A
+    6         10006  26060 37000      No garage IECC climate zones 6A-6B
 
 Notice that the household ID variable has a standardized name
 (“recs\_2015\_hid”), as does the observation weights column (“weight”)
@@ -322,20 +341,11 @@ consisted of person-level observations nested within households (e.g. as
 in the ACS), it would have have an additional “pid” integer variable to
 uniquely identify each person within the household.
 
-The variable “recs\_iecc\_zone” tells us something about a respondent’s
-location ([IECC climate
-zone](https://basc.pnnl.gov/images/iecc-climate-zone-map)). This and
-other spatially-referenced variables are defined and named to be
-consistent with variables in the `geo-processed/geo_concordance.fst`
-file (more on this file below). This allows subsequent operations to
-intelligently impute each respondent’s location (see `?imputePUMA`).
-
-The name of the other variable (“sizeofgarage”) comes from the RECS
-codebook. In the case of “sizeofgarage”, the raw data contained NA’s
-(valid “skips”) for households without a garage. Those blanks are
-replaced with an intelligible label (‘No garage’). In addition,
-“sizeofgarage” is classed as an ordered factor, since the labels have a
-natural ordering.
+In the case of “sizeofgarage” (the original variable name in RECS), the
+raw data contained NA’s (valid “skips”) for households without a garage.
+Those blanks are replaced with an intelligible label (“No garage”). In
+addition, “sizeofgarage” is classed as an ordered factor, since the
+labels have a natural ordering.
 
 ``` r
 class(recs$sizeofgarage)
@@ -350,8 +360,36 @@ levels(recs$sizeofgarage)
     [1] "No garage"                "One-car garage"          
     [3] "Two-car garage"           "Three-or-more-car garage"
 
-You can see how, exactly, the raw data was transformed by viewing the
-associated code in
+The variable “recs\_iecc\_zone” tells us something about each
+respondent’s location ([IECC climate
+zone](https://basc.pnnl.gov/images/iecc-climate-zone-map)). This and
+other spatially-referenced variables are defined and named to be
+consistent with variables in the
+`geo-processed/concordance/geo_concordance.fst` file. This allows
+subsequent operations to intelligently impute respondent location prior
+to fusion. More details on spatial data and location imputation can be
+found in subsequent sections.
+
+It is important that the location variables in a donor survey be
+precisely consistent with those defined in `geo_concordance.fst`. The
+latter file can be modified, if necessary, to add new location variables
+to allow such concordance. It is only strictly necessary that the donor
+survey include the variable (or set of variables) that provide maximum
+information about respondent location. For example, if a survey
+contained a “county” variable, there is no reason to include “state” –
+though the code shouldn’t break if it is included.
+
+Some surveys (like RECS) have a complicated combination of location
+variables that collectively define respondent location through their
+spatial intersection. fusionData’s code base automatically handles this,
+provided that the location variables are consistent (i.e. same name and
+levels) in both the donor microdata and the `geo_concordance.fst` file.
+There is no need to specify which variables are the location variables;
+this is determined automatically by looking for overlap with column
+names in the `geo_concordance.fst` file.
+
+You can see how, exactly, the raw survey data was transformed by viewing
+the associated code in
 `/survey-processed/RECS/2015/RECS_2015_H_processed.R`.
 
 Given the variety of survey data structures and conventions, there is no
@@ -377,11 +415,14 @@ understand the code later. Good practice is for comments to explain
 In all cases, the .R script that eventually saves the `_processed.fst`
 microdata file to disk must include the use of
 `labelled::set_variable_labels` to assign variable descriptions
-(ideally, taken from the official codebook) for each column. The same
-script must then call the `createDictionary()` function to create and
-save a standardized “dictionary.rds” file. You can see this at the end
+(ideally, taken from the official codebook) for each column. The script
+must then call the `createDictionary()` function to create and save a
+standardized “dictionary.rds” file. `createDictionary()` uses the
+assigned variable descriptions and other information in the microdata to
+build the dictionary in a standardized way. You can see this at the end
 of
-[RECS\_2015\_H\_processed.R](https://github.com/ummel/fusionData/blob/master/survey-processed/RECS/2015/RECS_2015_H_processed.R).
+[RECS\_2015\_H\_processed.R](https://github.com/ummel/fusionData/blob/master/survey-processed/RECS/2015/RECS_2015_H_processed.R):
+
 Here is the resulting dictionary file for RECS 2015.
 
 ``` r
@@ -390,27 +431,33 @@ head(recs.dictionary)
 ```
 
     # A tibble: 6 × 8
-      survey vintage respondent variable  description   values           type      n
-      <chr>  <chr>   <chr>      <chr>     <chr>         <chr>            <chr> <int>
-    1 RECS   2015    H          adqinsul  Level of ins… [Not insulated]… ord    5686
-    2 RECS   2015    H          agecdryer Age of cloth… [No clothes dry… ord    5686
-    3 RECS   2015    H          agecenac  Age of centr… [No central air… ord    5686
-    4 RECS   2015    H          agecwash  Age of cloth… [No clothes was… ord    5686
-    5 RECS   2015    H          agedw     Age of dishw… [No dishwasher]… ord    5686
-    6 RECS   2015    H          agefrzr   Age of most-… [No freezer], [… ord    5686
+      survey vintage respondent variable  description    values          type      n
+      <chr>  <chr>   <chr>      <chr>     <chr>          <chr>           <chr> <int>
+    1 RECS   2015    H          adqinsul  Level of insu… [Not insulated… ord    5686
+    2 RECS   2015    H          agecdryer Age of clothe… [No clothes dr… ord    5686
+    3 RECS   2015    H          agecenac  Age of centra… [No central ai… ord    5686
+    4 RECS   2015    H          agecwash  Age of clothe… [No clothes wa… ord    5686
+    5 RECS   2015    H          agedw     Age of dishwa… [No dishwasher… ord    5686
+    6 RECS   2015    H          agefrzr   Age of most-u… [No freezer], … ord    5686
 
 In practice, there is no reason for a typical user to ever open a
 survey’s dictionary file. The preferred and much more useful way to
-explore survey metadata and variable descriptions is described in the
-next section.
+explore survey metadata and variable descriptions is via the
+`universe()` function described in the next section.
+
+*As of August 2021, American Community Survey (ACS) microdata has been
+ingested for 2015 and 2019.* It is expected that additional vintages
+will eventually be added to allow temporal alignment with the further
+vintages of donor surveys. The .R scripts used to process the 2015 and
+2019 ACS microdata can serve as templates for ingesting other vintages.
 
 ## Document variables
 
 The previous section showed how and where a survey’s “dictionary.rds”
 file(s) are created. Whenever a dictionary file is added or updated, it
-is necessary to run the `compileDictionary()` function to compile the
-individual survey dictionaries into a single “universal” dictionary. The
-usage is straightforward:
+is necessary to run the `compileDictionary()` function to compile all of
+fusionData’s individual survey dictionaries into a single “universal”
+dictionary. The usage is straightforward:
 
 ``` r
 compileDictionary()
@@ -433,7 +480,8 @@ compileDictionary()
 As the console output tells us, `compileDictionary()` updates two files:
 `data/dictionary.rda` and `data/surveys.rda`. These files are part of
 the Github repository and are used by both the “Universal Survey
-Dictionary” and “Survey Harmonization Tool” that are part of fusionData.
+Dictionary” and “Survey Harmonization Tool” Shiny apps that are part of
+fusionData.
 
 The “Universal Survey Dictionary” is a Shiny app that can be accessed by
 the following call:
@@ -454,6 +502,9 @@ can browse the universe of available fusion variables.
 
 ## Harmonize variables
 
+Once a donor survey has been successfully ingested and documented, it is
+possible to start thinking about how to fuse that survey to the ACS.
+
 The statistical linchpin of the fusion process is the set of
 “harmonized” variables common to a donor survey and the ACS. Identifying
 conceptually similar variables across surveys and determining how they
@@ -461,67 +512,180 @@ can be modified to measure similar concepts is one of the most important
 steps in the process. It is also potentially time-consuming and
 error-prone.
 
-The “Survey Harmonization Tool” was created to address these problems.
-It is a Shiny app that makes it easier to detect, create, and save
-“harmonies” among the variables of donor surveys and the ACS. The app
-launches in a browser window with the following call:
+The “Survey Harmonization Tool” was created to make this process easier
+and safer. It is a Shiny app that makes it easier to detect, specify,
+and save “harmonies” constructed between variables in donor surveys and
+variables in the ACS. The app launches in a browser window with the
+following call:
 
 ``` r
 # Open "Survey Harmonization Tool" Shiny app
 harmony()
 ```
 
-TO DO: Recording demonstrating app functionality.
+At present, the `harmony()` app only allows specification of harmonies
+between a non-ACS donor survey and a specific ACS vintage
+(e.g. harmonizing 2015 RECS to 2015 ACS).
 
-When a user clicks “Submit harmony” within the app, the
-currently-specified “harmony” (as defined by the selected variables and
-settings) is saved to disk. Specifically, the details of that particular
-harmony are added to the appropriate .R “harmony file” located at
-`/harmony/harmonies`. For example, the file describing how to harmonize
-RECS 2015 and ACS 2015 variables is
+Construction of a harmony generally follows these steps:
+
+1.  Select a donor survey and vintage.
+2.  Select the recipient ACS vintage.
+3.  Select a “Donor variable” from the drop down list. The list is
+    searchable to help locate variables associated with certain words.
+4.  Select a “ACS variable” to use for the “other side” of the harmony.
+5.  For *factor* variables, edit the “Group” columns in the spreadsheet
+    objects to create the maximum-resolution harmony between the two
+    variables. You can see the “live” outcome of the specified
+    harmonization strategy in the table at the bottom of the page. For
+    *continuous* variables, no additional modification is needed as long
+    as the two variables measure similar concepts.
+6.  Once the harmony is specified as you like, click “Submit harmony”.
+    The button only becomes available to click if minimal safety checks
+    are passed for a valid harmony.
+
+When a user clicks “Submit harmony”, the currently-specified harmony (as
+defined by the selected variables and settings) is saved to disk.
+Specifically, the details of that particular harmony are added to the
+appropriate .R “harmony file” located at `/harmony/harmonies`. For
+example, the file describing how to harmonize RECS 2015 and ACS 2015
+variables is
 [RECS\_2015\_\_ACS\_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R).
-When `dget`-d, harmony files return a list of lists, where each element
-defines a harmony. Like this one, defining the harmony between the
-“fuelheat” variable in the RECS and the “hfl” variable in the ACS.
+
+You should receive a pop-up message indicating if the harmony was
+successfully added to the local .R harmony file (it will be created, if
+necessary). You can confirm the harmony was added by selecting the “View
+harmonies” panel.
+
+Probably the easiest way to become an expert with the app is to view
+existing harmonies that I’ve already constructed for the RECS and CEI.
+This will show you the settings used and give you a sense of how and why
+they were used.
+
+------------------------------------------------------------------------
+
+Additional details regarding “advanced” settings and examples. This may
+all seem convoluted at first. But once you understand what these fields
+are doing, it becomes quite easy, fast, and (almost) fun to construct
+harmonies.
+
+*Bin breakpoints*
+
+The Bin breakpoints field is used to specify how a continuous variable
+should be “binned” to turn it into a categorical variable – usually to
+allow for harmonization with a factor variable in the other survey. This
+is useful when an identical concept is measured on a continuous scale in
+one survey (e.g. income in dollars) and as a factor variable in the
+other survey (e.g. income range).
+
+Example: Select “moneypy” for RECS 2015 to see how the ACS “hincp” is
+binned to create harmony.
+
+*Adjustment*
+
+The Adjustment field provides a powerful way to modify or adjust
+variables to accommodate non-standard harmonies. Text in the Adjustment
+field is passed as-is to a dplyr::mutate() call within `harmonize()`
+that modifies the associated variable prior to any other manipulation.
+The text passed to the mutate() call can utilize any other variables in
+the microdata. This is quite powerful and allows for complicated
+harmonies to be accommodated.
+
+Example: Select “vehq” for CEI 2015-2019. In this case, the “vehq”
+(owned vehicles) and “vehql” (leased vehicles) variables in the CEI –
+both continuous – are added together by specifying “vehq + vehql” in the
+Adjustment field. The result is then binned to create harmony with the
+ACS “veh” variable, which is a factor variable referring to all
+available vehicles, whether owned or leased.
+
+*Household aggregator*
+
+Sometimes it is possible to create harmony between a household-level
+(“H”) donor variable and a person-level (“P”) ACS variable, provided
+that the latter is *aggregated* at the household level. In such cases,
+the “Household aggregator” field tells `harmonize()` how to aggregate or
+summarize the person-level ACS variable within each household. This
+field is only applicable when the donor variable is a household variable
+and the selected ACS variable is person-level (person-level donor
+variables can always be harmonized directly with person-level ACS
+variables).
+
+Simple example: Select “hhage” for RECS 2015
+(Respondent/head-of-household age). The ACS “agep” variable can be used
+to create harmony, but it is a person-level variable. By setting the
+Household aggregator field to “reference” we instruct `harmonize()` to
+use the “reference person” value for “agep” to create a household-level
+variable analogous to “hhage”.
+
+Advanced example: Select “numchild” for RECS 2015 (Number of household
+members age 17 or younger). The ACS “agep” variable can be used to
+create harmony. Bin breakpoints are used to re-assign each household
+member “agep” value to 1 if less than 18 and 0 if 18 or more (see the
+“Group” column in the associated spreadsheet). The Household aggregator
+field is the set to “sum” to instruct `harmonize()` to sum these values
+at the household level, which creates harmony with “numchild”.
+
+Very advanced example: Select “as\_comp1” for CEI 2015-2019 (Number of
+males age 16 and over). Again, the ACS “agep” variable can be used to
+create harmony (as above for “numchild”), but we need to additionally
+restrict the harmony to males only. This is done by using the Adjustment
+field to first set “agep” to 0 for all females, *then* bin the result,
+*then* sum at the household level.
+
+*Comments*
+
+The Comments field is used to leave helpful information about why the
+harmony was constructed as it was. Any harmony that makes use of one of
+the “advanced” settings should probably have a comment explaining the
+rationale.
+
+------------------------------------------------------------------------
+
+A harmony file can be `dget`-d to return a list of lists, where each
+element defines a harmony. Like this one, defining the harmony between
+the “fuelheat” variable in the RECS and the “hfl” variable in the ACS.
 
 ``` r
 fuelheat__hfl = list(
-RECS = list(
-groups = 1:7,
-levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
-breaks = "",
-adj = ""),
-ACS = list(
-groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
-levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
-breaks = "",
-adj = ""),
-ordered = FALSE,
-comment = "",
-modified = "2021-07-03 12:10:17"),
+    RECS = list(
+      groups = 1:7,
+      levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
+      levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
+      breaks = "",
+      adj = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2021-07-03 12:10:17"),
 ```
 
 This list object contains all of the information necessary to construct
 RECS and ACS microdata containing a new variable called
-"fuelheat\_\_hfl" – the harmonized version of the two associated heating
-fuel variables. This is precisely what the `harmonize()` function does
-(typically when called by `prepare()` as explained below) using all of
-the harmonies available in the specified harmony file. Note that
-harmonized variables are always indicated by a double-underscore
-("\_\_").
+"fuelheat\_\_hfl“; i.e. the harmonized version of the two associated
+heating fuel variables. This is precisely what the `harmonize()`
+function does – typically when called by `prepare()` as explained below
+– using all of the harmonies available in the specified harmony file.
+Note that harmonized variables are always indicated by a
+double-underscore (”\_\_").
 
-This strategy – using the `harmony()` app to manually define harmonies
-and then letting `harmonize()` take care of subsequent data manipulation
-– makes the construction of harmonized microdata easier, faster, and
-*much* safer.
+Using the `harmony()` app to manually define harmonies and then letting
+`harmonize()` take care of subsequent data manipulation makes the
+construction of harmonized microdata easier, faster, and *much* safer.
+It is generally advisable to use the `harmonize()` app to create and
+edit harmonies. It is also possible to manually edit the .R harmony
+files, if necessary, but be careful.
 
 Most users will eventually find themselves constructing harmonies via
-the app. Submitted harmonies are saved to *local* harmony files, which
-means you must commit and push those changes for them to show up in the
-Github repository – and become available for others to use. This also
-means it is important to pull the most recent version of the repository
-when you begin working with fusionData. Otherwise, you risk duplicating
-the efforts of someone else.
+the app and, as a result, modifying their *local* version of .R harmony
+files. This means you must commit and push those changes for them to
+show up in the Github repository – and become available for others to
+use. This also means it is important to pull the most recent version of
+the repository when you begin working with fusionData. Otherwise, you
+risk duplicating the efforts of someone else and/or failing to make use
+of the most recent version of harmony (and other) files.
 
 ## Compile spatial data
 
@@ -530,8 +694,8 @@ microdata, thereby expanding the set of potential predictor variables
 available in the fusion process. The geographic “unit of analysis” in
 this case consists of
 [PUMA’s](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/pumas.html),
-which are observed for ACS households and can be imputed (see
-`?imputePUMA`) for donor households.
+which are observed for ACS households and can be imputed for donor
+households.
 
 Ingestion of spatial datasets is generally less onerous than for survey
 data; there are fewer requirements that the processed data must meet.
@@ -549,12 +713,14 @@ meet.
     indicates that a measurement is time-invariant (e.g. a long-term
     climate “normal”).
 2.  It must contain a column (or columns) whose name and values are also
-    found in the “geo\_concordance.fst” file.
+    found in the `geo_concordance.fst` file. These columns define the
+    location of the measurement and – via the `geo_concordance.fst` file
+    – are mapped to PUMA’s.
 
 Ordered factor variables should be classed as such; other categorical
-variables can be character. It is not (currently) necessary to document
-the variables, name them a certain way, or create a dictionary. Let’s
-look at an example.
+variables can be character. It is *not* (currently) necessary to
+document the variables, name them a certain way, or create a dictionary.
+Let’s look at an example.
 
 ``` r
 irs <- readRDS("geo-processed/IRS-SOI/IRS-SOI_2018_processed.rds")
@@ -562,14 +728,14 @@ head(irs[, 1:5])
 ```
 
     # A tibble: 6 × 5
-      zcta10 vintage `Mean income per ret… `Mean income per pe… `Mean people per re…
-      <chr>    <int>                 <int>                <int>                <dbl>
-    1 35004     2018                 58600                28760                 2.04
-    2 35005     2018                 41200                21200                 1.94
-    3 35006     2018                 53100                25300                 2.10
-    4 35007     2018                 62300                29240                 2.13
-    5 35010     2018                 52900                25700                 2.06
-    6 35014     2018                 50300                25900                 1.94
+      zcta10 vintage `Mean income per return` `Mean income per p… `Mean people per …
+      <chr>    <int>                    <int>               <int>              <dbl>
+    1 35004     2018                    58600               28760               2.04
+    2 35005     2018                    41200               21200               1.94
+    3 35006     2018                    53100               25300               2.10
+    4 35007     2018                    62300               29240               2.13
+    5 35010     2018                    52900               25700               2.06
+    6 35014     2018                    50300               25900               1.94
 
 The `irs` object contains processed spatial data constructed from the
 [IRS Statistics of Income
@@ -585,19 +751,18 @@ The “zcta10” variable is also found in the “geo\_concordance.fst” file,
 which contains information about how to link geographic units to PUMA’s.
 Its creation relies heavily on data from the Missouri Census Data
 Center’s [Geocorr
-engine](https://mcdc.missouri.edu/applications/geocorr.html) (code
-[here](https://github.com/ummel/fusionData/blob/master/geo-processed/concordance/02%20geo_concordance.R)).
-The information on how to link zip codes to PUMA’s is used to aggregate
-the IRS-SOI data to PUMA-level prior to merging with survey microdata.
+engine](https://mcdc.missouri.edu/applications/geocorr.html). The
+information on how to link zip codes to PUMA’s is used to aggregate the
+IRS-SOI data to PUMA-level prior to merging with survey microdata.
 
-The “geo\_concordance.fst” file contains a variety of variables that can
+The `geo_concordance.fst` file contains a variety of variables that can
 be used to identify the location of observations in a processed spatial
-data file. Most of these are documented by
-[Geocorr](https://mcdc.missouri.edu/applications/docs/maggot2014.html).
+data file. Most of these are [documented by
+Geocorr](https://mcdc.missouri.edu/applications/docs/maggot2014.html).
 Others were added within the
-`geo-processed/concordance/02 geo_concordance.R` file to allow
-concordance with variables found in particular datasets. The concordance
-file can be expanded over time as necessary.
+[`geo-processed/concordance/geo_concordance.R`](https://github.com/ummel/fusionData/blob/master/geo-processed/concordance/geo_concordance.R)
+file to allow concordance with variables found in particular datasets.
+The concordance file can be expanded over time as necessary.
 
 ``` r
 concordance <- fst::fst("geo-processed/concordance/geo_concordance.fst")
@@ -618,8 +783,9 @@ names(concordance)
     [45] "division"         "recs_domain"      "recs_division"    "recs_ba_zone"    
     [49] "recs_iecc_zone"   "climate_division"
 
-In some cases, the processed .rds file will include multiple variables
-to achieve concordance. For example, a spatial dataset with block group
+In some cases, the spatial dataset’s processed .rds file will include
+multiple location variables that are used collectively to achieve
+spatial concordance. For example, a spatial dataset with block group
 observations must include columns for “state”, “county10”, “tract10”,
 and “bg10” in order to allow a smooth merge with the concordance file
 (this is the case for the EPA-SLD dataset).
@@ -628,22 +794,23 @@ Unlike with processed *survey* data, the naming convention for processed
 spatial data files is quite relaxed. The function `compileSpatial()`
 automatically detects and compiles all files in `/geo-processed` ending
 with "\_processed.rds". As long as a processed spatial data file has the
-necessary suffix – and meets the two requirements above – it will be
-compiled into the `geo_predictors.fst` file. Whenever a processed .rds
-file is added or updated, it is necessary to run `compileSpatial()` to
-update the `geo_predictors.fst` file.
+necessary suffix – and meets the two hard requirements mentioned above –
+it will be compiled into the `geo_predictors.fst` file.
+
+Whenever a processed .rds file is added or updated, it is necessary to
+run `compileSpatial()` to update the `geo_predictors.fst` file.
 
 The `geo_predictors.fst` file contains all variables and vintages across
 available spatial datasets, aggregated to PUMA-level in preparation for
 merging with survey microdata. The structure of this file is unusual,
 but it is not intended to be worked with directly. It is designed to
-allow the `prepare()` function (demonstrated below) to efficiently read
+allow the `assemble()` function (demonstrated below) to efficiently read
 the necessary data from disk when it merges spatial variables for
 particular donor and recipient surveys.
 
 Consequently, unless a user is actively adding or editing processed
 spatial data, the only “geo files” that are strictly necessary for the
-fusion process are `geo_predictors.rds` and `geo_concordance.rds`, both
+fusion process are `geo_predictors.fst` and `geo_concordance.fst`, both
 of which can be obtained by calling
 `getGeoProcessed(dataset = "essential")`.
 
@@ -685,11 +852,11 @@ data <- assemble(prep)
     Merging donor spatial predictor variables...
     Merging recipient spatial predictor variables...
     Assembling output data frames...
-    Performing validation checks...
+    Performing consistency checks...
 
 The resulting `data` object is a list containing two data frames. The
-first slot contains the “prepared” donor microdata. The second slot
-contains the “prepared” ACS recipient microdata. Notice that the RECS
+first slot contains the “fusion ready” donor microdata. The second slot
+contains the analogous ACS recipient microdata. Notice that the RECS
 microdata has more variables/columns than the ACS data. This is because
 `assemble` donor output includes – by default – *all* valid variables in
 the donor survey not used to create harmonies. The latter are potential
@@ -769,14 +936,62 @@ round(table(data$ACS_2015$fuelheat__hfl) / nrow(data[[2]]), 3)
         1     2     3     4     5     6     7 
     0.012 0.364 0.055 0.469 0.064 0.008 0.028 
 
-`assemble()` also merges spatial variables with both the donor and
-recipient microdata. The function `assignLocation()` is used internally
-to – among other things – impute one or more plausible PUMA’s for each
-donor household. Pre-compiled spatial variables (those in
-`geo_predictors.fst`) are then merged onto both the donor and recipient
-microdata at the PUMA level. Spatial variables are indicated by the
-double-dot (“..”) in the variable name, analogous to the way that
-harmonized variables are indicated by the double-underscore ("\_\_").
+`prepare()` also calls the internal function `assignLocation()` to
+impute one or more plausible PUMA’s for each donor household. The
+`implicates` argument controls how many PUMA’s are imputed for each
+donor household. Setting `implicates` higher results in more variability
+in the spatial predictors merged to a given household, reflecting
+uncertainty about where the household is located. The use of implicates
+here mimics its usage in standard multiple imputation techniques (5
+implicates is typical).
+
+------------------------------------------------------------------------
+
+The spatial imputation algorithm coded in `assignLocation()` requires
+some explanation. The location variables in the donor microdata are used
+to identify the set of possible PUMA’s assignable to each household,
+with the initial likelihood of selection being proportional to the
+number of housing units in the PUMA. However, we can also exploit the
+fact that we observe harmonized variables for donor and ACS respondents
+– and the PUMA of ACS respondents is known. That is, there is
+information in the *harmonized* variables that can be used to alter the
+likelihood of selecting a given PUMA.
+
+A conceptual example: Imagine, based on location variables alone, we
+know that a particular donor household is resident in one of five PUMA’s
+(001 through 005), each with an equal number of housing units. Using
+this information alone, we would assign each PUMA an equal probability
+of selection (call it *P*). However, we also observe household income
+for both donor and ACS households. The donor household is high income.
+We notice in the ACS microdata that high income households are common in
+PUMA 001 but rare in the other four. Conceptually, this information
+should increase the probability of selecting PUMA 001.
+
+In practice, we typically observe multiple harmonized variables – some
+categorical and some continuous. `assignLocation()` calculates [Gower’s
+distance](https://www.jstor.org/stable/2528823), using all of the
+harmonized variables, to derive a pairwise similarity value (*S*)
+between each donor household and a random sample of ACS households
+located within the feasible set of PUMA’s. The calculation uses the
+efficient [gower
+package](https://cran.r-project.org/web/packages/gower/index.html); even
+so, random sampling of the ACS is necessary to make it tractable. An ACS
+household (or multiple if `implicates` &gt; 1) is then randomly
+selected, where the probability of selection is *P* / *S* and the
+associated PUMA is imputed to the donor household. That is, the naive,
+population-based probability of selection (*P*) is modified by the
+observable similarity of the donor household and each ACS household
+(*S*).
+
+------------------------------------------------------------------------
+
+`assemble()` also merges spatial variables onto both the donor and
+recipient microdata. Pre-compiled spatial variables (those in
+`geo_predictors.fst`) are merged onto both the donor and recipient
+microdata at the PUMA level, using imputed PUMA’s for the donor. Spatial
+variables are indicated by the double-dot (“..”) in the variable name,
+analogous to the way that harmonized variables are indicated by the
+double-underscore ("\_\_").
 
 Let’s look at the variables in the recipient ACS microdata.
 
@@ -903,20 +1118,17 @@ names(data$ACS_2015)
     [233] "irs.soi..pa2om"          "nrel.urdb..rsed"        
 
 The string to the left of the “..” identifies the spatial dataset that
-the variable comes from. The string to the right is a unique,
-syntactically-valid identifier. It’s not critical that specific spatial
-variables be identifiable in the fusion process. And because
+the variable comes from (e.g. “irs.soi”). The string to the right is a
+unique, syntactically-valid identifier. It’s not critical that specific
+spatial variables be identifiable in the fusion process. And because
 pre-processing of spatial datasets does not impose a stringent
 naming/documentation convention (it is flexible by design), these
 non-nonsensical-but-unique names are the safest way to identify spatial
 variables.
 
-The `prepare()` function includes an `implicates` argument that controls
-how many PUMA’s are imputed for each donor household. Setting
-`implicates` higher results in more variability in the spatial
-predictors merged to a given household, reflecting our uncertainty about
-where the household is located. The use of implicates here mimics usage
-in standard multiple imputation techniques (5 implicates is typical).
+The "loc..\*" variables refer to the location variables directly
+observed in the donor and assignable to recipient microdata on the basis
+of respondent PUMA.
 
 Now let’s explore some of the additional arguments to `assemble()`:
 
@@ -976,30 +1188,31 @@ data <- assemble(prep,
     Merging donor spatial predictor variables...
     Merging recipient spatial predictor variables...
     Assembling output data frames...
-    Performing validation checks...
+    Performing consistency checks...
 
 ``` r
 lapply(data, dim)
 ```
 
     $RECS_2015
-    [1] 26257    67
+    [1] 26213    67
 
     $ACS_2015
     [1] 1226728      64
 
 The number of observations in the donor microdata is now higher,
 reflecting the use of `implicates = 5`. Note that the number of rows has
-increased by less than a factor of five. This is because
+actually increased by less than a factor of five. This is because
 `assignLocation()` collapses duplicate household-PUMA observations and
 adjusts the sample “weight” column accordingly. This reduces the amount
 of data without affecting subsequent statistical results.
 
 The difference in the number of columns between the RECS and ACS
-microdata is due to the former’s inclusion of our three requested donor
+microdata is due to the former’s inclusion of our three requested fusion
 variables. Otherwise, both data frames are entirely consistent with one
-another. They each include a unique household identifier variable and an
-identical set of harmonized survey and spatial variables that can be
+another; `assemble()` performs formal checks to ensure this is the case.
+Each microdata set includes a unique household identifier variable and
+an identical set of harmonized survey and spatial variables that can be
 exploited by the fusion process.
 
 By specifying the `pca` argument, the *numeric* spatial variables are
@@ -1065,7 +1278,7 @@ fit <- train(data = data$RECS_2015,
 
     3 fusion variables
     62 initial predictor variables
-    26257 observations
+    26213 observations
     Searching for derivative relationships...
     Determining order of fusion variables...
     Building fusion models...
@@ -1093,33 +1306,26 @@ nrow(sim)
 head(sim)
 ```
 
-         kwhcol                   agecenac
-    1    0.0000 No central air conditioner
-    2 2196.4823 No central air conditioner
-    3 1290.6489         15 to 19 years old
-    4 2386.3827         10 to 14 years old
-    5  361.1256         10 to 14 years old
-    6  363.3546         15 to 19 years old
-                                        cooltype
-    1                        No air conditioning
-    2   Individual window/wall or portable units
-    3            Central air conditioning system
-    4            Central air conditioning system
-    5            Central air conditioning system
-    6 Both a central system and individual units
+         kwhcol                   agecenac                                 cooltype
+    1  576.3857 No central air conditioner Individual window/wall or portable units
+    2 2367.5607         10 to 14 years old          Central air conditioning system
+    3 3459.5585      Less than 2 years old          Central air conditioning system
+    4 4432.3754         10 to 14 years old          Central air conditioning system
+    5    0.0000 No central air conditioner                      No air conditioning
+    6 2298.4798           5 to 9 years old          Central air conditioning system
 
 ``` r
 summary(data$RECS_2015$kwhcol)
 ```
 
        Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-        0.0   392.5  1115.0  1881.4  2550.0 20350.0 
+          0     390    1113    1875    2533   20350 
 
 ``` r
 summary(sim$kwhcol)
 ```
 
        Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-          0     372    1072    1836    2507   20350 
+        0.0   371.1  1071.4  1836.8  2513.6 20350.0 
 
 Onward and upward!
