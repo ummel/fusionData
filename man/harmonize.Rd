@@ -17,7 +17,7 @@ harmonize(harmony.file, respondent, output = "both")
 When \code{output = "both"}, a list of length 2 containing the donor and recipient data frames. Otherwise, a single data frame.
 }
 \description{
-Parses a specified .R "harmony file" produced by the Survey Harmonization Tool (\link{harmony}) to produce associated microdata with all available harmonized variables. The resulting harmonized data frame(s) can be used with \link{completeDonor}, \code{\link[fusionModel]{train}}, and \code{\link[fusionModel]{fuse}} to complete the data fusion process.
+Parses a specified .R "harmony file" produced by the Survey Harmonization Tool \link{harmony} to produce associated microdata with all available harmonized variables. This function is called within \link{prepare} and likely never needs to be called for the user directly.
 }
 \examples{
 test <- harmonize(harmony.file = "CEI_2015-2019__ACS_2015.R", respondent = "household")

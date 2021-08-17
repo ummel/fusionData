@@ -1,7 +1,7 @@
 #' Compile universal survey dictionary
 #'
 #' @description
-#' Compiles all of the individual survey data dictionaries in \code{/survey-processed} into a single tibble that is saved to disk for use by \link{dictionary} and \link{harmony} Shiny apps.
+#' Compiles all of the individual survey data dictionaries in \code{/survey-processed} into two tibbles?compile that is saved to disk for use by \link{dictionary} and \link{harmony} Shiny apps.
 #'
 #' @return Saves \code{dictionary.rds} and \code{surveys.rds} data frames to disk.
 #'

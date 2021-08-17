@@ -1,7 +1,7 @@
 #' Create harmonized microdata
 #'
 #' @description
-#' Parses a specified .R "harmony file" produced by the Survey Harmonization Tool (\link{harmony}) to produce associated microdata with all available harmonized variables. The resulting harmonized data frame(s) can be used with \link{completeDonor}, \code{\link[fusionModel]{train}}, and \code{\link[fusionModel]{fuse}} to complete the data fusion process.
+#' Parses a specified .R "harmony file" produced by the Survey Harmonization Tool \link{harmony} to produce associated microdata with all available harmonized variables. This function is called within \link{prepare} and likely never needs to be called for the user directly.
 #'
 #' @param harmony.file Character. Name of a .R harmony file located at \code{/harmony/harmonies}.
 #' @param respondent Character. Should the output microdata be at the \code{"household"} or \code{"person"} level?

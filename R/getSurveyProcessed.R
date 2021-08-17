@@ -5,8 +5,8 @@
 #'
 #' @param survey Character. Survey identifier, possibly including vintage and respondent type. See Details.
 #'
-#' @details \code{survey} must include a unique survey identifier. If just the identifier is provided (e.g. \code{survey = "RECS"}), then all available processed microdata across vintages and respondents is downloaded. Alternatively, can specify survey and vintage (e.g. \code{survey = "RECS_2015"}) or include additional respondent code (e.g. \code{survey = "RECS_2015_H"}) to limit download to more restrictive subsets. The special argument \code{survey = "all"} will download ALL available processed microdata across surveys.\cr\cr
-#' The function will fail with an explanation if the current working directory is not set to \code{/fusionModel}; i.e. the project directory as pulled from Github.
+#' @details \code{survey} must include a unique survey identifier. If just the identifier is provided (e.g. \code{survey = "RECS"}), then all available processed microdata across vintages and respondents is downloaded. Alternatively, can specify survey and vintage (e.g. \code{survey = "RECS_2015"}) or include additional respondent code (e.g. \code{survey = "RECS_2015_H"}) to limit download to more restrictive subsets.
+#' @details The special argument \code{survey = "all"} will download ALL available processed microdata across surveys.
 #'
 #' @return \code{\link[googledrive]{drive_download}} prints messages to console indicating which files were downloaded.
 #'
