@@ -53,7 +53,7 @@ data$`CEI_2015-2019` <- data$`CEI_2015-2019` %>%
 # Prepare the recipient
 # Merge pre-fused RECS "2019" variables to harmonized ACS 2019 microdata
 # Manually construct the 5 shared predictors from RECS variables so that they have same name, values, class as the CEI variables
-recs.2019 <- read_fst("production/RECS_2019_sim.fst")
+recs.2019 <- read_fst("production/fusion/RECS_2019_sim.fst")
 data$ACS_2019 <- data$ACS_2019 %>%
   left_join(recs.2019, by = "acs_2019_hid") %>%
   mutate(cntralac = factor(ifelse(grepl("central", cooltype), "Yes", "No")),
@@ -111,4 +111,4 @@ stopifnot(!anyNA(sim))
 #-----
 
 # Example: save result to disk (71 MB)
-fst::write_fst(sim, "production/CEX_2015-2019_sim.fst", compress = 100)
+fst::write_fst(sim, "production/fusion/CEX_2015-2019_sim.fst", compress = 100)

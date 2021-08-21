@@ -31,7 +31,7 @@
 library(tidyverse)
 
 # Load fused RECS_2015-ACS_2015 microdata
-recs.sim <- fst::read_fst("production/RECS_2015_sim.fst")
+recs.sim <- fst::read_fst("production/fusion/RECS_2015_sim.fst")
 
 #-----
 

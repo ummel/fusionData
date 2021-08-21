@@ -89,4 +89,4 @@ stopifnot(!anyNA(sim))
 #-----
 
 # Example: save result to disk (56 MB)
-fst::write_fst(sim, "production/RECS_2015_sim.fst", compress = 100)
+fst::write_fst(sim, "production/fusion/RECS_2015_sim.fst", compress = 100)
