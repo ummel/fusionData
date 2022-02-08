@@ -75,7 +75,7 @@ You will be prompted to enter the password for the Google Drive account
 storing the remote files.
 
 -   username: fusionACSdata
--   password: fusethis!
+-   password: fusethis!!
 
 The download will take a few minutes. The files are automatically placed
 in the appropriate sub-directories of `/fusionData`, with the
