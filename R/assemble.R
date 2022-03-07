@@ -219,7 +219,8 @@ assemble <- function(x,
       # Impute NA's in donor
       dgeo.num <- dgeo[ind]
       na.cols <- names(which(sapply(dgeo.num, anyNA)))
-      dgeo.num[na.cols] <- map(dgeo.num[na.cols], ~ replace_na(.x, replace = median(.x, na.rm = TRUE)))
+      #dgeo.num[na.cols] <- map(dgeo.num[na.cols], ~ replace_na(.x, replace = median(.x, na.rm = TRUE)))
+      dgeo.num[na.cols] <- map(dgeo.num[na.cols], ~ replace(.x, list = is.na(.x), values = median(.x, na.rm = TRUE)))
 
       # Fit PCA to donor data
       pca.fit <- prcomp(x = dgeo.num, retx = TRUE, center = TRUE, scale. = TRUE, rank. = pca[1])
@@ -243,7 +244,8 @@ assemble <- function(x,
       # Impute NA's in recipient
       rgeo.num <- rgeo[ind]
       na.cols <- names(which(sapply(rgeo.num, anyNA)))
-      rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace_na(.x, replace = median(.x, na.rm = TRUE)))
+      #rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace_na(.x, replace = median(.x, na.rm = TRUE)))
+      rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace(.x, list = is.na(.x), values = median(.x, na.rm = TRUE)))
 
       # PCA output with updated column names
       rpca <- predict(pca.fit, newdata = rgeo.num)[, 1:k]
