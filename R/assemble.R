@@ -63,7 +63,7 @@ assemble <- function(x,
 
   #-----
 
-  # # Identify spatial variables and datasets available in 'geo_predictors.fst'
+  # Identify spatial variables and datasets available in 'geo_predictors.fst'
   geo <- fst::fst("geo-processed/geo_predictors.fst")
   gvars <- setdiff(names(geo), c('state', 'puma10', 'vintage'))
   gsets <- unique(map_chr(strsplit(gvars, "..", fixed = TRUE), 1L))
@@ -78,6 +78,14 @@ assemble <- function(x,
     is.null(pca) | (is.numeric(pca) & length(pca) == 2)
     is.logical(replicates)
   })
+
+  #-----
+
+  # Restrict 'gvars' and 'gsets', if requested by 'spatial.datasets'
+  if (length(spatial.datasets) > 1) {
+    gvars <- unlist(map(spatial.datasets, ~ gvars[str_starts(gvars, fixed(paste0(.x, "..")))]))
+    gsets <- spatial.datasets
+  }
 
   #-----
 
@@ -187,14 +195,14 @@ assemble <- function(x,
   #-----
 
   # Merge requested spatial predictors
-  if (spatial.datasets != "none") {
+  if (spatial.datasets[1] != "none") {
 
-    gsets <- if (spatial.datasets == "all") gsets else spatial.datasets
+    #gsets <- if (spatial.datasets[1] == "all") gsets else spatial.datasets
 
     # Donor spatial predictors
     dgeo <- loadSpatial(gsets, donor)
 
-    # Donor spatial predictors
+    # Recipient spatial predictors
     rgeo <- loadSpatial(gsets, recipient)
 
     # Restrict to common spatial predictors
