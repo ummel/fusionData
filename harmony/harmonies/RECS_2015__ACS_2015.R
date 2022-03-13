@@ -49,7 +49,7 @@ list(
 
   elpay__elefp = list(
     RECS = list(
-      groups = c(1, 2, 3, 2),
+      groups = c(1, 2, 3, 1),
       levels = c("All used in this home is included in the rent or condo fee", "Household is responsible for paying for all used in this home", "Paid for some other way", "Some is paid by the household, some is included in the rent or condo fee"),
       breaks = "",
       adj = ""),
@@ -58,10 +58,11 @@ list(
       levels = c("Included in rent or in condo fee", "No charge or electricity not used", "Valid monthly electricity cost in ELEP"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = FALSE,
     comment = "",
-    modified = "2021-07-03 12:10:17"),
+    modified = "2022-03-12 10:36:48"),
 
   employhh__wkhp = list(
     RECS = list(
@@ -191,7 +192,7 @@ list(
 
   ngpay__gasfp = list(
     RECS = list(
-      groups = c(1, 2, 3, 3, 2),
+      groups = c(1, 2, 3, 3, 1),
       levels = c("All used in this home is included in the rent or condo fee", "Household is responsible for paying for all used in this home", "No natural gas", "Paid for some other way", "Some is paid by the household, some is included in the rent or condo fee"),
       breaks = "",
       adj = ""),
@@ -200,10 +201,11 @@ list(
       levels = c("Included in rent or in condo fee", "Included in electricity payment", "No charge or gas not used", "Valid monthly gas cost in GASP"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = FALSE,
     comment = "",
-    modified = "2021-07-03 12:10:17"),
+    modified = "2022-03-12 10:37:28"),
 
   nhsldmem__np = list(
     RECS = list(
