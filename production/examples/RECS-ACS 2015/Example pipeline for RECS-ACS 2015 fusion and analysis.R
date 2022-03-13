@@ -59,7 +59,7 @@ sim <- fuseM(data = data$ACS_2015, train.object = fit, M = 10, cores = 1)
 # Load desired ACS variables and weights
 
 # Person observations. Retain race of reference person, derived from original variables 'rac1p' and 'hisp'
-acs.p <- read_fst("survey-processed/ACS/2015/ACS_2015_P_processed.fst", columns = c("acs_2015_hid", "sporder", "rac1p", "hisp")) %>%
+acs.p <- fst::read_fst("survey-processed/ACS/2015/ACS_2015_P_processed.fst", columns = c("acs_2015_hid", "sporder", "rac1p", "hisp")) %>%
   filter(sporder == 1) %>%
   mutate(race = ifelse(rac1p %in% c("White alone", "Black or African American alone"), as.character(rac1p), "Other"),
          race = ifelse(hisp == "Not Spanish / Hispanic / Latino", race, "Latino"),
@@ -67,7 +67,7 @@ acs.p <- read_fst("survey-processed/ACS/2015/ACS_2015_P_processed.fst", columns 
   select(acs_2015_hid, race)
 
 # Household observations, including weights, with 'race' merged from person file
-acs <- read_fst("survey-processed/ACS/2015/ACS_2015_H_processed.fst") %>%
+acs <- fst::read_fst("survey-processed/ACS/2015/ACS_2015_H_processed.fst") %>%
   select(acs_2015_hid, state, weight, starts_with("rep_")) %>%
   left_join(acs.p, by = "acs_2015_hid")
 
