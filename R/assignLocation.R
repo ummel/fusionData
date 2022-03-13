@@ -3,10 +3,11 @@
 #
 # harmonized: Output from call to \link{harmonize}.
 # m: Integer. Number of implicates when imputing PUMA for donor observations.
+# collapse: Logical. Should rows be collapsed and weighting factors aggregated when there are multiple imputations of the same household-PUMA?
 
 #-----
 
-assignLocation <- function(harmonized, m = 1) {
+assignLocation <- function(harmonized, m, collapse) {
 
   # Variables in geolink defining the "target" geography (i.e. uniquely-identified PUMA's)
   gtarget <- c("state", "puma10")
@@ -213,9 +214,14 @@ assignLocation <- function(harmonized, m = 1) {
   # When 'D' is merged with microdata, the household "weight" is multiplied by "weight_adjustment" to arrive at correct total sample weight
   # This allow the unique() call below, which reduces the number of row in results (i.e. collapse duplicated entries)
   # Note that the recipient ID is dropped, which is OK if we don't care about adding additional ACS-based predictor variables (might be changed in future)
+  # If collapse = FALSE, then the weight_adjustment column is simply 1/m and there is no collapse of duplciate household entries
   data.table::set(D, j = rid, value = NULL)
-  D[, weight_adjustment := .N / m, by = c(did, gtarget)]
-  D <- unique(D)
+  if (collapse) {
+    D[, weight_adjustment := .N / m, by = c(did, gtarget)]
+    D <- unique(D)
+  } else {
+    D[, weight_adjustment := 1 / m]
+  }
 
   gc()
 
