@@ -38,7 +38,7 @@ pums <- read_fst("survey-processed/ACS/2019/ACS_2019_H_processed.fst",
          rntval = renteq)
 
 # Load necessary variables from fused ACS-RECS microdata
-recs <- read_fst("production/fusion/RECS_2019_sim.fst",
+recs <- read_fst("production/v1/prior/CEI-ACS 2019/RECS_2019_sim.fst",
                  columns = c("acs_2019_hid", "dollarel", "dollarng", "dollarlp", "dollarfo")) %>%
   mutate(elec = dollarel,
          ngas = dollarng,
@@ -48,7 +48,7 @@ recs <- read_fst("production/fusion/RECS_2019_sim.fst",
 # Load necessary variables from fused ACS-CEI microdata
 # Calculate total "FS consumption" (fs_cons) and total conventional consumption (total_cons)
 # Note inclusion of estimated vehicle depreciation
-sim <- read_fst("production/fusion/CEX_2015-2019_sim.fst") %>%
+sim <- read_fst("production/v1/prior/CEI-ACS 2019/CEX_2015-2019_sim.fst") %>%
   left_join(pums, by = "acs_2019_hid") %>%
   left_join(recs, by = "acs_2019_hid") %>%
   mutate(vehdep = 0.15 * vehval,  # Estimated annual vehicle depreciation
