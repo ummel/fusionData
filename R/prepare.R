@@ -7,6 +7,7 @@
 #' @param recipient Character. Recipient (ACS) survey identifier (e.g. `"ACS_2019"`).
 #' @param respondent Character. Desired respondent level of microdata. Either `"household"` or `"person"`.
 #' @param implicates Integer. Number of PUMA implicates to return for the donor microdata.
+#' @param collapse Logical. Should rows be collapsed and weighting factors aggregated when there are multiple imputations of the same household-PUMA?
 #'
 #' @return A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{\link{assemble}}.
 #'
@@ -45,7 +46,8 @@
 prepare <- function(donor,
                     recipient,
                     respondent,
-                    implicates = 1) {
+                    implicates = 1,
+                    collapse = TRUE) {
 
   # Validate arguments
   stopifnot({
@@ -61,7 +63,7 @@ prepare <- function(donor,
   #-----
 
   # Impute PUMA for the donor
-  location.data <- assignLocation(harmonized = data, m = implicates)
+  location.data <- assignLocation(harmonized = data, m = implicates, collapse = collapse)
 
   #----
 

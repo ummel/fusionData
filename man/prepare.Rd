@@ -4,7 +4,7 @@
 \alias{prepare}
 \title{Prepare microdata inputs for assembly}
 \usage{
-prepare(donor, recipient, respondent, implicates = 1)
+prepare(donor, recipient, respondent, implicates = 1, collapse = TRUE)
 }
 \arguments{
 \item{donor}{Character. Donor survey identifier (e.g. \code{"RECS_2015"}).}
@@ -14,6 +14,8 @@ prepare(donor, recipient, respondent, implicates = 1)
 \item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
 
 \item{implicates}{Integer. Number of PUMA implicates to return for the donor microdata.}
+
+\item{collapse}{Logical. Should rows be collapsed and weighting factors aggregated when there are multiple imputations of the same household-PUMA?}
 }
 \value{
 A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{\link{assemble}}.
