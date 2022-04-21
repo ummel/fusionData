@@ -17,7 +17,12 @@ Depends:
     shiny,
     fst,
     data.table,
-    tidyverse
+    tidyverse,
+    DT,
+    gt,
+    rhandsontable,
+    shinyjs,
+    shinyWidgets
 Imports: 
     labelled,
     pbapply,
