@@ -36,7 +36,7 @@ The fusionData *master* branch can be cloned to its own project
 directory on your local machine using RStudio and [these
 instructions](https://book.cds101.com/using-rstudio-server-to-clone-a-github-repo-as-a-new-project.html).
 
-Use the following setup parameters:
+Use the following setup parameters*:
 
 ``` r
 Repository URL: https://github.com/ummel/fusionData
@@ -47,6 +47,9 @@ You will be prompted to enter your Github username and password. After
 the repository has been cloned to your local project directory, you can
 install and load the package itself. You may be prompted to install some
 dependencies.
+
+*Note: if you use multi-factor authentication for your Github credentials, you will need to enable an SSH key, and will need to use `git@github.com:ummel/fusionData.git` as the Repository URL in the above setup parameters.
+
 
 ``` r
 # Install the fusionData package locally
