@@ -250,7 +250,7 @@ assignLocation <- function(harmonized, m, collapse) {
   # The result is a data.table with same number of rows as 'R'
   # Order the rows by PUMA so it is aligned with 'R' and can be cbind'd below
   glink[R, N := i.N, on = gtarget]
-  ind <- glink[, .I[sample(.N, size = N, prob = puma_share, replace = TRUE)], by = gtarget]$V1
+  ind <- glink[, .I[sample(.N, size = unique(N), prob = puma_share, replace = TRUE)], by = gtarget]$V1
   glink <- glink[ind]
   setorderv(glink, cols = gtarget)
 

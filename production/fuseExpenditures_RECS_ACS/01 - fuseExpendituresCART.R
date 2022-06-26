@@ -37,6 +37,8 @@ data <- assemble(prep,
 donor <- data$RECS_2015
 recipient <- data$ACS_2015
 
+vars_imp <- list()
+
 # Perform fuel by fuel imputation
 for (fuel in fuels) {
   
@@ -46,15 +48,19 @@ for (fuel in fuels) {
   fuelprice<-paste0("price",fuel)
   
   # Fuse the consumption of the fuel first
-  fit <- train(data = donor, 
-               y = fuelcons, 
-               x = setdiff(intersect(names(donor),c(names(recipient))),
-                           c(paste0("btu",fuels),paste0("dollar",fuels),"weight")),
-               weight = "weight",
-               file = "./temp_model.fsn")
+  fit <- trainCART(data = donor, 
+                   y = fuelcons, 
+                   x = setdiff(intersect(names(donor),names(recipient)),c(paste0("btu",fuels),paste0("dollar",fuels))),
+                   weight = "weight",
+                   cores = 2,
+                   maxcats = 10,
+                   complexity = 0.01)
   
-  recipient[[fuelcons]] <- fuse(data = recipient, file = "./temp_model.fsn")$V1
-  file.remove("./temp_model.fsn")
+  recipient[[fuelcons]] <- fuseCART(data = recipient, train.object = fit)[[fuelcons]]
+  
+  ## Uncomment to see fit
+  # plot(density(donor[donor[[fuelcons]]>0,fuelcons]))
+  # lines(density(recipient[recipient[[fuelcons]]>0,fuelcons]),col="red")
   
   # Calculate the price in the donor dataset
   donor[[fuelprice]]<-donor[[fuelexp]]/donor[[fuelcons]]
@@ -67,6 +73,10 @@ for (fuel in fuels) {
     if (sum((donor$loc..recs_division==div) & !is.na(donor[[fuelprice]]))>1) {
       donor[(donor$loc..recs_division==div) & !is.na(donor[[fuelprice]]),fuelprice][DescTools::LOF(
         donor[(donor$loc..recs_division==div) & !is.na(donor[[fuelprice]]),fuelprice],k=10)>2.75]<-NA
+      
+      ## Uncomment to see density with and without outliers
+      # plot(density(donor[(donor$loc..recs_division==div) & !is.na(donor[[fuelprice]]),fuelprice],na.rm=T))
+      # readline(div)
     }
   }
   
@@ -79,20 +89,27 @@ for (fuel in fuels) {
                   "loc..ur12", 
                   "typehuq__bld", 
                   fuelcons)
-  fit <- train(data = donor[!is.na(donor[[fuelprice]]),
-                            c("weight",price.x.vars, fuelprice)], 
-               y = fuelprice,
-               x = price.x.vars,
-               weight = "weight",
-               file = "./temp_model.fsn")
+  fit <- trainCART(data = donor[!is.na(donor[[fuelprice]]),
+                                c("weight",price.x.vars, fuelprice)], 
+                   y = fuelprice,
+                   x = price.x.vars,
+                   weight = "weight",
+                   cores = 2,
+                   maxcats = 10,
+                   complexity = 0.01)
+  
+  vars_imp[[fuel]]<-fit$models[[fuelprice]]$variable.importance
   
   # Create the new expenditure by
   # multiplying the predicted price
   # with the predicted consumption
   recipient[[fuelexp]] <- 
-    fuse(data = recipient, file = "./temp_model.fsn")$V1*
+    fuseCART(data = recipient, train.object = fit)[[fuelprice]]*
     recipient[[fuelcons]]
-  file.remove("./temp_model.fsn")
+  
+  ## Uncomment to see fit
+  # plot(density(donor[donor[[fuelexp]]>0,fuelexp]))
+  # lines(density(recipient[recipient[[fuelexp]]>0,fuelexp]),col="red")
   
   # Remove the created price from the donor
   donor<-donor[setdiff(names(donor),fuelprice)]

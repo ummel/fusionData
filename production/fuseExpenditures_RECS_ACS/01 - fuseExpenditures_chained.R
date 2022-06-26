@@ -37,24 +37,37 @@ data <- assemble(prep,
 donor <- data$RECS_2015
 recipient <- data$ACS_2015
 
+# Adjust this line accordingly to load the chain function
+source("~/fusionModel/R/chain.R")
+
+# Finds the best sequence to impute the fuel consumptions
+y.order <- chain(donor, 
+                 y = paste0("btu",fuels), 
+                 x = setdiff(intersect(names(donor),c(names(recipient))),
+                             c(paste0("btu",fuels),paste0("dollar",fuels),"weight")), 
+                 w = "weight")
+
+# Fit and fuse fuel consumptions
+fit <- train(data = donor, 
+             y = y.order, 
+             x = setdiff(intersect(names(donor),c(names(recipient))),
+                         c(paste0("btu",fuels),paste0("dollar",fuels),"weight")),
+             weight = "weight",
+             file = "./temp_model.fsn")
+
+recipient <- cbind(recipient,fuse(data = recipient, file = "./temp_model.fsn"))
+file.remove("./temp_model.fsn")
+
+
 # Perform fuel by fuel imputation
 for (fuel in fuels) {
+  
+  print(fuel)
   
   # Create appropriate variable names
   fuelcons<-paste0("btu",fuel)
   fuelexp<-paste0("dollar",fuel)
   fuelprice<-paste0("price",fuel)
-  
-  # Fuse the consumption of the fuel first
-  fit <- train(data = donor, 
-               y = fuelcons, 
-               x = setdiff(intersect(names(donor),c(names(recipient))),
-                           c(paste0("btu",fuels),paste0("dollar",fuels),"weight")),
-               weight = "weight",
-               file = "./temp_model.fsn")
-  
-  recipient[[fuelcons]] <- fuse(data = recipient, file = "./temp_model.fsn")$V1
-  file.remove("./temp_model.fsn")
   
   # Calculate the price in the donor dataset
   donor[[fuelprice]]<-donor[[fuelexp]]/donor[[fuelcons]]
