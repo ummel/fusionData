@@ -24,6 +24,15 @@ createDictionary <- function(data, survey, vintage, respondent) {
     substring(tolower(respondent), 1, 1) %in% c("h", "p")
   })
 
+  # Check that number of unique households/individuals matches number of rows in 'data'
+  hid <- grep(paste0("^", tolower(survey), ".*_hid$"), names(data), value = TRUE)
+  pid <- intersect(names(data), "pid")
+  row.check <- data %>%
+    select(all_of(c(hid, pid))) %>%
+    distinct() %>%
+    nrow()
+  if (row.check != nrow(data)) stop("There are ", row.check, " unique households/individuals but ", nrow(data), " rows in 'data'; check for duplicates or other errors...")
+
   # Check for complete variable labels/descriptions
   v <- compact(labelled::var_label(data))
   miss <- setdiff(names(data), names(v))
