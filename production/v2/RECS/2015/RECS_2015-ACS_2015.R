@@ -58,14 +58,13 @@ fsequence <- blockchain(data = data$RECS_2015,
 #-----
 
 # Train fusion model
-# Using nfolds = 0.75 for testing; could set to 5 for production
 # re: threads, see: https://github.com/ummel/fusionModel/issues/26
 train(data = data$RECS_2015,
       y = fsequence,
       x = pred.vars,
       file = "production/v2/RECS/2015/RECS_2015.fsn",
       weight = "weight",
-      nfolds = 0.75,
+      nfolds = 5,
       threads = 3,
       hyper = list(boosting = "gbdt",
                    feature_fraction = 0.8,
@@ -88,12 +87,11 @@ train(data = data$RECS_2015,
 #-----
 
 # Fuse variables to ACS for multiple implicates
-# Optimal settings for 'k' and 'max_dist' are unknown at moment -- using plausible values
+# Optimal settings for 'k' and 'max_dist' are unknown at moment -- using default values
 # See here re: multi-threading: https://github.com/ummel/fusionModel/issues/26
 sim <- fuseM(data = data$ACS_2015,
              file = "production/v2/RECS/2015/RECS_2015.fsn",
-             k = 100,
-             max_dist = 0.05,
+             k = 5,
              M = 2)  # Set higher for production
 
 # Save simulation results to disk
