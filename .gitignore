@@ -10,5 +10,6 @@ fusionData.Rproj
 /geo-raw
 *.fst
 *.rds
+*.fsn
 !*dictionary.rds
 README_cache
