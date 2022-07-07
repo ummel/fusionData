@@ -1,0 +1,13 @@
+name: fusionACS_Dictionary
+title: fusionACS_Dictionary
+username:
+account: ummel
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6571224
+bundleId: 6055925
+url: https://ummel.shinyapps.io/fusionACS_Dictionary/
+when: 1656539865.37056
+lastSyncTime: 1656539865.37059
+asMultiple: FALSE
+asStatic: FALSE

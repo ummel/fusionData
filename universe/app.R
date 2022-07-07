@@ -14,27 +14,41 @@
 library(shiny)
 
 # Load dictionary and survey summary data
-# dictionary <- subset(readRDS("dictionary/dictionary.rds"), select = -Type)
-# surveys <- readRDS("dictionary/surveys.rds")
+# Detect if in a local environment or deployed remotely
+if (basename(getwd()) == "fusionData") {
+  data(dictionary, package = "fusionData")
+  data(surveys, package = "fusionData")
+} else {
+  load("./www/dictionary.rda")
+  load("./www/surveys.rda")
+}
 
-# dictionary <- subset(readRDS("data/dictionary.rds"), select = -Type)
-# surveys <- readRDS("data/surveys.rds")
-
-data(dictionary, package = "fusionData")
-data(surveys, package = "fusionData")
-
+# Remove 'Type' variable from dictionary
 dictionary <- subset(dictionary, select = -Type)
+
+# Update the 'Survey' variable with full names
+surveys <- merge(surveys, data.frame(Survey = c("ACS", "AHS", "CEI", "NHTS", "RECS"),
+                                     `Survey name` = c("American Community Survey",
+                                                       "American Housing Survey",
+                                                       "Consumer Expenditure Survey (Interview)",
+                                                       "National Household Travel Survey",
+                                                       "Residential Energy Consumption Survey"),
+                                     check.names = FALSE),
+                 all.x = TRUE) |>
+  subset(select = c(Survey, `Survey name`, Vintage, Respondent, `Sample size`, `No. of variables`))
 
 #-----------------------------
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-    titlePanel(div(img(src = "fusionACS_badge.jpg", height = "225px", width = "200px", align = "right"),
-                   'fusionACS Universal Survey Dictionary')),
-    #hr(),
-    tabPanel('Survey summary', tableOutput('surveys')),
-    #hr(),
-    tabPanel('Main table', DT::dataTableOutput('dictionary'))
+  titlePanel(
+    div(img(src = "fusionACS_badge.jpg", height = "115px", width = "105px", align = "left", style = "padding: 10px;margin-top: -15px"),
+        'fusionACS Universal Survey Dictionary')),
+  tabsetPanel(type = "tabs",
+              tabPanel('Surveys', tableOutput('surveys')),
+              tabPanel('Variables', DT::dataTableOutput('dictionary'))
+  ),
+  title = 'fusionACS Universal Survey Dictionary'
 )
 
 #-----------------------------
@@ -42,19 +56,19 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    output$surveys <- renderTable(surveys)
+  output$surveys <- renderTable(surveys)
 
-    # Remove row names; for some reason 'rownames = FALSE' below does not work
-    row.names(dictionary) <- NULL
+  # Remove row names; for some reason 'rownames = FALSE' below does not work
+  row.names(dictionary) <- NULL
 
-    output$dictionary <- DT::renderDataTable(
-        DT::datatable(dictionary,
-                      rownames = FALSE,
-                      filter = "top",
-                      options = list(scrollX = TRUE,
-                                     dom = 'tipr',  # See here: https://datatables.net/reference/option/dom
-                                     pageLength = 25))
-    )
+  output$dictionary <- DT::renderDataTable(
+    DT::datatable(dictionary,
+                  rownames = FALSE,
+                  filter = "top",
+                  options = list(scrollX = TRUE,
+                                 dom = 'tipr',  # See here: https://datatables.net/reference/option/dom
+                                 pageLength = 25))
+  )
 }
 
 #-----------------------------
