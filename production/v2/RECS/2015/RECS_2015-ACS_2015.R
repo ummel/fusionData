@@ -29,6 +29,9 @@ data <- assemble(prep,
 rm(prep)
 gc()
 
+# Number of training observations; used by analyze()
+N <- nrow(data$RECS_2015)
+
 #-----
 
 # Sanity check
@@ -97,3 +100,28 @@ sim <- fuseM(data = data$ACS_2015,
 fst::write_fst(x = sim,
                path = "production/v2/RECS/2015/RECS_2015-ACS_2015.fst",
                compress = 100)
+
+#-----
+
+# Example analysis of fused data
+
+# Load subset of original ACS PUMS variables
+acs <- read_fst(path = "survey-processed/ACS/2015/ACS_2015_H_processed.fst",
+                columns = c("acs_2015_hid", "weight", "state", "puma10"))
+
+# Safety check on row ordering
+stopifnot(all(acs$acs_2015_hid == data$ACS_2015$acs_2015_hid))
+
+# Calculate mean household electricity consumption, by PUMA
+test <- analyze(kwh ~ 1,
+                implicates = sim,
+                donor.N = N,
+                sample_weights = acs$weight,
+                static = acs,
+                by = c("state", "puma10"))
+
+# Distribution of mean electricity consumption
+test %>%
+  filter(metric == "mean") %>%
+  pull(estimate) %>%
+  hist()
