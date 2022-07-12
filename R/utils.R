@@ -146,42 +146,71 @@ safeCharacters <- function(x) {
 
 #------------------
 
-# Function to return weighted percentiles of 'x'; used by harmonize()
-# Percentiles are returned only if number of unique 'x' is at least 'min.unique'
+# # Function to return weighted percentiles of 'x'; used by harmonize()
+# # Percentiles are returned only if number of unique 'x' is at least 'min.unique'
+# # This leaves variables like age or household size unaffected (original 'x' returned)
+# # If the proportion of zero values is >= min.zero, then zeros are preserved in output
+# # If zeros are preserved, then negative values are assigned percentiles ranging from 0 to -1, which the most negative value receiving -1
+# # The logic here is that respondents tend to be accurate about -/0/+ classification of the response, but we want percentiles to capture the relative ranking within these classes
+#
+# convertPercentile <- function(x, w = NULL, min.unique = 100, min.zero = 0.05) {
+#
+#   i <- which(!is.na(x))
+#
+#   if (is.numeric(x) & length(unique(x[i])) >= min.unique) {
+#
+#     if (is.null(w)) w <- rep(1, length(x))
+#
+#     zeros <- sum(x[i] == 0) / length(i) >= min.zero
+#     k <- if (zeros) i[x[i] != 0] else i
+#
+#     q <- if (zeros & any(x[k] > 0)) k[x[k] > 0] else k
+#     cdf <- spatstat.geom::ewcdf(x[q], w[q])
+#     x[q] <- cdf(x[q])
+#
+#     # Negative values - only relevant if zeros = TRUE
+#     if (zeros & any(x[k] < 0)) {
+#       q <- k[x[k] < 0]
+#       cdf <- spatstat.geom::ewcdf(-x[q], w[q])
+#       x[q] <- -cdf(-x[q])
+#     }
+#
+#     # Reduce precision of output
+#     x <- cleanNumeric(x, tol = 0.001)
+#
+#   }
+#
+#   return(x)
+#
+# }
+
+#-------------------
+
+# Function to return a robust scaled measure of a numeric/continuus variable; used with assemble()
+# Scaled values are returned only if number of unique 'x' is at least 'min.unique'
 # This leaves variables like age or household size unaffected (original 'x' returned)
-# If the proportion of zero values is >= min.zero, then zeros are preserved in output
-# If zeros are preserved, then negative values are assigned percentiles ranging from 0 to -1, which the most negative value receiving -1
-# The logic here is that respondents tend to be accurate about -/0/+ classification of the response, but we want percentiles to capture the relative ranking within these classes
-convertPercentile <- function(x, w = NULL, min.unique = 100, min.zero = 0.05) {
+# Original zeros are preserved in the output, with all other values converted to a robust Z-score: (x - median(x)) / mad(x)
+# A final adjustment ensures that the (weighted) median of the scaled output is 1
+# This effectively assumes that conceptually similar variables with different measurement scales are sampling the same median household and zero-response households but could have varying scaled otherwise
 
-  i <- which(!is.na(x))
+# Example
+# x <- read_fst("survey-processed/CEX/CEI/CEI_2015-2019_H_processed.fst", columns = c("weight", "fincbtxm"))
+# y <- read_fst("survey-processed/ACS/2019/ACS_2019_H_processed.fst", columns = c("weight", "hincp"))
+# test1 <- convert2scaled(x$fincbtxm, x$weight)
+# test2 <- convert2scaled(y$hincp, y$weight)
 
-  if (is.numeric(x) & length(unique(x[i])) >= min.unique) {
-
-    if (is.null(w)) w <- rep(1, length(x))
-
-    zeros <- sum(x[i] == 0) / length(i) >= min.zero
-    k <- if (zeros) i[x[i] != 0] else i
-
-    q <- if (zeros & any(x[k] > 0)) k[x[k] > 0] else k
-    cdf <- spatstat.geom::ewcdf(x[q], w[q])
-    x[q] <- cdf(x[q])
-
-    # Negative values - only relevant if zeros = TRUE
-    # Otherwise,
-    if (zeros & any(x[k] < 0)) {
-      q <- k[x[k] < 0]
-      cdf <- spatstat.geom::ewcdf(-x[q], w[q])
-      x[q] <- -cdf(-x[q])
-    }
-
-    # Reduce precision of output
+convert2scaled <- function(x, w, min.unique = 100) {
+  if (is.numeric(x) & length(unique(x)) >= min.unique) {
+    i <- x != 0
+    x0 <- x[i]
+    xmed <- weightedQuantile(x0, w[i], p = 0.5)
+    xmad <- 1.4826 * weightedQuantile(abs(x0 - xmed), w[i], p = 0.5)
+    x0 <- (x0 - xmed) / xmad
+    x[i] <- x0 + (xmed / xmad)
+    x <- x / weightedQuantile(x, w, p = 0.5)
     x <- cleanNumeric(x, tol = 0.001)
-
   }
-
   return(x)
-
 }
 
 #-------------------

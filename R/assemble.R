@@ -114,7 +114,7 @@ assemble <- function(x,
     setdiff(fusion.variables, c(invalid1, invalid2, invalid3))
   }
 
-  # Report which variables are being added ass fusion variables
+  # Report which variables are being added as fusion variables
   fvars <- sort(fvars)
   cat("Adding the following fusion variables:\n", paste(fvars, collapse = ", "), "\n")
 
@@ -293,17 +293,19 @@ assemble <- function(x,
   #-----
 
   # Reorder output variables for nicer viewing
-  # Note that numeric 'hvars' are converted to percentile in certain cases; see convertPercentile() in R/utils.R
+  # Convert numeric 'hvars' in certain cases; see convert2scaled()/convertPercentile() in utils.R
 
   cat("Assembling output data frames...\n")
 
   dout <- dout %>%
     select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
-    mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
+    #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
+    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100))
 
   rout <- rout %>%
     select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
-    mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
+    #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
+    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100))
 
   #-----
 
