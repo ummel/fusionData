@@ -189,9 +189,9 @@ safeCharacters <- function(x) {
 # Function to return a robust scaled measure of a numeric/continuus variable; used with assemble()
 # Scaled values are returned only if number of unique 'x' is at least 'min.unique'
 # This leaves variables like age or household size unaffected (original 'x' returned)
-# Original zeros are preserved in the output, with all other values converted to a robust Z-score: (x - median(x)) / mad(x)
-# A final adjustment ensures that the (weighted) median of the scaled output equals 1 (if the weighted median is non-zero)
-# This effectively assumes that conceptually similar variables with different measurement scales are sampling the same median household and zero-response households but could have varying scaled otherwise
+# Original zeros are preserved in the output, with all other values converted to a robust, weighted Z-score: i.e. (x - median(x)) / mad(x)
+# A final adjustment ensures that the (weighted) median of the scaled, non-zero output equals 1
+# This effectively assumes that conceptually similar variables with different measurement scales are sampling the same median household and zero-response households but could have varying scales otherwise
 
 # Example
 # cei <- read_fst("survey-processed/CEX/CEI/CEI_2015-2019_H_processed.fst", columns = c("weight", "fincbtxm", "mrtgip"))
@@ -207,7 +207,7 @@ convert2scaled <- function(x, w, min.unique = 100) {
     xmad <- 1.4826 * weightedQuantile(abs(x0 - xmed), w[i], p = 0.5)
     x0 <- (x0 - xmed) / xmad
     x[i] <- x0 + (xmed / xmad)
-    xmed <- weightedQuantile(x, w, p = 0.5)
+    xmed <- weightedQuantile(x[i], w[i], p = 0.5)
     if (xmed != 0) x <- x / xmed
     x <- cleanNumeric(x, tol = 0.001)
   }
