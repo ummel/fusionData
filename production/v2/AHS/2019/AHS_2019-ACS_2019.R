@@ -52,7 +52,7 @@ fit <- train(data = data$AHS_2019,
              weight = "weight")
 
 sim <- fuseM(data = data$ACS_2019,
-             file = "production/v2/AHS/2019/AHS_2019-ACS.fsn",
+             file = "production/v2/AHS/2019/AHS_2019.fsn",
              k = 5,
              M = 2)  # Increase more for production 
 
