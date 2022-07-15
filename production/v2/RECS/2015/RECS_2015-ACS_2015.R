@@ -3,36 +3,37 @@ library(fusionModel)
 
 #-----
 
-# Specify the variables to be fused
-# I've chosen the variables specified here, excluding energy expenditures
-# https://docs.google.com/document/d/1YlgrP7hRe13skQtHUzyY5eqx-6_F_pZ5nzmYnkgF13k/edit?pli=1
-fusion.vars <- c("totsqft_en", "cufeetng", "kwh", "cooltype", "scalee", "noacbroke", "noacel",
-                 "noacdays", "noheatbroke", "noheatel", "noheatng")
-
-#-----
-
 # Prepare and assemble data inputs
-
-# Single implicate for testing (ideally more for production)
 prep <- prepare(donor = "RECS_2015",
                 recipient = "ACS_2015",
                 respondent = "household",
-                implicates = 1)
+                implicates = 5)
 
-# Don't need to use pce option; just using for speed-up during testing
+# Removed pca for prep 
 data <- assemble(prep,
-                 fusion.variables = fusion.vars,
-                 pca = c(25, 0.95),
+                 fusion.variables = c("btung", "kwh", "cooltype", "scalee", 'noheatng', "btufo", "btulp",
+                                      "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk'),
                  window = 2)
-
-# Clean up to clear memory
-rm(prep)
-gc()
 
 # Number of training observations; used by analyze()
 N <- nrow(data$RECS_2015)
 
 #-----
+#Create new custom variabes 
+data$RECS_2015 <- data$RECS_2015 %>%
+  mutate(
+    disconnect = scalee != "Never",
+    noheat = noheatbroke == "Yes" | noheatbulk == "Yes" |  noheatel == "Yes" | noheatng == "Yes",
+    noac = noacel == "Yes" | noacbroke == "Yes"
+  ) %>%
+  select(-all_of(c("scalee", "noacel", "noacbroke", "noheatbroke", "noheatbulk", "noheatel", "noheatng")))
+
+# Clean up to clear memory
+rm(prep)
+gc()
+
+#---------
+
 
 # Sanity check
 # lapply(data, dim)
@@ -42,6 +43,8 @@ N <- nrow(data$RECS_2015)
 # round(table(data$ACS_2015$nhsldmem__np) / nrow(data[[2]]), 3)
 
 #-----
+# Select desired fusion variables
+fusion.vars <- c("kwh","btung","btufo","btulp","cooltype","disconnect", "noheat", "noac")
 
 # Predictor variables
 # This is just a fancy way to pull the predictor variables from 'data' attributes
@@ -53,7 +56,7 @@ fsequence <- blockchain(data = data$RECS_2015,
                         y = fusion.vars,
                         x = pred.vars,
                         weight = "weight",
-                        cores = 3)
+                        cores = 5)  #Have to change this for Windows PC
 
 #-----
 
@@ -85,14 +88,13 @@ train(data = data$RECS_2015,
 # table(data$RECS_2015$cooltype) / nrow(data$RECS_2015)
 
 #-----
-
 # Fuse variables to ACS for multiple implicates
 # Optimal settings for 'k' and 'max_dist' are unknown at moment -- using default values
 # See here re: multi-threading: https://github.com/ummel/fusionModel/issues/26
 sim <- fuseM(data = data$ACS_2015,
              file = "production/v2/RECS/2015/RECS_2015.fsn",
              k = 5,
-             M = 2)  # Set higher for production
+             M = 100)  # Using 100 implicates for consistency with v1 deliverable 
 
 # Save simulation results to disk
 fst::write_fst(x = sim,
@@ -100,26 +102,3 @@ fst::write_fst(x = sim,
                compress = 100)
 
 #-----
-
-# Example analysis of fused data
-
-# Load subset of original ACS PUMS variables
-acs <- read_fst(path = "survey-processed/ACS/2015/ACS_2015_H_processed.fst",
-                columns = c("acs_2015_hid", "weight", "state", "puma10"))
-
-# Safety check on row ordering
-stopifnot(all(acs$acs_2015_hid == data$ACS_2015$acs_2015_hid))
-
-# Calculate mean household electricity consumption, by PUMA
-test <- analyze(kwh ~ 1,
-                implicates = sim,
-                donor.N = N,
-                sample_weights = acs$weight,
-                static = acs,
-                by = c("state", "puma10"))
-
-# Distribution of mean electricity consumption
-test %>%
-  filter(metric == "mean") %>%
-  pull(estimate) %>%
-  hist()
