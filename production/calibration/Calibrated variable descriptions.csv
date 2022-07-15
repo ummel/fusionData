@@ -1,0 +1,49 @@
+major,cat,category,calibration
+Apparel,cloftw,Clothing and footwear,direct
+Apparel,jwlbg,Jewelry and handbags,direct
+Education,educ,Education services,direct
+Education,stdint,Student loan interest payments,indirect
+Entertainment,eltrnp,Electronic products,direct
+Entertainment,hotel,Hotels and motels,direct
+Entertainment,oeprd,Other entertainment products,direct
+Entertainment,oesrv,Other entertainment services,direct
+Entertainment,recrp,Recreational products,direct
+Food and drink,eathome,Eating and drinking at home,direct
+Food and drink,eatout,Eating and drinking out,direct
+Health care,health,Health care and insurance premiums,direct
+Household operation,furhwr,"Furniture, housewares, and tools",direct
+Household operation,happl,Household appliances,direct
+Household operation,hhpcp,Household and personal care products,direct
+Household operation,hhpcs,"Household, personal, and child care services",direct
+Housing,hinsp,"Home insurance, primary",direct
+Housing,hmtimp,Home maintenance and improvement,direct
+Housing,mrtgip,"Mortgage interest payments, primary",indirect
+Housing,mrtgpp,"Mortgage principal payments, primary",indirect
+Housing,mrtgps,"Mortgage principal payments, secondary",indirect
+Housing,ohouse,Other housing expenses,indirect
+Housing,ptaxp,"Property taxes, primary",indirect
+Housing,rent,Rent,indirect
+Miscellaneous,chrty,Charitable contributions,direct
+Miscellaneous,finpay,"Insurance, financial services, and other payments",direct
+Miscellaneous,ocash,Other cash transfers,indirect
+Miscellaneous,othint,Interest and finance charges on credit card and other debt,indirect
+Other,rntval,"Annual rental value, imputed for owner-occuped homes",direct
+Other,tax,Net tax burden (before-tax income minus after-tax income),none
+Other,vehval,Value of owned vehicles,indirect
+Transportation,airshp,Air and ship travel,direct
+Transportation,gas,Gasoline and other motor fuel,direct
+Transportation,pubtrn,Public transportation,direct
+Transportation,taxis,Taxi and ride sharing services,direct
+Transportation,vehins,Vehicle insurance,direct
+Transportation,vehint,Vehicle loan interest payments,indirect
+Transportation,vehmlr,"Vehicle maintenance, leasing, and rental",direct
+Transportation,vehnew,Gross value of new vehicle purchases,direct
+Transportation,vehprd,"Vehicle parts, accessories, and supplies",direct
+Transportation,vehprn,Vehicle loan principal payments,indirect
+Transportation,vehreg,"Vehicle licensing, registration, and inspection",indirect
+Transportation,vehusd,Net purchases of used vehicles,direct
+Utilities and phone,elec,Electricity,direct
+Utilities and phone,intphn,Internet and phone,direct
+Utilities and phone,ngas,Natural gas,direct
+Utilities and phone,ofuel,"Heating oil, LPG, and other fuels",direct
+Utilities and phone,watrsh,"Water, sewer, and trash",direct

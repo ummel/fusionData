@@ -1,17 +1,5 @@
-# This script generates:
-# National PCE calibration targets.rds
-# State PCE calibration targets.rds
-# State EIA calibration targets.rds
-
-#-----
-
 # Desired vintage of the macrodata
 year <- "2019"
-
-# Load static inputs
-data(cpi_series)
-data(BEA_pce_national)
-data(BEA_pce_state)
 
 #-----
 
@@ -38,6 +26,25 @@ nagg <- BEA_pce_national %>%
   summarize(total = sum(national_pce * national_pce_adj)) %>%
   filter(!is.na(total)) %>%
   mutate(cat = as.list(tolower(cat)))
+
+#---
+
+#   # National PCE
+#   npce <- BEA_pce_national %>%
+#   select(pce_series, !!year) %>%
+#   rename(national_pce = !!year) %>%
+#   right_join(cat_assignment, by = "pce_series") %>%
+#   group_by(cat) %>%
+#   summarize(national_pce = sum(national_pce * national_pce_adj))
+#
+# # National aggregates
+# # If the initial PUMS estimate is higher, it is retained as the "true" value
+# nagg <- npce %>%
+#   left_join(custom.aggregates, by = "cat") %>%
+#   mutate(nat_agg = ifelse(is.na(custom), national_pce, custom)) %>%
+#   select(cat, nat_agg)
+
+#stopifnot(nrow(nagg) == length(unique(cat_assignment$cat)))
 
 #-----
 
@@ -81,19 +88,32 @@ sagg <- spce %>%
 
 #-----
 
+# TURNED OFF FOR NOW...
 # State EIA residential fuel totals ($millions)
-eagg <- readRDS("geo-processed/EIA-SEDS/eia-seds_2010-2019_processed.rds") %>%
-  filter(vintage == 2019) %>%
-  select(state, ends_with("_expend")) %>%
-  mutate(ofuel = lpg_expend + fueloil_expend) %>%
-  rename(elec = electricity_expend, ngas = natgas_expend) %>%
-  select(state, elec, ngas, ofuel) %>%
-  pivot_longer(cols = -state, names_to = "cat", values_to = "total") %>%
-  mutate(cat = as.list(cat))
+
+# eagg <- eia_state %>%
+#   filter(year == !!year, !is.na(state_fips)) %>%
+#   pivot_longer(cols = ELEC:OFUEL, names_to = "cat", values_to = "eia_agg") %>%
+#   select(cat, state_fips, eia_agg) %>%
+#   rename(state = state_fips)
 
 #-----
 
-# Save results to disk
-saveRDS(nagg, "production/calibration/National PCE calibration targets.rds")
-saveRDS(sagg, "production/calibration/State PCE calibration targets.rds")
-saveRDS(eagg, "production/calibration/State EIA calibration targets.rds")
+# National PCE, state PCE, and state EIA (fuels) aggregates
+# Static data.table prepared in advance
+# Note: the reassignment of 'major' to create separate "Gasoline" and "Vehicles" entries is designed to let 'major' better reflect differences in likelihood of underreporting
+#  The assignment is relevant when imputing adjustment factors for categories without aggregates (in the calibration process)
+# cat_aggregates <- sagg %>%
+#   left_join(nagg) %>%
+#   #left_join(eagg) %>%
+#   left_join(cat_assignment %>% select(major, cat, category) %>% distinct()) %>%
+#   # mutate(major = ifelse(cat == "GAS", "Gasoline", major),
+#   #        major = ifelse(major == "Transportation" & grepl("vehicle", tolower(category)), "Vehicles", major),
+#   #        major = ifelse(major %in% c("Gasoline", "Vehicles", "Housing", "Utilities and phone"), major, "Other")) %>%
+#   select(-category) %>%
+#   data.table(key = c("state", "cat"))
+#
+# #-----
+#
+# # Save output to disk
+# save(cat_aggregates, file = "data/cat_aggregates.RData")

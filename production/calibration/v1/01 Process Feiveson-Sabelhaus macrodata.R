@@ -1,15 +1,3 @@
-# This script generates:
-# ACS_2019 calibration inputs.fst
-# Feiveson-Sabelhaus calibration targets.rds
-# Pseudo Lorenz curves.png
-
-#-----
-
-# Single implicate of fuse CEI-ACS microdata
-sim <- read_fst("production/v2/CEI/2015-2019/CEI_2015-2019__ACS_2019__01.fst")
-
-#-----
-
 # Feiveson and Sabelhaus 2019: https://www.federalreserve.gov/econres/feds/files/2019010r1pap.pdf
 
 # Feiveson-Sabelhaus income cohort data from Table 5 of publication
@@ -20,7 +8,7 @@ fs.data.orig <- googlesheets4::read_sheet(ss = "1aMnqP3-Yy4K9VD2kMABT539uPfBDgrD
 
 #-----
 
-# Identify subset of consumption variables to include in Feiveson and Sabelhaus (FS) definition of consumption
+# CEX-based variables to include in Feiveson and Sabelhaus (FS) definition of consumption
 # Exclude all loan principal payments: MRTGPP, MRTGPS, VEHPRN
 # Exclude vehicle purchases (no effect on net worth): VEHNEW, VEHUSD
 # Exclude all categories in "Other" major category
@@ -30,57 +18,74 @@ fs.data.orig <- googlesheets4::read_sheet(ss = "1aMnqP3-Yy4K9VD2kMABT539uPfBDgrD
 #  -- Assuming category is mostly home improvement and, therefore, not part of FS consumption
 # Exclude "Other cash transfers" (OCASH)
 #  -- Appears to captured in the FS concept of "net interfamily transfers", and so are separate from "consumption" as defined by FS
-fs.cons <- setdiff(names(sim), c("hmtimp", "mrtgpp", "mrtgps", "ocash", "rntval", "tax", "vehnew", "vehprn", "vehusd", "vehval"))
 
-# Add custom "Vehicle depreciation" consumption variable (created below)
-fs.cons <- c(fs.cons, "vehdep")
+fs.cons <- cat_assignment %>%
+  filter(major != "Other") %>%
+  filter(!cat %in% c("MRTGPP", "MRTGPS", "VEHPRN", "VEHNEW", "VEHUSD", "HMTIMP", "OCASH")) %>%
+  pull(cat) %>%
+  tolower() %>%
+  unique() %>%
+  c("vehdep")  # Add custom "Vehicle depreciation" variable
 
 #-----
+
+# Load necessary variables from processed ACS-PUMS 2019 househould-level microdata
+pums <- read_fst("survey-processed/ACS/2019/ACS_2019_H_processed.fst",
+                 columns = c("acs_2019_hid", "weight", "state", "np", "insp", "taxamt", "rntp", "renteq")) %>%
+  rename(hinsp = insp,
+         ptaxp = taxamt,
+         rent = rntp,
+         rntval = renteq)
+
+# Load necessary variables from fused ACS-RECS microdata
+# recs <- read_fst("production/v1/prior/CEI-ACS 2019/RECS_2019_sim.fst",
+#                  columns = c("acs_2019_hid", "dollarel", "dollarng", "dollarlp", "dollarfo")) %>%
+#   mutate(elec = dollarel,
+#          ngas = dollarng,
+#          ofuel = dollarlp + dollarfo) %>%
+#   select(acs_2019_hid, elec, ngas, ofuel)
 
 # Load necessary variables from fused ACS-CEI microdata
 # Calculate total "FS consumption" (fs_cons) and total conventional consumption (total_cons)
 # Note inclusion of estimated vehicle depreciation
-sim <- sim %>%
-  mutate(vehdep = 0.15 * vehval) %>% # Estimated annual vehicle depreciation
-  mutate_at(fs.cons, ~ pmax(0, .x)) %>% # Enforce non-negative values among the consumption variables
+sim <- read_fst("production/v1/CEI-ACS 2019/prior/CEX_2015-2019_sim.fst") %>%
+  left_join(pums, by = "acs_2019_hid") %>%
+  #left_join(recs, by = "acs_2019_hid") %>%
+  mutate(vehdep = 0.15 * vehval,  # Estimated annual vehicle depreciation
+         health = pmax(0, health),  # Enforce non-negative values
+         recrp = pmax(0, recrp)) %>%
   mutate(fs_cons = rowSums(.[fs.cons]), # Sum total FS consumption at household level
          total_cons = fs_cons - rent - mrtgip - hinsp - ptaxp + rntval)  # More conventional definition of total consumption using housing rental equivalence
-
-# NOTE any 'fs.cons' variables that are missing in 'sim'
-stopifnot(length(setdiff(fs.cons, names(sim))) == 0)
+#select(acs_2019_hid, total_cons, fs_cons, all_of(fs.cons))
 
 #-----
 
 # The two measures of consumption are highly correlated overall
 # cor(sim$total_cons, sim$fs_cons)
-
-# # How important is estimated vehicle depreciation (vehdep) in the calculation of total household consumption?
+#
+# # How important is estimated vehicle depreciation in the calculation of total household consumption?
 # sim %>%
 #   filter(vehdep > 0) %>%
-#   slice_sample(prop = 0.1) %>%
+#   slice_sample(prop = 0.2) %>%
 #   ggplot(aes(x = total_cons, y = vehdep / total_cons)) +
 #   geom_smooth() +
 #   xlim(10e3, 250e3)
 
 #-----
 
-# ONE-TIME OPERATION!!!
+# Load and process ACS-PUMS 2019 househould-level microdata
 
-# Load and process ACS-PUMS 2019 person-level microdata
-
-# One-time calculation to assign PUMS respondent to FS cohorts
-h <- read_fst("survey-processed/ACS/2019/ACS_2019_H_processed.fst", columns = c("acs_2019_hid", "weight", "np", "state"))
 p <- read_fst("survey-processed/ACS/2019/ACS_2019_P_processed.fst", columns = c("acs_2019_hid", "relshipp", "agep", "schl", "pincp")) %>%
 
-  # !!!! SUB-SAMPLE FOR TESTING
-  #filter(acs_2019_hid %in% sample(h$acs_2019_hid, 10e3)) %>%
+  #filter(acs_2019_hid %in% sample(pums$acs_2019_hid, 10e3)) %>%   # SUB-SAMPLE FOR TESTING
 
   filter(relshipp %in% c("Reference person", "Opposite-sex husband / Wife / Spouse", "Same-sex husband / Wife / Spouse")) %>%
   arrange(acs_2019_hid, relshipp) %>%
-
   group_by(acs_2019_hid) %>%
-  summarize(fs_denom = n(), # Total FS denominator (either 1 or 2)
-            pinc_total = sum(pincp),  # Total income (HOH and spouse only)
+  summarize(denom_total = n(), # Total FS denominator (either 1 or 2)
+            #n_total = sum(n_total), # Total number of people
+            #cons_total = sum(fs_cons),  # Total FS consumption
+            pinc_total = sum(pincp),  # Total SCF permanent income (spouses only)
             educ_ref = max(schl),  # Maximum educational attainment of reference person or spouse (if present)
             age_ref = mean(agep),  # Average age of reference person and spouse (if present)
             .groups = "drop") %>%
@@ -94,187 +99,119 @@ p <- read_fst("survey-processed/ACS/2019/ACS_2019_P_processed.fst", columns = c(
          educ_grp = ifelse(educ_ref %in% c("Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree"), "Some college", educ_grp),
          educ_grp = ifelse(educ_ref %in% c("Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"), "College degree or higher", educ_grp)) %>%
 
-  # Add household weight, state, and size ('np')
-  left_join(h, by = "acs_2019_hid") %>%
-
-  # Arrange row-order to match original 'h' (PUMS households); this should be same row-order as in 'sim'
-  arrange(match(acs_2019_hid, h$acs_2019_hid))
-
-# Safety check
-stopifnot(nrow(p) == nrow(h))
-stopifnot(all(as.character(p$acs_2019_hid) == as.character(h$acs_2019_hid)))
-rm(h)
-
-#-----
-
-# Estimate "permanent income" for each household in 'p' (need a 'sim' object to provide estimated total consumption)
-# Since we don't observe permanent income, it is estimated on basis of predictor variables below
-p <- cbind(p, sim)
-fit <- lm(pinc_total / fs_denom ~ state + age_grp + educ_grp + total_cons, data = p, weights = p$weight)
-p$perminc <- predict(fit)  # Estimated permanent income
-
-#-----
-
-# PERFORM PER-IMPLCIATE -- or just for the first to generate adjusted FS consumption shares!
-# Add 'sim' variables to 'p'
-# This is the objec that can be calibrated in separate script
-
-# Scaling function using weighted median and MAD
-# medscale <- function(x, w) {
-#   xmed <- weightedQuantile(x, w, p = 0.5)
-#   xmad <- 1.4826 * weightedQuantile(abs(x - xmed), w, p = 0.5)
-#   (x - xmed) / xmad
-# }
-
-p <- p %>%
+  #left_join(select(pums, acs_2019_hid, weight, np), by = "acs_2019_hid") %>%
+  left_join(sim, by = "acs_2019_hid") %>%
 
   # Age-cohort specific percentile for income group assignment
   # The calculated percentile is the household's position in the sorted per-spouse income distribution
   # The percentile gives the share of the total HoH/spouse population that has a lower per-spouse income
   group_by(age_grp) %>%
-  mutate(perminc_ptile = spatstat.geom::ewcdf(perminc, weights = weight * fs_denom, normalise = TRUE)(perminc)) %>%
+  mutate(fs_inc_pc = pinc_total / denom_total,
+         fs_inc_ptile = spatstat.geom::ewcdf(fs_inc_pc, weights = weight * denom_total, normalise = TRUE)(fs_inc_pc)) %>%
   ungroup() %>%
 
   # Assign each CU (actually, PEU) to an income group
-  mutate(inc_grp = findInterval(perminc_ptile, c(-Inf, 0.5, 0.9, Inf)),
+  mutate(inc_grp = findInterval(fs_inc_ptile, c(-Inf, 0.5, 0.9, Inf)),
          inc_grp = unique(fs.data.orig$inc_grp)[inc_grp]) %>%
 
   # Restrict to necessary variables
-  select(acs_2019_hid, weight, state, np, fs_cons, total_cons, perminc, perminc_ptile, age_grp, educ_grp, inc_grp, np, fs_denom)
-
-# Safety check
-stopifnot(!is.unsorted(p$acs_2019_hid))
+  select(acs_2019_hid, weight, age_grp, educ_grp, inc_grp, fs_inc_pc, fs_inc_ptile, np, denom_total, fs_cons, total_cons, any_of(names(sim)))
 
 #-----
 
-# Compute FS-cohort summary variables and add original FS values from paper
-# NOTE: Adjustment of original FS figures from 2016 to 2019 dollars (inflation factor = 1.065)
+# Compute FS-cohort summary variables derived from CEX-PUMS fused data
+group.totals <- p %>%
+  group_by(age_grp, inc_grp) %>%
+  summarize(
+    n = sum(weight * denom_total),  # Number of HoH or spouses in cohort (i.e. FS denominator) (millions)
+    n_tot = sum(weight * np),  # Number of people in cohort (millions)
+    n_peu = sum(weight),  # Number of PEU's in cohort (millions)
+    cons_ce = sum(weight * fs_cons),  # Total FS consumption based on Consumer Expenditure Survey (CE) variables, in $millions
+    #perm_inc = sum(weight * pinc_total)  # Total permanent income (SCF), in $millions
+    #cons_adj = sum(weight * cons_total) / cons_ce,  # Adjustment factor to account for difference between total household consumption and consumption of the PEU (using CE)
+    #pop_adj = sum(weight * denom_total) / n,  # Adjustment factor for FS denominator; difference between PEU and households
+    pop_adj = 1,
+    cons_adj = 1,
+    .groups = "drop"
+  )
 
+#-----
+
+# Add cohort summary variables to original FS data
 fs.data <- fs.data.orig %>%
-  mutate_if(is.numeric, ~ .x * 1.065) %>%  # Inflation adjustment from 2016 to 2019
-  left_join(p %>%
-              group_by(age_grp, inc_grp) %>%
-              summarize(
-                n = sum(weight * fs_denom),  # Number of HoH or spouses in cohort (i.e. FS denominator) (millions)
-                cons_ce = sum(weight * fs_cons),  # Total FS consumption based on Consumer Expenditure Survey (CE) variables, in $millions
-                .groups = "drop"),
-            by = c("age_grp", "inc_grp")) %>%
-  mutate(age_grp = factor(age_grp, levels = unique(age_grp)),
-         inc_grp = factor(inc_grp, levels = unique(inc_grp))) %>%
-  group_by(inc_grp) %>%
-  mutate(wealth_stock = cumsum(wealth_change)) %>%
-  ungroup()
+  left_join(group.totals, by = c("age_grp", "inc_grp"))
 
 #-----
 
 # Impute the seemingly erroneous "55-64" age group consumption figure for Bottom 50%
 # Without this adjustment, the 55-64 age group consumption looks erroneous
 # Uses a spline to impute 55-64 consumption figure that proportionally adjusts all values to maintain original total consumption for "Bottom 50%"
-x <- fs.data$consumption[1:6]
-n <- fs.data$n[1:6]
-tot <- sum(x * n)
-x[4] <- NA
-x <- spline(x, xout = 1:6)$y
-fs.data$consumption[1:6] <- tot * x * n / sum(x * n) / n
+# x <- fs.data$consumption[1:6]
+# n <- fs.data$n[1:6]
+# tot <- sum(x * n)
+# x[4] <- NA
+# x <- spline(x, xout = 1:6)$y
+# fs.data$consumption[1:6] <- tot * x * n / sum(x * n) / n
 
 #-----
 
-# Update figures affected by consumption imputation
-fs.data <- fs.data %>%
-  mutate(saving = income - consumption,
-         cons_fs = n * consumption)
+# Share of total consumption to redistribute within each income cohort
+move <- rep(c(0.06, 0.06, 0.06), each = 6)
+#move <- rep(c(0, 0, 0), each = 6)  # No adjustment
 
-#-----
-
-# Function used to adjust FS consumption values; i.e. move consumption from older cohorts to younger cohorts
-adjFun <- function(x, return.adjusted = FALSE) {
-
-  # Which age cohorts within each income group will be the givers/source of transfers to younger households?
-  give <- c(0,0,0,1,1,1,  # Low income
+# Which age cohorts within each income group will be the givers/source of transfers to younger households?
+givers <- c(0,0,0,0,1,1,
             0,0,0,1,1,1,
-            0,0,0,1,1,1)  # High income
+            0,0,1,1,1,1)
 
-  receive <- c(1,0,0,0,0,0,  # Low income
-               1,1,1,0,0,0,
-               1,1,1,0,0,0)  # High income
+# Which age cohorts within each income group will be the recipient of transfers to younger households?
+recipients <- c(1,0,0,0,0,0,
+                1,1,1,0,0,0,
+                1,1,0,0,0,0)
 
-  # Update 'give' to include parameters provided by 'x'
-  give[give == 1] <- x
+#---
 
-  #---
-
-  fs.adj <- fs.data %>%
-    mutate(g = give,
-           r = receive) %>%
-    group_by(inc_grp) %>%
-    mutate(
-      rel = consumption / mean(consumption * (1 - g)),
-      gain_shr = ifelse(r == 1, (1 / rel) / sum((1 / rel)[r == 1]), 0),
-      gain_shr = n * gain_shr,
-      gain_shr = gain_shr / sum(gain_shr),  # Safety check (not really necessary)
-      loss = g * cons_fs,  # Cohort consumption loss
-      gain = sum(loss) * gain_shr,  # Cohort consumption gain
-      cons_fs = cons_fs - loss + gain,
-      consumption = cons_fs / n  # New, updated consumption per HOH/spouse
-    ) %>%
-    ungroup() %>%
-    mutate(saving = income - consumption,
-           fidelity = cons_ce / cons_fs) %>%
-    arrange(inc_grp, age_grp)
-
-  #-----
-
-  # Objective value: Variance in slope of relationship between fidelity and log(wealth_stock), by income group
-  obj <- sapply(split(fs.adj, fs.adj$inc_grp), function(g) {
-    coef(lm(fidelity ~ log(wealth_stock), data = g, weights = n))[2]
-  }) %>%
-    var()
-
-  #obj <- -1 * abs(cor(fs.adj$fidelity, log(fs.adj$wealth_stock)))
-
-  # Return either objective value or adjusted data
-  out <- if (return.adjusted) {
-    fs.adj
-  } else {
-    obj
-  }
-
-  return(out)
-}
-
-#-----
-
-# Optimize adjFun
-# NOTE: Results are super sensitive to the initial parameters...
-opt <- optim(par = rep(0.05, 9),
-             fn = adjFun,
-             method = "L-BFGS-B",
-             lower = rep(0, 9),
-             upper = rep(0.5, 9))
-
-# Get adjusted FS data frame
-fs.adj <- adjFun(x = opt$par, return.adjusted = TRUE)
+fs.adj <- fs.data %>%
+  mutate(cons_ce_share = cons_ce / sum(cons_ce), # Share of total CE PEU consumption within the cohort
+         age_grp = factor(age_grp, levels = unique(fs.data$age_grp)),
+         inc_grp = factor(inc_grp, levels = unique(fs.data$inc_grp)),
+         m = move,
+         g = givers,
+         r = recipients
+  ) %>%
+  group_by(inc_grp) %>%
+  mutate(
+    wealth_stock = cumsum(wealth_change),  # Estimate total wealth of each cohort
+    N = sum(consumption * n), # Total income cohort consumption
+    age_weight = (seq(30, 80, by = 10) / 80) ^ 3,  # Kluge, but generates plausible results; adds an age component when allocating among givers and receivers
+    loss = g * wealth_stock * age_weight * n,
+    loss = m * N * (loss / sum(loss)),
+    gain = ifelse(r == 1, n / age_weight, 0),
+    gain = m * N * (gain / sum(gain)),
+    consumption = (consumption * n - loss + gain) / n  # New, updated consumption per HOH/spouse
+  ) %>%
+  ungroup() %>%
+  mutate(saving = income - consumption,
+         cons_share_fs = (consumption * n) / sum(consumption * n),  # NO adjustment
+         cons_share = (consumption * n * cons_adj) / sum(consumption * n * cons_adj)) %>%   # Adjusts for household vs. PEU total consumption difference (see comment about 'cons_adj')
+  arrange(inc_grp, age_grp)
 
 #-----
 
 # Plot of adjusted shares...
 fs.adj %>%
-  ggplot(aes(x = wealth_stock, y = fidelity, color = inc_grp, label = as.integer(age_grp))) +
-  geom_hline(yintercept = 1, linetype = "dashed") +
+  group_by(inc_grp) %>%
+  mutate(
+    cons_ce_share = cons_ce_share / sum(cons_ce_share),
+    yratio = ((cons_ce / n) - consumption) / consumption,
+  ) %>%
+  ggplot(aes(x = wealth_stock, y = yratio, color = inc_grp, label = as.integer(age_grp))) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
   geom_label(alpha = 0.8) +
   geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 0.5) +
-  scale_y_continuous("Ratio of CE reported consumption to FS adjusted consumption") +
+  scale_y_continuous("(CE consumption - FS consumption) / FS consumption (% deviation)", labels = scales::percent) +
   scale_x_continuous("Approximate mean wealth per capita (log scale)", labels = scales::dollar, trans = "log") +
   theme_bw()
-
-# Total consumption redistribution from old to young
-sum(fs.adj$loss) / 1e9 # In $billions
-sum(fs.adj$loss) / sum(fs.adj$cons_fs)  # As share of total consumption across all cohorts
-
-# Redistribution as share of post-adjustment consumption, by income group, limited to cohorts with consumption 'loss' via adjustment
-fs.adj %>%
-  group_by(inc_grp) %>%
-  summarize(redist_share = sum(loss) / sum(cons_fs[loss != 0]))
 
 #--------------------
 
@@ -369,10 +306,8 @@ fitGB2 <- function(age_grp, fs_data, ce_data) {
     #arrange(consumption) %>%
     mutate(
       ctotal = consumption * n,
-      #cshare = cumsum(ctotal * cons_adj) / sum(ctotal * cons_adj), # Make adjustment for difference between PEU's and whole households
-      #pshare = cumsum(n * pop_adj) / sum(n * pop_adj)  # Cumulative share of FS per-capita/spouse population, adjusted for PEU vs. household difference
-      cshare = cumsum(ctotal) / sum(ctotal),
-      pshare = cumsum(n) / sum(n)  # Cumulative share of FS per-capita/spouse population
+      cshare = cumsum(ctotal * cons_adj) / sum(ctotal * cons_adj), # Make adjustment for difference between PEU's and whole households
+      pshare = cumsum(n * pop_adj) / sum(n * pop_adj)  # Cumulative share of FS per-capita/spouse population, adjusted for PEU vs. household difference
     ) %>%
     select(inc_grp, consumption, ctotal, pshare, cshare)
 
@@ -386,12 +321,12 @@ fitGB2 <- function(age_grp, fs_data, ce_data) {
   #  2) cshare: Cumulative share of consumption
   p2 <- ce_data %>%
     filter(age_grp %in% !!age_grp) %>%
-    arrange(perminc) %>%  # Order by per-capita/spouse permanent income
+    arrange(fs_inc_pc) %>%  # Order by per-capita/spouse permanent income (or a proxy for it; see how it is defined above)
     mutate(
       ctotal = fs_cons * weight,  # Using household FS consumption
       #ctotal = cons_total * weight,  # Using total household consumption
       cshare = cumsum(ctotal) / fs.max,
-      pshare = cumsum(fs_denom * weight) / sum(fs_denom * weight)
+      pshare = cumsum(denom_total * weight) / sum(denom_total * weight)
     ) %>%
     select(ctotal, pshare, cshare)
 
@@ -474,25 +409,20 @@ gg <- psplits %>%
   ggplot(aes(x = x, y = y, color = `Age cohort`)) +
   geom_line() +
   geom_abline(slope = 1, linetype = "dashed") +
-  # xlab("Cumulative share of HoH/spouse population (ordered by per-capita income)") +
-  # ylab("Cumulative share of FS consumption") +
-  xlab("Cumulative share of population (ordered by per-capita income)") +
-  ylab("Cumulative share of consumption") +
+  xlab("Cumulative share of HoH/spouse population (ordered by per-capita income)") +
+  ylab("Cumulative share of FS consumption") +
   theme_bw()
-
-ggsave("production/calibration/Pseudo Lorenz curves.png", gg, width = 8, height = 6)
+gg
 
 #-----
 
 # Share of total FS consumption and population, by age group
-# NOT USED: These figures are adjusted to account for the difference between true total consumption in a inc-age cohort and total consumption among PEU's only
-# NOT USED: That makes the adjustment most relevant for younger households more likely to be in households with multiple CU's
+# These figures are adjusted to account for the difference between true total consumption in a inc-age cohort and total consumption among PEU's only
+# That makes the adjustment most relevant for younger households more likely to be in households with multiple CU's
 age.shares <- fs.adj %>%
-  mutate(#cons_share = consumption * n * cons_adj,
-         cons_share = consumption * n,
+  mutate(cons_share = consumption * n * cons_adj,
          cons_share = cons_share / sum(cons_share),
-         #pop_share = n * pop_adj,
-         pop_share = n,
+         pop_share = n * pop_adj,
          pop_share = pop_share  / sum(pop_share)) %>%
   group_by(age_grp) %>%
   summarize(cons_share = sum(cons_share), # Make adjustment for difference between PEU's and whole households
@@ -516,12 +446,9 @@ stopifnot(round(sum(fsagg$share), 3) == 1)
 # The 'cons_grp' column is used in conjunction with consumption shares indicated in 'fsagg' data frame
 p <- p %>%
   group_by(age_grp) %>%
-  mutate(cons_grp = findInterval(perminc_ptile, c(-Inf, psplits[[first(age_grp)]], Inf))) %>%
-  ungroup() %>%
-  select(acs_2019_hid, weight, state, perminc, age_grp, educ_grp, inc_grp, cons_grp)
+  mutate(cons_grp = findInterval(fs_inc_ptile, c(-Inf, psplits[[first(age_grp)]], Inf))) %>%
+  ungroup()
 
-#-----
-
-# Save 'p' and 'fsagg' to disk
-write_fst(p, "production/calibration/ACS_2019 calibration inputs.fst", compress = 100)
-saveRDS(fsagg, "production/calibration/Feiveson-Sabelhaus calibration targets.rds")
+# Cleanup
+rm(pums, recs, sim)
+gc()
