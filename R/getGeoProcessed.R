@@ -1,6 +1,7 @@
 #' Download processed spatial data
 #'
 #' @description
+#' Since processed spatial data files are generally too large to upload to Github or attach to the fusionData package, they are stored on Google Drive. This function downloads requested processed geographic data and places it in the appropriate local sub-directory of /fusionData/geo_processed. The full file path (e.g. intermediate directories) are created, if necessary, but no existing data on disk is altered or deleted.
 #'
 #' @param dataset Character. Indicate which spatial dataset(s) to download. If \code{dataset = "essential"}, only files necessary to call \link{prepare} and \link{assemble} are downloaded. If \code{dataset = "all"}, all processed spatial data files are downloaded. Otherwise, a single spatial dataset identifier (e.g. "EPA-SLD") to download all associated "*_processed.rds" files.
 #'
@@ -15,12 +16,20 @@
 
 getGeoProcessed <- function(dataset = "essential") {
 
-  # TO DO: Switch to silent auth eventually:
   # See: vignette("non-interactive-auth") in gargle package
   # https://gargle.r-lib.org/articles/get-api-credentials.html
-  message("You may need to authorize the 'googledrive' package via your browser")
-  message("Password: fusethis!")
-  googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+  # message("You may need to authorize the 'googledrive' package via your browser")
+  # message("Password: fusethis!")
+  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+
+  # 2022-07-19: Run this once to save the token
+  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+  # token <- googledrive::drive_token()
+  # save(token, file = "data/token.rda")
+
+  # Authenticate with locally-stored token
+  load("data/token.rda")
+  googledrive::drive_auth(token = token)
 
   #-----
 

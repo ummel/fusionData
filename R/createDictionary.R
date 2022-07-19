@@ -1,7 +1,7 @@
 #' Generate data dictionary from survey microdata
 #'
 #' @description
-#' Produces a data dictionary with standard structure that can be saved alongside processed microdata. Resulting dictionary can be compiled with other survey dictionaries via \link{compileDictionary}.
+#' Produces a data dictionary with standard structure that can be saved alongside processed microdata. Resulting dictionary can be compiled with other survey dictionaries via \link{compileDictionary}. This function is typically called at the end of a .R script that generates processed survey microdata.
 #'
 #' @param data Data frame. Survey microdata with variable descriptions stored in columns via \code{\link[labelled]{var_label}}.
 #' @param survey Character. Unique survey identifier (e.g. "RECS").
@@ -9,8 +9,6 @@
 #' @param respondent Character. Respondent type; either "Household" or "Person" or a string identifiable as such.
 #'
 #' @return Returns a tibble with standard "dictionary" information based on the provided microdata.
-#'
-#' @examples
 #'
 #' @export
 

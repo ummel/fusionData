@@ -39,8 +39,9 @@ compileDictionary <- function() {
   usethis::use_data(dictionary, overwrite = TRUE)
   usethis::use_data(surveys, overwrite = TRUE)
 
-  # save(dictionary, file = "data/dictionary.rda", compress = TRUE)
-  # save(surveys, file = "data/surveys.rda", compress = TRUE)
+  # ALSO save copies to /universe Shiny app (so it can deploy remotely)
+  save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
+  save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 
   # Print summary of data outputs
   message("dictionary.rds dimensions: ", paste(dim(dictionary), collapse = " x "))

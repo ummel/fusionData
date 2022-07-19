@@ -13,7 +13,7 @@ getGeoProcessed(dataset = "essential")
 \code{\link[googledrive]{drive_download}} prints messages to console indicating which files were downloaded.
 }
 \description{
-
+Since processed spatial data files are generally too large to upload to Github or attach to the fusionData package, they are stored on Google Drive. This function downloads requested processed geographic data and places it in the appropriate local sub-directory of /fusionData/geo_processed. The full file path (e.g. intermediate directories) are created, if necessary, but no existing data on disk is altered or deleted.
 }
 \details{
 Files are automatically placed in appropriate sub-directory of fusionData/geo_processed. When \code{dataset = "essential"}, the downloaded files are: "geo_predictors.fst" and "concordance/geo_concordance.fst".

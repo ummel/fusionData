@@ -19,8 +19,5 @@ createDictionary(data, survey, vintage, respondent)
 Returns a tibble with standard "dictionary" information based on the provided microdata.
 }
 \description{
-Produces a data dictionary with standard structure that can be saved alongside processed microdata. Resulting dictionary can be compiled with other survey dictionaries via \link{compileDictionary}.
-}
-\examples{
-
+Produces a data dictionary with standard structure that can be saved alongside processed microdata. Resulting dictionary can be compiled with other survey dictionaries via \link{compileDictionary}. This function is typically called at the end of a .R script that generates processed survey microdata.
 }

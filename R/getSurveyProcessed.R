@@ -1,7 +1,7 @@
-#' Download processed microdata
+#' Download processed survey microdata
 #'
 #' @description
-#' Since processed survey microdata files are generally too large to upload to Github or attach to the fusionData package, all of the processed microdata (.fst) files are stored on Google Drive. This function downloads requested survey microdata and places it in the appropriate local sub-directory of /fusionData. The full file path (e.g. intermediate directories) are created, if necessary, but no existing data on disk is altered or deleted.
+#' Since processed survey microdata files are generally too large to upload to Github or attach to the fusionData package, all of the processed microdata (.fst) files are stored on Google Drive. This function downloads requested survey microdata and places it in the appropriate local sub-directory of /fusionData/survey-processed. The full file path (e.g. intermediate directories) are created, if necessary, but no existing data on disk is altered or deleted.
 #'
 #' @param survey Character. Survey identifier, possibly including vintage and respondent type. See Details.
 #'
@@ -11,18 +11,28 @@
 #' @return \code{\link[googledrive]{drive_download}} prints messages to console indicating which files were downloaded.
 #'
 #' @examples
-#' getProcessedData(survey = "RECS_2015_H")
+#' getSurveyProcessed(survey = "RECS_2015_H")
 #'
 #' @export
 
 getSurveyProcessed <- function(survey) {
 
-  # TO DO: Switch to silent auth eventually:
   # See: vignette("non-interactive-auth") in gargle package
   # https://gargle.r-lib.org/articles/get-api-credentials.html
-  message("You may need to authorize the 'googledrive' package via your browser")
-  message("Password: fusethis!")
-  googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+  # message("You may need to authorize the 'googledrive' package via your browser")
+  # message("Password: fusethis!!")
+  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+
+  # 2022-07-19: Run this once to save the token
+  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+  # token <- googledrive::drive_token()
+  # save(token, file = "data/token.rda")
+
+  # Authenticate with locally-stored token
+  load("data/token.rda")
+  googledrive::drive_auth(token = token)
+
+  #-----
 
   # TEST 'survey' values
   # survey <- "RECS"

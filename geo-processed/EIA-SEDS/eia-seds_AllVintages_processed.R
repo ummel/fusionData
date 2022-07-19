@@ -24,7 +24,7 @@ first_year <- 2010
 # Get current SEDS "Codes and Descriptions" file (Excel)
 tmp <- tempfile()
 download.file(url = "https://www.eia.gov/state/seds/CDF/Codes_and_Descriptions.xlsx", destfile = tmp)
-codes <- readxl::read_excel(path = tmp, sheet = "MSN Descriptions", skip = 10)
+codes <- readxl::read_excel(path = tmp, sheet = "Codes_and_Descriptions", skip = 10)
 unlink(tmp)
 
 # Get the current SEDS "Consolidated data file" (.zip)
@@ -37,7 +37,7 @@ download.file(url = "https://www.eia.gov/state/seds/sep_update/Complete_SEDS_upd
 seds <- read.csv(unz(tmp, filename = "complete_seds_update.csv"), stringsAsFactors = FALSE) %>%
   left_join(codes, by = "MSN") %>%
   #filter(MSN %in% c("MGACD", "ESRCP", "ESRCD", "NGRCP", "NGRCD", "LGRCP", "LGRCD", "DFRCP", "DFRCD")) %>%
-  filter(MSN %in% c("MGTXD", "ESRCP", "ESRCD", "NGRCP", "NGRCD", "PQRCP", "PQRCD", "DFRCP", "DFRCD")) %>%  # Codes switched from LPG to Propane in 2016
+  filter(MSN %in% c("MGTXD", "ESRCP", "ESRCD", "NGRCP", "NGRCD", "PQRCP", "PQRCD", "KSRCP", "DFRCP", "DFRCD", "ESRCV", "NGRCV", "PQRCV", "DFRCV", "KSRCV", "WDRCV")) %>%  # Codes switched from LPG to Propane in 2016
   mutate(series = paste(Description, Unit, sep = " | ")) %>%
   select(StateCode, Year, series, Data) %>%
   filter(Year >= first_year) %>%
@@ -52,7 +52,7 @@ unlink(tmp)
 
 # The number of households in each state-year based on 1-year ACS survey
 # see ?get_acs: ACS data only available back to 2010 via that function (though help file says 2009)
-acs.years <- 2010:max(seds$year)
+acs.years <- 2010:2019  # KLUGE, since get_acs() was throwing error for 2020 ACS 1-year file
 household.count <- acs.years %>%
   map(~ tidycensus::get_acs(geography = "state", variables = "B11001_001", state = NULL, year = .x, survey = "acs1")) %>%
   setNames(acs.years) %>%
@@ -66,7 +66,7 @@ household.count <- acs.years %>%
 # Merge SEDS, household count, and (optionally) CPI index
 # TURNED OFF: Note that fuel price variables are adjusted for inflation over time and indexed to the CPI in year: max(household.count$year)
 temp <- seds %>%
-  left_join(household.count, by = c("state", "year")) %>%
+  inner_join(household.count, by = c("state", "year")) %>%
   #left_join(cpi.index.df %>% mutate(cpi = cpi / cpi[year == max(household.count$year)]), by = "year") %>%  # For inflation adjustment
   # Average fuel price variables
   mutate(gasoline_price = (120.476 / 1000) * `Motor gasoline average price, all end-use sectors | Dollars per million Btu`,  # Convert gasoline price to dollars per gallon
@@ -74,6 +74,13 @@ temp <- seds %>%
          natgas_price = `Natural gas price in the residential sector | Dollars per million Btu`,
          lpg_price = `Propane price in the residential sector | Dollars per million Btu`,
          fueloil_price = `Distillate fuel oil price in the residential sector | Dollars per million Btu`) %>%
+
+  # Total residential expenditure variables
+  mutate(electricity_expend = `Electricity expenditures in the residential sector | Million dollars`,
+         natgas_expend = `Natural gas expenditures in the residential sector | Million dollars`,
+         lpg_expend = `Propane expenditures in the residential sector | Million dollars`,
+         fueloil_expend = `Distillate fuel oil expenditures in the residential sector | Million dollars` + `Kerosene expenditures in the residential sector | Million dollars`) %>%
+
   #mutate_at(vars(ends_with("_price")), funs(cpi * .)) %>%    # Adjust fuel prices for inflation
   mutate_at(vars(ends_with("_price")), na_if, 0) %>%    # Replace any zero prices with NA
   arrange(state, year)
@@ -89,9 +96,16 @@ seds.state <- temp %>%
     electricity_MWh_hh = 1000 * `Electricity consumed by (i.e., sold to) the residential sector | Million kilowatthours` / hh,
     natgas_tcf_hh = 1000 * `Natural gas consumed by (delivered to) the residential sector | Million cubic feet` / hh,
     lpg_gal_hh = 42 * 1000 * `Propane consumed by the residential sector | Thousand barrels` / hh,
-    fueloil_gal_hh = 42 * 1000 * `Distillate fuel oil consumed by the residential sector | Thousand barrels` / hh
+    fueloil_gal_hh = 42 * 1000 * (`Distillate fuel oil consumed by the residential sector | Thousand barrels` + `Kerosene consumed by the residential sector | Thousand barrels`) / hh
   ) %>%
-  select(year, state, gasoline_price:fueloil_price, electricity_MWh_hh:fueloil_gal_hh)
+  mutate(
+    # Average expenditure of all households, whether users of the fuel or not
+    electricity_expend_hh = 1e6 * electricity_expend / hh,
+    natgas_expend_hh = 1e6 * natgas_expend / hh,
+    lpg_expend_hh = 1e6 * lpg_expend / hh,
+    fueloil_expend_hh = 1e6 * fueloil_expend / hh
+  ) %>%
+  select(year, state, gasoline_price:fueloil_price, electricity_MWh_hh:fueloil_gal_hh, electricity_expend:fueloil_expend, electricity_expend_hh:fueloil_expend_hh)
 
 #-----
 
