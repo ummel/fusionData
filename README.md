@@ -1,6 +1,6 @@
 fusionData
 ================
-Kevin Ummel (<ummel@sas.upenn.edu>)
+Kevin Ummel (<ummel@berkeley.edu>)
 
 -   [Overview](#overview)
 -   [Setup and install](#setup-and-install)

@@ -1,6 +1,6 @@
 ---
 title: "fusionData"
-author: Kevin Ummel ([ummel@sas.upenn.edu](mailto:ummel@sas.upenn.edu))
+author: Kevin Ummel ([ummel@berkeley.edu](mailto:ummel@berkeley.edu))
 output:
   github_document:
     toc: true
