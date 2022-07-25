@@ -64,4 +64,4 @@ fst::write_fst(x = sim,
                compress = 100)
 
 # Cleanup
-#rm(sim, pred.data)
+rm(sim, pred.data)
