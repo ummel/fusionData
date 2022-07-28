@@ -47,7 +47,7 @@ prepare <- function(donor,
                     recipient,
                     respondent,
                     implicates = 1,
-                    collapse = TRUE) {
+                    collapse = FALSE) {
 
   # Validate arguments
   stopifnot({
