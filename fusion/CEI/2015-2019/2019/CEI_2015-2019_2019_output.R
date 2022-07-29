@@ -20,17 +20,21 @@ nsimp <- 5
 #   unlist() %>%
 #   min()
 
+# Rows in 'train.data' for the first spatial implicate
+fsimp <- seq(nrow(train.data) / nsimp)
+
 #-----
 
 # Identify fusion sequence and blocking strategy
-fchain <- blockchain(data = train.data,
+# Note that 'data' is limited to the first spatial implicate in 'train.data'
+fchain <- blockchain(data = train.data[fsimp, ],
                      y = fusion.vars,
                      x = pred.vars,
                      delta = 0.01,
                      maxsize = 3,
                      weight = "weight",
                      nfolds = 5,
-                     fraction = min(1, 10e3 * nsimp / nrow(train.data)),
+                     fraction = min(1, 50e3  / max(fsimp)),
                      cores = 3)
 
 #-----
@@ -45,7 +49,7 @@ fsn.path <- train(data = train.data,
                   cores = 3,
                   hyper = list(boosting = "goss",
                                num_leaves = 2 ^ (5) - 1,
-                               min_data_in_leaf = unique(round(pmax(20, nrow(train.data) / nsimp * 0.001 * c(1)))),
+                               min_data_in_leaf = unique(round(pmax(20, max(fsimp) * 0.001 * c(1)))),
                                feature_fraction = 0.8,
                                num_iterations = 1000,
                                learning_rate = 0.05)
@@ -55,7 +59,7 @@ fsn.path <- train(data = train.data,
 
 # Fuse multiple implicates to training data for internal validation analysis
 # Note that 'data' is limited to the first spatial implicate in 'train.data'
-valid <- fuseM(data = train.data[seq(nrow(train.data) / nsimp), ],
+valid <- fuseM(data = train.data[fsimp, ],
                file = fsn.path,
                k = 10,
                M = 50,
