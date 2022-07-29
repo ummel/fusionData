@@ -11,6 +11,8 @@ pred.vars <- names(fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_predict.fst
 # Identify the fusion variables
 fusion.vars <- setdiff(names(train.data), c("weight", pred.vars))
 
+#-----
+
 # Number of spatial implicates in 'train.data'
 nsimp <- 5
 
@@ -23,11 +25,15 @@ nsimp <- 5
 # Rows in 'train.data' for just the first spatial implicate
 fsimp <- seq(to = nrow(train.data), by = nsimp)
 
+# Initial production run: restrict train.data to first spatial implicate
+# Need to test more with multiple implicates
+train.data <- train.data[fsimp, ]
+
 #-----
 
 # Identify fusion sequence and blocking strategy
 # Note that 'data' is limited to the first spatial implicate in 'train.data'
-fchain <- blockchain(data = train.data[fsimp, ],
+fchain <- blockchain(data = train.data,
                      y = fusion.vars,
                      x = pred.vars,
                      delta = 0.01,
@@ -49,7 +55,7 @@ fsn.path <- train(data = train.data,
                   cores = 3,
                   hyper = list(boosting = "goss",
                                num_leaves = 2 ^ (5) - 1,
-                               min_data_in_leaf = unique(round(pmax(20, length(fsimp) * 0.001 * c(1)))),
+                               min_data_in_leaf = unique(round(pmax(10, length(fsimp) * 0.0005 * c(1)))),
                                feature_fraction = 0.8,
                                num_iterations = 1000,
                                learning_rate = 0.05)
