@@ -67,7 +67,7 @@ fusion.vars <- c(fusion.vars, "mortint_share", "tax_rate")
 # Imputation is done via a LightGBM model fit to RECS 2015 microdata; see imputeHeatingFuel() function and script
 # The ACS heating fuel variable ('hfl') is then harmonized to match the RECS fuel types imputed to CEI households
 
-source("fusion/CEI/2015-2019/imputeHeatingFuel.R")
+source("fusion/CEI/2015-2019/2019/imputeHeatingFuel.R")
 cei <- read_fst("survey-processed/CEX/CEI/CEI_2015-2019_H_processed.fst")
 temp <- tibble(cei_hid = cei$cei_hid,
                hfl = imputeHeatingFuel(cei.h = cei)) %>%
@@ -103,21 +103,17 @@ pred.vars <- prescreen(data = data$`CEI_2015-2019`,
                        weight = "weight",
                        fraction = 0.50,
                        cor_thresh = 0.025,
-                       lasso_thresh = 0.975,
-                       cores = 2)
+                       lasso_thresh = 0.95,
+                       cores = 3)
 
 #-----
-
-# Restrict 'data' to necessary variables in preferred order
-# Perhaps put this in a functions that wraps saving to fst?
-#vars <- unlist(map(c("fusion.vars", "harmonized.vars", "location.vars", "spatial.vars"), ~ attr(data, .x)))
 
 # Save training data to disk
 data$`CEI_2015-2019` %>%
   select(one_of(c("weight", fusion.vars, pred.vars))) %>%
-  write_fst(path = paste0("fusion/CEI/2015-2019/CEI_2015-2019_train.fst"), compress = 100)
+  write_fst(path = paste0("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_train.fst"), compress = 100)
 
 # Save prediction data to disk
 data$ACS_2019 %>%
   select(one_of(pred.vars)) %>%
-  write_fst(path = paste0("fusion/CEI/2015-2019/CEI_2015-2019_predict.fst"), compress = 100)
+  write_fst(path = paste0("fusion/CEI/2015-2019/2019/CEI_2015-2019__2019_predict.fst"), compress = 100)
