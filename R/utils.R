@@ -43,7 +43,7 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 # Function to convert a numeric vector to integer, if possible
 # Checks if maximum value is coercible to 32-bit integer; see ?integer "Details"
 convertInteger <- function(x) {
-  if (all(x[!is.na(x)] %% 1 == 0) & max(x, na.rm = TRUE) < 2*10^9) {
+  if (all(x[!is.na(x)] %% 1 == 0) & max(x, na.rm = TRUE) <= .Machine$integer.max) {
     return(as.integer(round(x)))
   } else {
     return(x)
@@ -199,7 +199,7 @@ safeCharacters <- function(x) {
 # test1 <- convert2scaled(cei$mrtgip, cei$weight)
 # test2 <- convert2scaled(acs$mortgage, acs$weight)
 
-convert2scaled <- function(x, w, min.unique = 100) {
+convert2scaled <- function(x, w, min.unique = 100, precision = 3) {
   if (is.numeric(x) & length(unique(x)) >= min.unique) {
     i <- x != 0
     x0 <- x[i]
@@ -209,7 +209,7 @@ convert2scaled <- function(x, w, min.unique = 100) {
     x[i] <- x0 + (xmed / xmad)
     xmed <- weightedQuantile(x[i], w[i], p = 0.5)
     if (xmed != 0) x <- x / xmed
-    x <- cleanNumeric(x, tol = 0.001)
+    x <- signif(round(x, precision), precision)
   }
   return(x)
 }
@@ -270,3 +270,93 @@ sameClass <- function(x, y) {
 #   x[outlier.index] <- NA
 #   return(x)
 # }
+
+#-------------------
+
+# Function to integerize real (non-integer) positive weights
+# 'mincor' refers to the minimum allowable Pearson correlation between 'x' and the integerized version of 'x'
+# Function will also handle 'x' that is constant or already integer
+integerize <- function(x, mincor = 0.999) {
+  stopifnot(all(x > 0))
+  if (sd(x) == 0) {
+    return(rep(1L, length(x)))
+  } else {
+    p <- 0
+    i <- 0
+    r <- max(x) / min(x)
+    while (p < mincor) {
+      i <- i + 1
+      mx <- ifelse(is.integer(x), r, max(r, 10 ^ i))
+      z <- 1 + mx * ((x - min(x)) / r)
+      z <- as.integer(round(z))
+      p <- cor(x, z)
+    }
+    return(z)
+  }
+}
+
+# Examples
+# x <- rlnorm(1e3)
+# xint <- integerize(x)
+# cor(x, xint)
+#
+# x <- 1:10
+# xint <- integerize(x)
+# all.equal(x, xint)
+#
+# x <- rep(0.1, 10)
+# xint <- integerize(x)
+# unique(xint)
+
+#-------------------
+
+# Function to identically scale one or two datasets (df or matrix) of numeric variables and convert to positive integers with selected precision
+# This is used within assemble() to scale the numeric spatial predictors to improve compression when saved to disk
+# It uses a robust scaling: (x - median(x)) / mad(x)
+# When 'x' and 'y' are supplied, the median and mad of 'x' are used to scale both inputs
+# The 'precision' argument controls the number of digits in resulting integers
+# A horizontal shift is also applied so that the minimum integer output value is zero; this avoids storing negative indicator without affecting the scale
+
+scale2integer <- function(x, y = NULL, precision = 2) {
+
+  vec <- FALSE
+  if (is.vector(x)) {
+    vec <- TRUE
+    x <- data.frame(V1 = x)
+  }
+  stopifnot(all(apply(x, 2, is.double)))
+  xcenter <- apply(x, 2, median, na.rm = TRUE)
+  xscale <- apply(x, 2, mad, na.rm = TRUE)
+  xscale[xscale == 0] <- apply(x[, xscale == 0], 2, sd, na.rm = TRUE)
+  x <- scale(x, center = xcenter, scale = xscale)
+  x <- round(x, precision)
+  x <- apply(x, 2, function(x) as.integer(x * (10 ^ precision)))
+  x <- data.frame(x)
+  shift <- -1L * apply(x, 2, min, na.rm = TRUE)
+
+  if (!is.null(y)) {
+    if (vec) {
+      y <- data.frame(V1 = y)
+    } else {
+      stopifnot(identical(colnames(x), colnames(y)))
+    }
+    stopifnot(all(apply(y, 2, is.double)))
+    y <- scale(y, center = xcenter, scale = xscale)
+    y <- round(y, precision)
+    y <- apply(y, 2, function(x) as.integer(x * (10 ^ precision)))
+    y <- data.frame(y)
+    shift <- pmax(shift, -1L * apply(y, 2, min, na.rm = TRUE))
+    y <- y + rep(shift, each = nrow(y))
+    if (vec) y <- as.integer(y[[1]])
+  }
+
+  x <- x + rep(shift, each = nrow(x))
+  if (vec) x <- as.integer(x[[1]])
+
+  if (is.null(y)) {
+    return(x)
+  } else {
+    return(list(x = x, y = y))
+  }
+
+}

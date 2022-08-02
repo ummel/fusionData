@@ -8,7 +8,7 @@
 #' @param spatial.datasets Character. Vector of requested spatial datasets to merge (e.g. `"EPA-SLD"`) or either of two special values: `"all"` (default) or `"none"`.
 #' @param window Integer. Size of allowable temporal window, in years, when merging spatial variables. `window = 0` (default) means that a spatial variable is only included if it has the same vintage as the survey. See Details.
 #' @param pca Numeric. Controls whether/how PCA is used to reduce dimensionality of spatial variables. Default (NULL) is no PCA. If non-NULL, should be a numeric vector of length two; e.g. \code{pca = c(50, 0.95)}. First number is the maximum number of components to return; second number is target proportion of variance explained. See Details.
-#' @param replicates Logical. Should replicate observation weights be included, if available? Defaults to FALSE. Passed to \link{completeDonor}.
+#' @param replicates Logical. Should replicate observation weights be included, if available? Defaults to FALSE.
 #'
 #' @details Spatial variables are included if the associated vintage is within +/- `window` years of the survey vintage. In cases where the spatial variable has multiple vintages equidistant from the survey vintage, the older vintage is selected. Variables with `vintage = "always"` are, of course, always included.
 #'
@@ -126,10 +126,12 @@ assemble <- function(x,
   #-----
 
   # Merge donor microdata components: harmonized variables, fusion variables, and location variables
+  # Note that the weights are 'integerized' after applying the imputation adjustment factor (weight_adjustment)
   dout <- x$harmonized[[donor]] %>%
     left_join(fusion.data, by = did) %>%
     left_join(x$location[[donor]], by = did[1]) %>%
-    mutate(weight = weight * weight_adjustment) %>%
+    mutate(weight = weight * weight_adjustment,
+           weight = integerize(weight, mincor = 0.999)) %>%
     select(-weight_adjustment)
 
   rm(fusion.data)
@@ -261,7 +263,7 @@ assemble <- function(x,
 
       #---
 
-      # Update 'dgeo' and rgeo' with PCA results
+      # Update 'dgeo' and 'rgeo' with PCA results
       dgeo <- cbind(dgeo[!ind], dpca)
       rgeo <- cbind(rgeo[!ind], rpca)
 
@@ -273,6 +275,17 @@ assemble <- function(x,
       gc()
 
     }
+
+    #-----
+
+    # Apply integer scaling to double variables in 'dgeo' and 'rgeo'
+    # The scaling median and mad are derived from 'rgeo' and applied to both inputs
+    cat("Applying integer scaling to spatial predictor variables...\n")
+    ind <- sapply(dgeo, is.double) & !names(dgeo) %in% mvars
+    temp <- scale2integer(x = rgeo[ind], y = dgeo[ind], precision = 2)
+    rgeo[ind] <- temp$x
+    dgeo[ind] <- temp$y
+    rm(temp)
 
     #-----
 
@@ -300,12 +313,12 @@ assemble <- function(x,
   dout <- dout %>%
     select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
     #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
-    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100))
+    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3))
 
   rout <- rout %>%
     select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
     #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
-    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100))
+    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3))
 
   #-----
 

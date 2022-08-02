@@ -214,7 +214,7 @@ assignLocation <- function(harmonized, m, collapse) {
   # When 'D' is merged with microdata, the household "weight" is multiplied by "weight_adjustment" to arrive at correct total sample weight
   # This allow the unique() call below, which reduces the number of row in results (i.e. collapse duplicated entries)
   # Note that the recipient ID is dropped, which is OK if we don't care about adding additional ACS-based predictor variables (might be changed in future)
-  # If collapse = FALSE, then the weight_adjustment column is simply 1/m and there is no collapse of duplciate household entries
+  # If collapse = FALSE, then the weight_adjustment column is simply 1/m and there is no collapse of duplicate household entries
   data.table::set(D, j = rid, value = NULL)
   if (collapse) {
     D[, weight_adjustment := .N / m, by = c(did, gtarget)]

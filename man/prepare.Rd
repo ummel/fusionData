@@ -4,7 +4,7 @@
 \alias{prepare}
 \title{Prepare microdata inputs for assembly}
 \usage{
-prepare(donor, recipient, respondent, implicates = 1, collapse = TRUE)
+prepare(donor, recipient, respondent, implicates = 1, collapse = FALSE)
 }
 \arguments{
 \item{donor}{Character. Donor survey identifier (e.g. \code{"RECS_2015"}).}
