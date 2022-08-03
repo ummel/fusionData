@@ -27,12 +27,13 @@ if (basename(getwd()) == "fusionData") {
 dictionary <- subset(dictionary, select = -Type)
 
 # Update the 'Survey' variable with full names
-surveys <- merge(surveys, data.frame(Survey = c("ACS", "AHS", "CEI", "NHTS", "RECS"),
+surveys <- merge(surveys, data.frame(Survey = c("ACS", "AHS", "CEI", "NHTS", "RECS", "ASEC"),
                                      `Survey name` = c("American Community Survey",
                                                        "American Housing Survey",
                                                        "Consumer Expenditure Survey (Interview)",
                                                        "National Household Travel Survey",
-                                                       "Residential Energy Consumption Survey"),
+                                                       "Residential Energy Consumption Survey",
+                                                       "Annual Social and Economic Supplement of the CPS"),
                                      check.names = FALSE),
                  all.x = TRUE) |>
   subset(select = c(Survey, `Survey name`, Vintage, Respondent, `Sample size`, `No. of variables`))
