@@ -36,8 +36,7 @@ train.data <- train.data[fsimp, ]
 fchain <- blockchain(data = train.data,
                      y = fusion.vars,
                      x = pred.vars,
-                     delta = 0.01,
-                     maxsize = 3,
+                     maxsize = 1,  # Blocking is expensive with semi-continuous variables, so turned off
                      weight = "weight",
                      nfolds = 5,
                      fraction = min(1, 50e3  / length(fsimp)),
@@ -64,12 +63,12 @@ fsn.path <- train(data = train.data,
 #----
 
 # Fuse multiple implicates to training data for internal validation analysis
-valid <- fuseM(data = train.data,
-               file = fsn.path,
-               k = 10,
-               M = 50,
-               ignore_self = TRUE,
-               cores = 3)
+valid <- fuse(data = train.data,
+              file = fsn.path,
+              k = 10,
+              M = 30,
+              ignore_self = TRUE,
+              cores = 3)
 
 # Save 'valid' as .fst
 fst::write_fst(x = valid, path = "fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_valid.fst", compress = 100)
@@ -83,11 +82,11 @@ rm(train.data, valid)
 pred.data <- read_fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_predict.fst")
 
 # Fuse multiple implicates to ACS
-sim <- fuseM(data = pred.data,
-             file = fsn.path,
-             k = 10,
-             M = 50,
-             cores = 3)
+sim <- fuse(data = pred.data,
+            file = fsn.path,
+            k = 10,
+            M = 30,
+            cores = 3)
 
 # Save 'sim' as .fst
 fst::write_fst(x = sim, path = "fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_fused.fst", compress = 100)
