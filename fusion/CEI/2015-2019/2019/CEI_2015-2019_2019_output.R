@@ -84,8 +84,8 @@ fsn.path <- train(data = train.data,
 print(Sys.time() - start)
 
 # Once train() is complete, reset number of threads allowed in data.table and fst
-setDTthreads(ncores)
-threads_fst(ncores)
+setDTthreads(num.cores)
+threads_fst(num.cores)
 
 #------------------ Fuse - validation ------------------------------------------
 
