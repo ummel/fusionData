@@ -26,7 +26,7 @@ fst::threads_fst(1)
 train.data <- fst::read_fst(file.path(in.dir, "CEI_2015-2019_2019_train.fst"))
 
 # Extract variable names from the prediction data (without loading to memory)
-pred.vars <- names(fstfst::(file.path(in.dir, "CEI_2015-2019_2019_predict.fst")))
+pred.vars <- names(fst::fst(file.path(in.dir, "CEI_2015-2019_2019_predict.fst")))
 
 
 # Identify the fusion variables
