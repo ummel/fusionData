@@ -17,16 +17,17 @@ if(local.run){
 #------------------------------------------------------------------------------
 
 # Turn off data.table and fst multithreading to prevent forking issues
-setDTthreads(1)
-threads_fst(1)
+data.table::setDTthreads(1)
+fst::threads_fst(1)
 
 #------------------ Prep the inputs --------------------------------------------
 
 # Load the training data
-train.data <- read_fst(file.path(in.dir, "CEI_2015-2019_2019_train.fst"))
+train.data <- fst::read_fst(file.path(in.dir, "CEI_2015-2019_2019_train.fst"))
 
 # Extract variable names from the prediction data (without loading to memory)
-pred.vars <- names(fst(file.path(in.dir, "CEI_2015-2019_2019_predict.fst")))
+pred.vars <- names(fstfst::(file.path(in.dir, "CEI_2015-2019_2019_predict.fst")))
+
 
 # Identify the fusion variables
 fusion.vars <- setdiff(names(train.data), c("weight", pred.vars))
@@ -84,8 +85,8 @@ fsn.path <- train(data = train.data,
 print(Sys.time() - start)
 
 # Once train() is complete, reset number of threads allowed in data.table and fst
-setDTthreads(num.cores)
-threads_fst(num.cores)
+data.table::setDTthreads(num.cores)
+fst::threads_fst(num.cores)
 
 #------------------ Fuse - validation ------------------------------------------
 
@@ -104,11 +105,13 @@ fst::write_fst(x = valid, path = file.path(out.dir, "CEI_2015-2019_2019_valid.fs
 
 # Clean up
 rm(train.data, valid)
+gc()
 
 #------------------ Fuse - simulation ------------------------------------------
 
 # Load the prediction data
-pred.data <- read_fst(file.path(in.dir, "CEI_2015-2019_2019_predict.fst"))
+pred.data <- fst::read_fst(file.path(in.dir, "CEI_2015-2019_2019_predict.fst"))
+
 
 # Fuse multiple implicates to ACS
 fsn.path = file.path(out.dir, "CEI_2015-2019_2019_model.fsn")
@@ -116,7 +119,7 @@ start = Sys.time()
 sim <- fuse(data = pred.data,
             file = fsn.path,
             k = 10,
-            M = 30,
+            M = 8,
             cores = num.cores)
 print(Sys.time() - start)
 
@@ -125,3 +128,4 @@ fst::write_fst(x = sim, path = file.path(out.dir, "CEI_2015-2019_2019_fused.fst"
 
 # Clean up
 rm(pred.data, sim)
+gc()
