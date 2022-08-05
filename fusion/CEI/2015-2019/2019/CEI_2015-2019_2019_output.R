@@ -3,8 +3,8 @@ library(fusionModel)
 #-----
 
 # Turn off data.table and fst multithreading to prevent forking issues
-setDTthreads(1)
-threads_fst(1)
+data.table::setDTthreads(1)
+fst::threads_fst(1)
 
 # Set number of cores
 ncores <- 3
@@ -12,10 +12,10 @@ ncores <- 3
 #-----
 
 # Load the training data
-train.data <- read_fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_train.fst")
+train.data <- fst::read_fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_train.fst")
 
 # Extract variable names from the prediction data (without loading to memory)
-pred.vars <- names(fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_predict.fst"))
+pred.vars <- names(fst::fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_predict.fst"))
 
 # Identify the fusion variables
 fusion.vars <- setdiff(names(train.data), c("weight", pred.vars))
@@ -71,8 +71,8 @@ fsn.path <- train(data = train.data,
 )
 
 # Once train() is complete, reset number of threads allowed in data.table and fst
-setDTthreads(ncores)
-threads_fst(ncores)
+data.table::setDTthreads(ncores)
+fst::threads_fst(ncores)
 
 #----
 
@@ -89,17 +89,18 @@ fst::write_fst(x = valid, path = "fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_v
 
 # Clean up
 rm(train.data, valid)
+gc()
 
 #----
 
 # Load the prediction data
-pred.data <- read_fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_predict.fst")
+pred.data <- fst::read_fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_predict.fst")
 
 # Fuse multiple implicates to ACS
 sim <- fuse(data = pred.data,
             file = fsn.path,
             k = 10,
-            M = 30,
+            M = 8,
             cores = ncores)
 
 # Save 'sim' as .fst
@@ -107,3 +108,4 @@ fst::write_fst(x = sim, path = "fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_fus
 
 # Clean up
 rm(pred.data, sim)
+gc()
