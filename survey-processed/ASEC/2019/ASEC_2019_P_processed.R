@@ -124,7 +124,7 @@ maxcheck <- d[ , lapply(.SD, max),
 # exclude Q flags and topcode flags --> never missing 
 intvars <- intvars[!str_starts(intvars, 'q|tinc')]
 
-### valid blanks ----
+### ~ valid blanks ----
 # find factor variables with label 'NIU'
 NIUvars <- intvars[colSums(d[ , ..intvars] == 'NIU')>0]
 length(NIUvars)
@@ -358,7 +358,7 @@ for (x in names(NIUreplace)){
   d[ , (x) := recode(get(x), NIU = NIUreplace[[x]])]
 }
 
-### other blanks ----
+### ~ other blanks ----
 
 # look at value labels to see if there are other factor labels that indicate missing or NIU
 # test <- map(c(1:length(intvars)), ~var_info[var_name %in% intvars, val_labels[[.x]][[2]]])
@@ -404,6 +404,7 @@ varlist <- setdiff(names(d), c(names(d)[str_starts(names(d), 'rep_')],
 
 # famsize is a factor but can be a numeric  
 d[ , famsize := as.numeric(str_extract(as.character.factor(famsize), '[:digit:]*'))]
+intvars <- setdiff(intvars, 'famsize')
 
 # check for any missing values
 colnames(d)[colSums(is.na(d)) > 0] 
@@ -420,9 +421,7 @@ var_info <- var_info[!(var_name %in% flag_detail)]
 colnames(d)[colSums(is.na(d)) > 0] 
 
 # drop levels that are not used by factors - typically levels that are not valid in this year 
-#d[ , (intvars) := lapply(.SD, droplevels), .SDcols = intvars]
-
-# something went wrong here 
+d[ , (intvars) := lapply(.SD, droplevels), .SDcols = intvars]
 
 # Dictionary ----
 
@@ -456,10 +455,10 @@ fst::write_fst(x = d, path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.f
 # Compile Universal ----
 compileDictionary()
 
-# check universal dictionary
-asec_dictionary <- dictionary
-load('./data/dictionary.rda')
-load('./data/surveys.rda')
-
-universe()
-harmony()
+# # check universal dictionary
+# asec_dictionary <- dictionary
+# load('./data/dictionary.rda')
+# load('./data/surveys.rda')
+# 
+# universe()
+# harmony()
