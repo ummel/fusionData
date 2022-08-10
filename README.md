@@ -486,6 +486,11 @@ the Github repository and are used by both the “Universal Survey
 Dictionary” and “Survey Harmonization Tool” Shiny apps that are part of
 fusionData.
 
+After using the `compileDictionary()` and before calling the `universe()` 
+Shiny app, update the list of donor surveys in `universe/app.R` to include
+the acronym for the donor survey and a description of the survey. The relevant
+code is on line 30. 
+
 The “Universal Survey Dictionary” is a Shiny app that can be accessed by
 the following call:
 
