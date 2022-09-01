@@ -17,7 +17,7 @@ codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
 #-----
 
 # Unzip raw .zip file
-unzip("survey-raw/ACS/2015/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
+unzip("survey-raw/ACS/2015/csv_pus.zip", exdir = tempdir(), overwrite = TRUE)
 hus.files <- list.files(path = tempdir(), pattern = "hus..csv$", full.names = TRUE)
 
 # Read household PUMS data
