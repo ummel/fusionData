@@ -49,7 +49,11 @@ codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet 
   mutate(
     label = ifelse(grepl("Not ascertained", label) | grepl("I don't know", label) | grepl("Don't know", label) | grepl("I prefer not to answer",label) | grepl("Refused", label), NA, label)   # Set label to NA if value is "I don't know", "Not ascertained",  (these observations are to be imputed eventually)
     ) %>%
-
+  mutate(
+    label = ifelse(var == 'HHSTFIPS', value,label),
+    label = ifelse(var == 'HH_CBSA', value,label) ,
+    label = ifelse(value == 'XXXXX',NA,label)
+  ) %>%
   mutate_all(trimws)
 
 # Add replicate household weight variables to codebook
@@ -229,29 +233,67 @@ na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
 ## Impute NA values in 'd'
-#imp <- imputeMissing(data = d,
-  #                  N = 1,
- #                  weight = "WTPERFIN",
-   #                  x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
+imp <- imputeMissing(data = d,
+                    N = 1,
+                   weight = "WTHHFIN",
+                   y_exclude = c("HOMEOWN","PC","SPHONE","TAB","WALK","BIKE","CAR","TAXI","BUS","TRAIN","PARA","PRICE",
+                                 "PLACE","WALK2SAVE","BIKE2SAVE", "PTRANS","LIF_CYC","HBHUR","HTHTNRNT", "HTPPOPDN","HTRESDN",
+                                 "HTEEMPDN","HBHTNRNT", "HBPPOPDN","HBRESDN",'HH_CBSA'),
+                     x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
 
 # Replace NA's in 'd' with the imputed values
-#d[names(imp)] <- imp
+d[names(imp)] <- imp
 #rm(imp)
 #gc()
-
-#anyNA(d)
 
 #-----
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
 
-d <- d %>%
-    rename(division = CENSUS_D,
-           region = CENSUS_R,
-         state = HHSTATE,
-         cbsa10 = HH_CBSA 
-         )
+d1 <- d %>%
+    rename(
+      nhts_region = CENSUS_R,
+      nhts_division = CENSUS_D,
+      cbsa13 = HH_CBSA,
+           state = HHSTFIPS
+                 ) %>% mutate(state = str_pad(state, 2, pad ="0")) %>% mutate (state = as.factor(state))
 
+
+#Remove entries with travel flag at the state-division level
+geo2 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
+  select('state','division','region')  %>% unique()
+
+d_travel_2 <-  d1  %>% 
+  merge(.,geo2, by ='state') %>% 
+  mutate(travel_flag = ifelse(nhts_division == division, 'No','Yes')) %>%
+  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag'))
+
+
+d2 <- d_travel_2 %>% filter(is.na(cbsa13))
+                            
+#Remove entries with travel flag at the cbsa-division level
+geo1 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
+        select('cbsa13','division','region')  %>% unique()
+
+d_travel_1 <-  d_travel_2  %>% filter(!is.na(cbsa13)) %>% 
+          merge(.,geo1, by ='cbsa13') %>% 
+          mutate(travel_flag = ifelse((nhts_division == division) & (nhts_region == region), 'No','Yes')) %>%
+          filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag'))
+
+d <- bind_rows(d2,d_travel_1)  %>%
+  rename(
+    region = nhts_region ,
+    division = nhts_division,
+  )
+
+#Remove entries with travel flag at the state-cbsa level
+#geo3 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
+ # select('state','cbsa13')  %>% unique()
+
+#d4 <- d %>% filter(cbsa13 != "None") %>% rename(nhts_state = state) %>%
+ #     merge(.,geo3, by = 'cbsa13')  %>% 
+#  mutate(travel_flag = ifelse(nhts_state == state, 'No','Yes')) %>% select(c('cbsa13','nhts_state','state','travel_flag'))
+ # filter(travel_flag == "Yes")  %>% select(c('cbsa13','nhts_state','state'))
 
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
@@ -263,8 +305,6 @@ d <- d %>%
   mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE))
 
 #----------------
-
-
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
@@ -297,6 +337,7 @@ saveRDS(object = dictionary, file = "survey-processed/NHTS/2017/NHTS_2017_H_dict
 # Save data to disk (.fst)
 fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_H_processed.fst", compress = 100)
 
-
+compileDictionary()
+compileSpatial()
 
 
