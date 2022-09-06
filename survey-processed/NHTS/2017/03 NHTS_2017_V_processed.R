@@ -9,35 +9,26 @@ source("R/createDictionary.R")
 source("R/imputeMissing.R")
 source("R/detectDependence.R")
 
-#This is to process the person level data  
-setwd("/Users/karthikakkiraju/Documents/fusionData")
+#This file is to process vehicle level data
 
-#-----
-# Load raw NHTS 2017  data
-d_p00 <- read_csv("survey-raw/NHTS/2017/perpub.csv") # Load raw NHTS 2017 person level data
-d_h0 <- read_csv("survey-raw/NHTS/2017/hhpub.csv") # Load raw NHTS 2017 household level data
-
-#Remove variables common to person and household files. This is to avoid repetition of variables (For example:state)
-nm <- c(setdiff(names(d_p00), names(d_h0)), "HOUSEID")
-d <- d_p00  %>% select(all_of(nm))
+# Load raw NHTS 2017 vehicle level data
+d <- read_csv("survey-raw/NHTS/2017/vehpub.csv")
 
 d <- d %>%
   mutate(
-  
-    WRKTIME = ifelse(grepl("AM", WRKTIME) | grepl("PM", WRKTIME), format(strptime(WRKTIME, "%I:%M %p"), "%H:%M"), WRKTIME),
-    WRKTIME = gsub(":", ".", WRKTIME), # Replace : with . in WRKTIME for consistency with ENDTIME and STRTTIME time format
-    
-    YEARMILE = ifelse(YEARMILE == -7, -77, YEARMILE), #Codebook only has -77,-88,-9 values specified. Could be typos.
-    YEARMILE = ifelse(YEARMILE == -8, -88, YEARMILE),
-    
-        ) %>% select(HOUSEID,PERSONID,everything())
-  
-# Load and process person level codebook
-codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet ="CODEBOOK_PER") %>%
+    OD_READ = ifelse(OD_READ == -7, -77, OD_READ), #Codebook only has -77,-88,-9 values specified. Could be typos.
+    OD_READ = ifelse(OD_READ == -8, -88, OD_READ), 
+     )
+
+#----
+
+# Load and process vehcile level codebook
+codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet ="CODEBOOK_VEH") %>%
  
    setNames(c('var', 'desc', 'type', 'length', 'valuelabel', 'frequency','weighted'))%>%  #value and label are in the same cell. Need to separate them into differnt columns
    select(var, desc, valuelabel) %>%
  
+  
   fill(var, desc) %>% # Replacing NA with the appropriate  entry
   
   mutate(
@@ -54,18 +45,11 @@ codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet 
    
   # Replacing "Not ascertained", "I don't know", "Don't know" labels with NA  
   mutate(
-    label = ifelse(grepl("Not ascertained", label) | grepl("I don't know", label) | grepl("Don't know", label) | grepl("I prefer not to answer", label), NA, label)   # Set label to NA if value is "I don't know", "Not ascertained",  (these observations are to be imputed eventually)
+    label = ifelse(grepl("Not ascertained", label) | grepl("I don't know", label) | grepl("Don't know", label) | grepl("I prefer not to answer",label) | grepl("Refused", label), NA, label)   # Set label to NA if value is "I don't know", "Not ascertained",  (these observations are to be imputed eventually)
     ) %>%
-  mutate_all(trimws) %>% filter(var %in% nm)
-  
-  codebook <- codebook %>%
-    mutate(
-     label = ifelse(var == "PHYACT" & value == "01","rarely or never does any physical activity",label), 
-     label = ifelse(var == "PHYACT" & value == "02","some light or moderate physical activities",label), 
-     label = ifelse(var == "PHYACT" & value == "03","some vigorous physical activities",label) 
-           )%>%
-    mutate_all(trimws)
-  
+
+  mutate_all(trimws)
+
   
 # Variables with "Appropriate skip" values
 # These are the variables for which suitable replacement values must be specified below
@@ -76,79 +60,21 @@ as.vars <- codebook %>%
   unique()
 
 as.values <- list(
-  
-  ALT_16 = "No Public Tranportation or Taxi",
-  ALT_23 = "Not a passenger to Friend/Family ",
-  ALT_45 = "No bike or walk",
-  BIKE4EX = "No biking for exercise",
-  BIKESHARE = "No bike sharing usage",
-  BIKE_DFR  = "No biking",
-  BIKE_GKP = "No biking",
-  CARRODE = "No people in vehicle to work",
-  CARSHARE = "No car share program usage",
-  CONDNIGH = "No medical conditions",
-  CONDPUB = "No medical conditions",
-  CONDRIDE = "No medical conditions",
-  CONDRIVE = "No medical conditions",
-  CONDSPEC = "No medical conditions",
-  CONDTAX = "No medical conditions",
-  CONDTRAV = "No medical conditions",
-  DELIVER = "No online delivery",
-  DRIVER = "No driver status",
-  EDUC = "No education",
-  FLEXTIME = "No work",
-  GT1JBLWK = "No job",
-  LPACT = 0,
-  LSTTRDAY17 ="No trip",
-  MEDCOND6 = "No medical condition",
-  NOCONG = 0,
-  OCCAT = "No job catejory",
-  PAYPROF ="No work for pay",
-  PRMACT = "No primary action",
-  PUBTIME = 0,
-  RIDESHARE = "No app usage",
-  SAMEPLC = "No trips",
-  SCHTRN1 = "No mode to school",
-  SCHTRN2 = "No mode frpm school",
-  SCHTYP = "No student status",
-  TIMETOWK = 0,
-  VPACT = 0,
-  WALK4EX = 0,
-  WALK_DEF = "Infrastrcture not a reason for not walking more",
-  WALK_GKQ= "Safety not a reason for not walking more",
-  WKFMHMXX ="No days worked from home",
-  WKFTPT = "Not full time or part-time worker",
-  WKRMHM = "Not working",
-  WORKER = "No",
-  WRKTIME = "No arrival time at work",
-  WRKTRANS = "No mode to work",
-  WRK_HOME = "No",
-  W_CANE = "No",
-  W_CHAIR = "No",
-  W_CRUTCH = "No",
-  W_DOG = "No",
-  W_MTRCHR = "No",
-  W_NONE = "No",
-  W_SCOOTR = "No",
-  W_WHCANE = "No",
-  W_WLKR = "No", 
-  YRTOUS = "No year of arrival in US",
-  YEARMILE = 0,
-  MCUSED = 0,
-  WORKER = "No worker status"
+  HFUEL = "No hybrid car",
+  VEHOWNMO = 0
+ 
 )
 
-  # These are cases where the variable measures a continuous/numeric concept,
+    # These are cases where the variable measures a continuous/numeric concept,
   # but inserting a zero-value for "Not applicable" entries does not make sense.
   # In this case, a categorical value is assigned to override the default zero
   # and the variable should be treated as an ordered factor.
  
 # Safety check for missing entries in 'as.values'
 miss <- noquote(setdiff(as.vars, names(as.values)))
-
 extras <- noquote(setdiff(names(as.values), as.vars))
 stopifnot(length(miss) == 0 & length(extras) == 0)
-extras
+
 #-----
 
 # Update 'codebook' with the manually specified override values for "Appropriate skip"
@@ -177,32 +103,28 @@ stopifnot(!any(codebook$label == "Appropriate skip", na.rm = TRUE))
 
 ordered.factors <- list(
 
-  BIKE4EX = c("No biking for exercise",0:99),
-  BIKESHARE = c("No bike sharing usage",0:99),
-  CARRODE = c("No people in vehicle to work",0:20),
-  CARSHARE = c("No car share program usage",0:90),
-  DELIVER = c("No online delivery", 0:99),
-  EDUC = c("No education","Less than a high school graduate", "High school graduate or GED","Some college or associates degree","Bachelor's degree","Graduate degree or professional degree"),
-  GT1JBLWK = c("No job","No", "Yes"),
-  HEALTH = c("Poor", "Fair", "Good","Very good","Excellent"),
-  LSTTRDAY17 = c("No trip","The day before","A few days before","A week before","More than a week before but within a month","More than a month before"),
-  MEDCOND = c("Yes","No"),
-  MEDCOND6 = c("No medical condition","6 months or less","More than 6 months","All [$YOUR_THEIR] life"),
-  PHYACT = c("rarely or never does any physical activity","some light or moderate physical activities","some vigorous physical activities"),
-  RIDESHARE = c("No app usage",0:99),
-  WALK4EX = c("No walk trips for exercise",0:99),
-  WKFMHMXX = c("No days worked from home",0:31),
-  WKFTPT = c("Not full time or part-time worker","Part-time","Full-time"),
-  WRKTIME = c("No arrival time at work", c(sprintf("%05.2f",seq(00.00,23.59,0.01)))),
-  YRTOUS = c("No year of arrival in US", 1905:2017)
-  )
+  HBHTNRNT = c("0-4%","5-14%","15-24%","25-34%","35-44%","45-54%","55-64%","65-74%","75-84%","85-94%","95-100%"),
+  HBHUR = c("Second City","Rural","Suburban","Small Town","Urban"),
+  HBPPOPDN =c("0-99","100-499","500-999","1,000-1,999","2,000-3,999","4,000-9,999","10,000-24,999","25,000-999,999"),
+  HBRESDN =c("0-99","100-499","500-999","1,000-1,999","2,000-3,999","4,000-9,999","10,000-24,999","25,000-999,999"),
+  HHFAMINC = c("Less than $10,000","$10,000 to $14,999","$15,000 to $24,999","$25,000 to $34,999","$35,000 to $49,999","$50,000 to $74,999","$75,000 to $99,999","$100,000 to $124,999","$125,000 to $149,999","$150,000 to $199,999","$200,000 or more"),
+  HTEEMPDN = c("0-49","50-99","100-249","250-499","500-999","1,000-1,999","2,000-3,999","4,000-999,999"),
+  HTHTNRNT = c("0-4%","5-14%","15-24%","25-34%","35-44%","45-54%","55-64%","65-74%","75-84%","85-94%","95-100%"),
+  HTPPOPDN = c("0-99","100-499","500-999","1,000-1,999","2,000-3,999","4,000-9,999","10,000-24,999","25,000-999,999"),
+  HTRESDN = c("0-99","100-499","500-999","1,000-1,999","2,000-3,999","4,000-9,999","10,000-24,999","25,000-999,999"),
+  LIF_CYC = c("one adult, no children","2+ adults, no children","one adult, youngest child 0-5","2+ adults, youngest child 0-5","one adult, youngest child 6-15","2+ adults, youngest child 6-15","one adult, youngest child 16-21","2+ adults, youngest child 16-21","one adult, retired, no children","2+ adults, retired, no children"),
+  MSACAT = c("Not in MSA","MSA less than 1 million","MSA of 1 million or more, and not in 1","MSA of 1 million or more, with rail"),
+  MSASIZE = c("Not in MSA or CMSA","In an MSA of Less than 250,000","In an MSA of 250,000 - 499,999","In an MSA of 500,000 - 999,999","In an MSA or CMSA of 1,000,000 - 2,999,999","In an MSA or CMSA of 3 million or more","Not in MSA or CMSA"),
+  RAIL =c("MSA does not have rail, or hh not in an MSA","MSA has rail"),
+  URBAN = c("Not in urban area","In an area surrounded by urban areas", "In an urban area","In an Urban cluster"),
+  URBANSIZE = c("Not in an urbanized area","50,000 - 199,999","200,000 - 499,999","500,000 - 999,999","1 million or more without heavy rail","1 million or more with heavy rail")
+    )
 
 # Safety check
 # Detect any variables in 'ordered.factors' that are NOT in the codebook
 extras <- noquote(setdiff(names(ordered.factors), codebook$var))
 stopifnot(length(extras) == 0)
 
-extras
 # Safety check
 # Check for a precise match between levels specified in 'ordered.factors' and the codebook labels
 # Will return helpful message if a discrepancy is detected; some discrepancies may be allowable
@@ -219,7 +141,6 @@ extras
 d <- d[intersect(names(d), codebook$var)]
 
 options(scipen = 999) #Removes scientific notation. Scientific notation creeps in during new label creation and creates NA values upon comparison with ordered.factors.
-
 for (v in names(d)) {
 
   cb <- filter(codebook, var == v )
@@ -263,36 +184,48 @@ for (v in names(d)) {
 
 }
 
+#Setting BESTMILE, GSCOST,GSYRGAL to 0 if vehicle was owned for less than a month
+
+#names <- c('BESTMILE','GSCOST','GSYRGAL','GSTOTCST')
+#for(v in names) 
+#  (is.na(d[[v]]))
+#  {d[[v]]= ifelse(d$VEHOWNMO == 0,0,d[[v]])}
+
 #-----
 
-# Detect structural dependencies
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-
 # Select variables that would be imputed
-#y_in <- c("HOMEOWN","HHFAMINC","PC","SPHONE","CAR","HH_HISP","HH_RACE","WEBUSE17","PRICE","PTRANS","PLACE","WALKS2SAVE","BIKE2SAVE")
-#y_ex <- setdiff(names(na.count),y_in)
+y_in <- c("VEHAGE","FUELTYPE","VEHTYPE","GSYRGAL","GSTOTCST","GSCOST")
+y_ex <- setdiff(names(na.count),y_in)
 
-## Impute NA values in 'd'
+# Impute NA values in 'd'
 imp <- imputeMissing(data = d,
                     N = 1,
-                   weight = "WTPERFIN",
-                    y_exclude = c("WRKTRANS","CARRODE","YEARMILE","GCDWORK","WKSTFIPS","DISTTOWK17","DISTTOSC17 ","BIKE_DFR","BIKE_GKP"),
-                    x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
+                   weight = "WTHHFIN",
+                   y_exclude = y_ex,
+                   x_exclude = c("HOUSEID", "PERSONID"))
 
 # Replace NA's in 'd' with the imputed values
 d[names(imp)] <- imp
 rm(imp)
-#gc()
+gc()
 
 #anyNA(d)
 
 #-----
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
+
+d <- d %>%
+    rename(division = CENSUS_D,
+         state = HHSTATE,
+         cbsa13 = HH_CBSA 
+         )
+
 
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
@@ -302,8 +235,9 @@ gvars <- intersect(gnames, names(d))
 # Class new/added geo identifiers as unordered factors
 d <- d %>%
   mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE))
-
 #----------------
+
+
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
@@ -312,26 +246,22 @@ h.final <- d %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
-  #labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
+  labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
   
   rename(
-    pid = PERSONID,
     nhts_2017_hid = HOUSEID,
-    weight = WTPERFIN # Rename ID and weight variables to standardized names
+    weight = WTHHFIN    # Rename ID and weight variables to standardized names
   ) %>%
   
-  rename_with(~ gsub("WTPERFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTHHFIN")) %>%  # Rename replicate weight columns to standardized names
+  rename_with(~ gsub("WTTRDFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTTRDFIN")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(nhts_2017_hid, pid, everything()) %>%   # Reorder columns with replicate weights at the end
+  select(nhts_2017_hid, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
   arrange(nhts_2017_hid)
-
 #----------------
 
-# Create dictionary and save to disk
-dictionary <- createDictionary(data = h.final, survey = "NHTS", vintage = 2017, respondent ="P")
-saveRDS(object = dictionary, file = "survey-processed/NHTS/2017/NHTS_2017_P_dictionary.rds")
-
-#----------------
 # Save data to disk (.fst)
-fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_P_processed.fst", compress = 100)
-compileDictionary()
+fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_V_processed.fst", compress = 100)
+fst::write_fst(x = codebook, path = "survey-processed/NHTS/2017/NHTS_2017_V_codebook.fst", compress = 100)
+
+
+
