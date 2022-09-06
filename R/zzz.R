@@ -8,6 +8,7 @@
 
   # Authenticate 'fusionACSdata' GDrive access using locally-stored token
   load("data/token.rda")
+  googledrive::drive_deauth()
   googledrive::drive_auth(token = token)
 
   # NOTE: To generate/update the token, run this once in console
