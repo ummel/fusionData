@@ -93,6 +93,10 @@ d[ , ownchild := ifelse(age < 18 & marst == 'Never married/single'
 # sum of own children of the householder
 d[ , noc := sum(ownchild), by = serial]
 
+# make own child factor
+d[ , ownchild := factor(ownchild, labels = c('Not child (<18) of householder', 
+                                             'Child (<18) of householder'), ordered = T)]
+
 # presence and age of own children 
   # someone has an own child in the family *if* 
   #   - someone's momloc/poploc/momloc2/poploc2 is the same as their pernum 
@@ -136,7 +140,7 @@ d[ , child_pres_age := factor(child_pres_age, labels = c('NIU', 'only kids < 6',
 table(d$nchild, d$child_pres_age, useNA = 'always')
 
 # add the factor variables to the list 
-intvars <- c(intvars, 'child_pres_age')
+intvars <- c(intvars, 'ownchild', 'child_pres_age')
 
 # Blank Values ----
 
@@ -522,8 +526,8 @@ saveRDS(dictionary, file = "survey-processed/ASEC/2019/ASEC_2019_P_dictionary.rd
 fst::write_fst(x = d, path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst", compress = 100)
   
 
-# d <- fst::read_fst(path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst") %>%
-#   as.data.table()
+# d <- fst::read_fst(path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst") %>%  as.data.table()
+# dictionary <- readRDS(file = "survey-processed/ASEC/2019/ASEC_2019_P_dictionary.rds")
 
 # Compile Universal ----
 compileDictionary()
