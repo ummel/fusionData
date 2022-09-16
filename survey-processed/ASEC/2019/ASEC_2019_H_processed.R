@@ -18,6 +18,7 @@ data <- read_ipums_micro(ddi)
 
 #-----
 
+data <- filter(data, gq == 1)
 
 # Collect only household data
 
@@ -207,6 +208,9 @@ value_check_state_name <- labelled::set_variable_labels(.data = value_check_with
                                                         .labels = setNames(as.list(var_info$var_label),
                                                                            names(value_check_without_state_name)))
 
+repnames <- names(value_check_state_name)[str_starts(names(value_check_state_name), 'repwt')]
+setnames(value_check_state_name, repnames, str_replace(repnames, 'wt', '_'))
+
 d_H_final <- value_check_state_name %>% 
   rename(state_name = statecensus)
 
@@ -219,9 +223,10 @@ saveRDS(dictionary, file = "survey-processed/ASEC/2019/ASEC_2019_H_dictionary.rd
 # Save data
 fst::write_fst(x = d_H_final, path = "survey-processed/ASEC/2019/ASEC_2019_H_processed.fst", compress = 100)
 
+
 # Compile universal
 
-# fusionData::compileDictionary()
+fusionData::compileDictionary()
 # fusionData::universe()
 
 
