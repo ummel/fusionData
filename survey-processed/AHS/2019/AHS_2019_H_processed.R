@@ -9,12 +9,12 @@ source("R/detectDependence.R")
 # Function to process the labels from the codebook
 
 get_labels <- function(resp_codes) {
-  
+
   labs <- str_split(resp_codes,
                     pattern = "\\|\\|",simplify = T)
   labs <- str_split(labs, pattern = ": ",simplify = T)
   labs <- as.data.frame(labs)
-  
+
   if (dim(labs)[2]>2) {
     not_labs <- str_split(labs$V3, pattern = "to ",simplify = T)
     not_labs <- as.data.frame(not_labs)
@@ -33,10 +33,10 @@ get_labels <- function(resp_codes) {
       labs <- as.data.frame(labs)
     }
   }
-  
+
   # Not applicable, will be set as the default No
   if (length(grep("or -6",labs$V1)>0)) {
-    
+
     # Find the default No
     if (sum(labs$V2=="No")==1) {
       default_no<-"No"
@@ -45,33 +45,32 @@ get_labels <- function(resp_codes) {
     } else {
       default_no<-"Not applicable"
     }
-    
+
     labs <- rbind(labs, data.frame("V1"= c("N", "-6"),
                                    "V2"= c(default_no, default_no)))
-    
+
     labs <- labs[-c(grep("or -6",labs$V1)),]
   }
-  
+
   # Actual missing values, set to NA
   if (length(grep("or -9",labs$V1)>0)) {
-    
+
     labs <- rbind(labs, data.frame("V1"= c("M", "-9"),
                                    "V2"= c(NA, NA)))
-    
+
     labs <- labs[-c(grep("or -9",labs$V1)),]
-    
+
   }
-  
+
   return(labs)
 }
-
 
 #-----
 
 # Function to check if the labels are ordered
 
 ordered_labels <- function(labels) {
-  
+
   non_missing_labs <- labels[!labels$V2%in%c("Not reported","Not applicable"),]
   if(length(grep("\\d",non_missing_labs$V2))>=0.5*length(non_missing_labs)) {
     return(TRUE)
@@ -80,7 +79,6 @@ ordered_labels <- function(labels) {
     return(FALSE)
   }
 }
-
 
 #-----
 
@@ -145,49 +143,49 @@ pb <- pbapply::timerProgressBar(min = 0, max = dim(d)[2],
                                 char = "+", width = 50, style = 3)
 
 for (var in names(d)) {
-  
+
   d[[var]] <- str_remove_all(d[[var]],"'")
-  
+
   # Check if variable has labels
-  if ((var%in%labeled_vars) & 
+  if ((var%in%labeled_vars) &
       (length(grep("\\|\\|",codebook$resp_codes[codebook$var==var]))!=0)) {
-    
+
     # Check if labels are the same for metro and national
     # (i.e. one set of labels)
     if (dim(codebook[codebook$var==var,])[1]==1) {
-    
+
       labs <- get_labels(codebook$resp_codes[codebook$var==var])
-      
+
       temp <- data.frame("V1" = d[[var]], "order" = 1:dim(d)[1])
       temp <- merge(temp, labs, by="V1", all.x = T)
       temp <- temp[order(temp$order),]
       temp$V2[is.na(temp$V2)] <- temp$V1[is.na(temp$V2)]
-      
+
     } else {
-      
+
       # For National
-      labs <- get_labels(codebook$resp_codes[(codebook$var==var) & 
+      labs <- get_labels(codebook$resp_codes[(codebook$var==var) &
                                                (codebook$national==1)])
-      
+
       temp_nat <- data.frame("V1" = d[[var]], "order" = 1:dim(d)[1])
       temp_nat <- merge(temp_nat, labs, by="V1", all.x = T)
       temp_nat <- temp_nat[order(temp_nat$order),]
       temp_nat$V2[is.na(temp_nat$V2)] <- temp_nat$V1[is.na(temp_nat$V2)]
-      
+
       # For Metro
-      labs <- get_labels(codebook$resp_codes[(codebook$var==var) & 
+      labs <- get_labels(codebook$resp_codes[(codebook$var==var) &
                                                (codebook$metro==1)])
-      
+
       temp_met <- data.frame("V1" = d[[var]], "order" = 1:dim(d)[1])
       temp_met <- merge(temp_met, labs, by="V1", all.x = T)
       temp_met <- temp_met[order(temp_met$order),]
       temp_met$V2[is.na(temp_met$V2)] <- temp_met$V1[is.na(temp_met$V2)]
-      
+
       temp <- temp_nat
       temp$V2[d$Sample=="Metro"] <- temp_met$V2[d$Sample=="Metro"]
-      
+
     }
-    
+
     # Final check to see if there is no continuous variable
     # passing up here unintendedly
     if (length(unique(temp$V2[!is.na(temp$V2)]))>length(unique(labs$V2))) {
@@ -199,15 +197,15 @@ for (var in names(d)) {
                          levels=unique(labs$V2[labs$V2%in%temp$V2]),
                          ordered=ordered_labels(labs))
     }
-    
+
   } else {
     d[[var]] <- as.numeric(d[[var]])
     d[[var]][d[[var]]==-6] <- 0  # Not applicable, therefore zero
     d[[var]][d[[var]]==-9] <- NA # Not reported, actual missing
   }
-  
+
   pbapply::setTimerProgressBar(pb, match(var,names(d)))
-  
+
 }
 
 pbapply::closepb(pb)
@@ -219,7 +217,7 @@ gc()
 # Subset only observations and variables where the dwelling is not vacant
 # This is important, because otherwise there is no "household"
 
-d<-d[d$INTSTATUS=="Occupied interview", 
+d<-d[d$INTSTATUS=="Occupied interview",
      setdiff(names(d),
              codebook$var[codebook$topic%in%
                             c("Months Occupied",
@@ -235,7 +233,7 @@ d$TENURE<-factor(d$TENURE,
 # Impute SOME missing variables
 # Note: this also requires installing the rpart.plot package
 
-exp_vars<-c("WEIGHT", "DIVISION", "OMB13CBSA", 
+exp_vars<-c("WEIGHT", "DIVISION", "OMB13CBSA",
             "HINCP", "NUMPEOPLE", "NUMOLDKIDS", "NUMYNGKIDS","NUMELDERS",
             "HHAGE", "HHMAR", "HHRACE", "HHSEX", "HHSPAN", "HHGRAD",
             "BLD", "YRBUILT", "TENURE",
@@ -257,7 +255,7 @@ selected_vars <- c("WEIGHT", "DIVISION", "OMB13CBSA", selected_vars)
 imp <- fst::read_fst("survey-raw/AHS/2019/ahs_imp.fst")
 
 # Replace NA's in 'd' with the imputed values
-d[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])] <- 
+d[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])] <-
   imp[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])]
 rm(imp)
 gc()
@@ -281,7 +279,7 @@ gvars <- intersect(gnames, names(d))
 
 # Impute division to the missing cbsa13
 # For the cases where the cbsa13 may belong to more than one division
-# the household is split among the possible divisions, with its weight 
+# the household is split among the possible divisions, with its weight
 # split according to the probability of being in each of them
 miss_wgt<-geo_conc[geo_conc$cbsa13%in%unique(d$cbsa13[is.na(d$division)]),
                    c("division","cbsa13","puma_weight")]
@@ -322,7 +320,7 @@ h.final <- d %>%
   labelled::set_variable_labels(.labels = setNames(as.list(paste("Replicate Weight",str_remove(repl_wgts,"REPWEIGHT"))), repl_wgts)) %>%  # Set descriptions for replicate weights
   rename(
     ahs_2019_hid = CONTROL,  # Rename ID and weight variables to standardized names
-    weight = WEIGHT 
+    weight = WEIGHT
   ) %>%
   rename_with(~ gsub("REPWEIGHT", "REP_", .x, fixed = TRUE), .cols = starts_with("REPWEIGHT")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase

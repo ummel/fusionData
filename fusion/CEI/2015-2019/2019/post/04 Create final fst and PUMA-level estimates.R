@@ -1,3 +1,7 @@
+# This script generates:
+# CEI_2015-2019_2019_calib.fst
+# CEI_2015-2019_2019_puma.fst
+
 library(fusionData)
 library(fusionModel)
 
@@ -8,15 +12,16 @@ d <- fread("fusion/CEI/2015-2019/2019/post/CEI_2015-2019_2019_calib.csv.gz")
 
 #----
 
-# Save fst version to disk (not full compression; too slow)
-threads_fst(2)  # To reduce CPU temperature
+# Save fst version to disk (NOT using full compression; too slow)
+threads_fst(2)  # Can be set higher if sufficient resources available
 write_fst(d, path = "fusion/CEI/2015-2019/2019/post/CEI_2015-2019_2019_calib.fst", compress = 75)
 
 #----
 
 # Generate PUMA-level estimates for select variables
+# NOTE: Could use mclapply() below for bulk processing given sufficient resources
 
-# Select/example variables to use
+# NOTE: Only small subset of variables processed currently (for speed)
 vars <- c("elec", "gas", "eatout", "airshp")
 
 # ACS static variables

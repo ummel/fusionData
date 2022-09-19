@@ -34,5 +34,8 @@ for (i in 1:nrow(M)) {
                                dir = "fusion/CEI/2015-2019/2019/post")
   out$M <- rep.int(i, nrow(out))
   setcolorder(out, "M")
-  fwrite(out, file = "fusion/CEI/2015-2019/2019/post/CEI_2015-2019_2019_calib.csv.gz", append = i > 1, nThread = 4, showProgress = TRUE)
+  data.table::fwrite(out, file = "fusion/CEI/2015-2019/2019/post/CEI_2015-2019_2019_calib.csv.gz",
+                     append = i > 1,
+                     nThread = 4,
+                     showProgress = TRUE)
 }

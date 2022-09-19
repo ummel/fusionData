@@ -1,3 +1,5 @@
+# Function that carries out iteration calibration to selected constraints
+
 # TEST
 # sim <- fst::read_fst("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_fused.fst", from = 1, to = 1276716)
 # test <- calibrateCEIimplicate(sim, nimp = 5, dir = "fusion/CEI/2015-2019/2019/post")
@@ -79,10 +81,8 @@ calibrateCEIimplicate <- function(sim, output_cats, delta_stop, iter_max, dir) {
 
     # Calibrate using 'fsagg' (Feiveson-Sabelhaus consumption shares)
 
-    # Update estimate of total FS consumption for each household
-    #set(d, j = "fs_cons", value = rowSums(d[, ..fscats]))
-
-    # TEST
+    # Update consumption group assignment of each household, as this can potentially change with each iteration
+    # This appears to have little effect on results, but it is technically correct
     set(d, j = "vehdep", value = 0.15 * d$vehval)
     set(d, j = "fs_cons", value = rowSums(d[, ..fscats]))
     set(d, j = "total_cons", value = d$fs_cons - d$rent - d$mrtgip - d$hinsp - d$ptaxp + d$rntval)
@@ -255,8 +255,8 @@ calibrateCEIimplicate <- function(sim, output_cats, delta_stop, iter_max, dir) {
 
     #------------------------
 
-    # Calculate some measure (delta) of the overall change in calibrated values
-    # Idea: When delta is sufficiently small, terminate loop (not yet implemented)
+    # Calculate measure (delta) of the overall change in calibrated values
+    # When delta is sufficiently small (delta_stop), loop is terminated
 
     # Mean ratio of calibrated values to original/un-calibrated values for each variable
     ratio <- colMeans(d[, ..cats] / d0[, ..cats], na.rm = TRUE)
@@ -351,20 +351,7 @@ calibrateCEIimplicate <- function(sim, output_cats, delta_stop, iter_max, dir) {
 
 #------------------
 
-# Save variable name summary to disk
-# doc.cats %>%
-#   filter(cat %in% names(output)) %>%
-#   mutate(calibration = ifelse(cat %in% unlist(nagg$cat), "direct", "indirect"),
-#          calibration = ifelse(!cat %in% cats, "none", calibration)) %>%
-#   arrange(major, cat) %>%
-#   write_csv("production/calibration/Calibrated variable descriptions.csv")
-#
-# # Save final calibrated data to disk
-# fst::write_fst(output, "production/calibration/CEI-ACS_2019 calibrated.fst", compress = 100)
-
-#------------------
-
-# General prep function
+# General prep function to calculate/define necessary variables as well as FS and total consumption variables
 prepCEIsim <- function(sim, fscats) {
   h.acs <- read_fst("survey-processed/ACS/2019/ACS_2019_H_processed.fst", columns = c("hincp", "mortgage", "insp", "taxamt", "rntp", "renteq"))
   sim %>%
