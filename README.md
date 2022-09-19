@@ -2,15 +2,22 @@ fusionData
 ================
 Kevin Ummel (<ummel@berkeley.edu>)
 
--   [Overview](#overview)
--   [Setup and install](#setup-and-install)
--   [Usage and structure](#usage-and-structure)
--   [Ingest survey data](#ingest-survey-data)
--   [Document variables](#document-variables)
--   [Harmonize variables](#harmonize-variables)
--   [Compile spatial data](#compile-spatial-data)
--   [Prepare for fusion](#prepare-for-fusion)
--   [Make it rain](#make-it-rain)
+-   <a href="#overview" id="toc-overview">Overview</a>
+-   <a href="#setup-and-install" id="toc-setup-and-install">Setup and
+    install</a>
+-   <a href="#usage-and-structure" id="toc-usage-and-structure">Usage and
+    structure</a>
+-   <a href="#ingest-survey-data" id="toc-ingest-survey-data">Ingest survey
+    data</a>
+-   <a href="#document-variables" id="toc-document-variables">Document
+    variables</a>
+-   <a href="#harmonize-variables" id="toc-harmonize-variables">Harmonize
+    variables</a>
+-   <a href="#compile-spatial-data" id="toc-compile-spatial-data">Compile
+    spatial data</a>
+-   <a href="#prepare-for-fusion" id="toc-prepare-for-fusion">Prepare for
+    fusion</a>
+-   <a href="#make-it-rain" id="toc-make-it-rain">Make it rain</a>
 
 ## Overview
 
@@ -36,7 +43,7 @@ The fusionData *master* branch can be cloned to its own project
 directory on your local machine using RStudio and [these
 instructions](https://book.cds101.com/using-rstudio-server-to-clone-a-github-repo-as-a-new-project.html).
 
-Use the following setup parameters*:
+Use the following setup parameters:
 
 ``` r
 Repository URL: https://github.com/ummel/fusionData
@@ -48,8 +55,10 @@ the repository has been cloned to your local project directory, you can
 install and load the package itself. You may be prompted to install some
 dependencies.
 
-*Note: if you use multi-factor authentication for your Github credentials, you will need to enable an SSH key, and will need to use `git@github.com:ummel/fusionData.git` as the Repository URL in the above setup parameters.
-
+\*Note: if you use multi-factor authentication for your Github
+credentials, you will need to enable an SSH key, and will need to use
+`git@github.com:ummel/fusionData.git` as the Repository URL in the above
+setup parameters.
 
 ``` r
 # Install the fusionData package locally
@@ -58,6 +67,12 @@ devtools::install()
 # Load fusionData package
 library(fusionData)
 ```
+
+You may be prompted to enter the password for the Google Drive account
+storing the remote files.
+
+-   username: fusionACSdata
+-   password: fusethis!!
 
 For full functionality, it is necessary to download the remotely-stored
 processed survey microdata and processed spatial data files. The
@@ -73,12 +88,6 @@ getSurveyProcessed(survey = "all")
 # Download only the essential remote spatial data files
 getGeoProcessed(dataset = "essential")
 ```
-
-You will be prompted to enter the password for the Google Drive account
-storing the remote files.
-
--   username: fusionACSdata
--   password: fusethis!!
 
 The download will take a few minutes. The files are automatically placed
 in the appropriate sub-directories of `/fusionData`, with the
@@ -309,10 +318,10 @@ goal is to produce a data.frame containing microdata observations that
 -   Ordered factors are used and defined whenever possible (as opposed
     to unordered).
 -   Standard column names are used for unique household identifiers
-    (e.g. “acs\_2019\_hid”); for person-level microdata the
+    (e.g. “acs_2019_hid”); for person-level microdata the
     within-household person identifier (integer) is always “pid”.
 -   Standard column names are used for observation weights; “weight” for
-    the primary weighting variable and “rep\_1”, etc. for replicate
+    the primary weighting variable and “rep_1”, etc. for replicate
     weights.
 -   Variables identifying respondent location are consistent with those
     defined in `geo-processed/concordance/geo_concordance.fst`.
@@ -338,8 +347,8 @@ head(select(recs, recs_2015_hid, weight, rep_1, sizeofgarage, recs_iecc_zone))
     6         10006  26060 37000      No garage IECC climate zones 6A-6B
 
 Notice that the household ID variable has a standardized name
-(“recs\_2015\_hid”), as does the observation weights column (“weight”)
-and the first of the 96 replicate weights (“rep\_1”). If the microdata
+(“recs_2015_hid”), as does the observation weights column (“weight”) and
+the first of the 96 replicate weights (“rep_1”). If the microdata
 consisted of person-level observations nested within households (e.g. as
 in the ACS), it would have have an additional “pid” integer variable to
 uniquely identify each person within the household.
@@ -363,8 +372,8 @@ levels(recs$sizeofgarage)
     [1] "No garage"                "One-car garage"          
     [3] "Two-car garage"           "Three-or-more-car garage"
 
-The variable “recs\_iecc\_zone” tells us something about each
-respondent’s location ([IECC climate
+The variable “recs_iecc_zone” tells us something about each respondent’s
+location ([IECC climate
 zone](https://basc.pnnl.gov/images/iecc-climate-zone-map)). This and
 other spatially-referenced variables are defined and named to be
 consistent with variables in the
@@ -424,7 +433,7 @@ standardized “dictionary.rds” file. `createDictionary()` uses the
 assigned variable descriptions and other information in the microdata to
 build the dictionary in a standardized way. You can see this at the end
 of
-[RECS\_2015\_H\_processed.R](https://github.com/ummel/fusionData/blob/master/survey-processed/RECS/2015/RECS_2015_H_processed.R):
+[RECS_2015_H\_processed.R](https://github.com/ummel/fusionData/blob/master/survey-processed/RECS/2015/RECS_2015_H_processed.R):
 
 Here is the resulting dictionary file for RECS 2015.
 
@@ -434,14 +443,14 @@ head(recs.dictionary)
 ```
 
     # A tibble: 6 × 8
-      survey vintage respondent variable  description    values          type      n
-      <chr>  <chr>   <chr>      <chr>     <chr>          <chr>           <chr> <int>
-    1 RECS   2015    H          adqinsul  Level of insu… [Not insulated… ord    5686
-    2 RECS   2015    H          agecdryer Age of clothe… [No clothes dr… ord    5686
-    3 RECS   2015    H          agecenac  Age of centra… [No central ai… ord    5686
-    4 RECS   2015    H          agecwash  Age of clothe… [No clothes wa… ord    5686
-    5 RECS   2015    H          agedw     Age of dishwa… [No dishwasher… ord    5686
-    6 RECS   2015    H          agefrzr   Age of most-u… [No freezer], … ord    5686
+      survey vintage respondent variable  description             values type      n
+      <chr>  <chr>   <chr>      <chr>     <chr>                   <chr>  <chr> <int>
+    1 RECS   2015    H          adqinsul  Level of insulation     [Not … ord    5686
+    2 RECS   2015    H          agecdryer Age of clothes dryer    [No c… ord    5686
+    3 RECS   2015    H          agecenac  Age of central air con… [No c… ord    5686
+    4 RECS   2015    H          agecwash  Age of clothes washer   [No c… ord    5686
+    5 RECS   2015    H          agedw     Age of dishwasher       [No d… ord    5686
+    6 RECS   2015    H          agefrzr   Age of most-used freez… [No f… ord    5686
 
 In practice, there is no reason for a typical user to ever open a
 survey’s dictionary file. The preferred and much more useful way to
@@ -466,30 +475,11 @@ dictionary. The usage is straightforward:
 compileDictionary()
 ```
 
-    ✓ Setting active project to '/home/kevin/Documents/Projects/fusionData'
-
-    ✓ Saving 'dictionary' to 'data/dictionary.rda'
-
-    • Document your data (see 'https://r-pkgs.org/data.html')
-
-    ✓ Saving 'surveys' to 'data/surveys.rda'
-
-    • Document your data (see 'https://r-pkgs.org/data.html')
-
-    dictionary.rds dimensions: 958 x 7
-
-    surveys.rds dimensions: 7 x 5
-
-As the console output tells us, `compileDictionary()` updates two files:
+As the console output reveals, `compileDictionary()` updates two files:
 `data/dictionary.rda` and `data/surveys.rda`. These files are part of
 the Github repository and are used by both the “Universal Survey
 Dictionary” and “Survey Harmonization Tool” Shiny apps that are part of
 fusionData.
-
-After using the `compileDictionary()` and before calling the `universe()` 
-Shiny app, update the list of donor surveys in `universe/app.R` to include
-the acronym for the donor survey and a description of the survey. The relevant
-code is on line 30. 
 
 The “Universal Survey Dictionary” is a Shiny app that can be accessed by
 the following call:
@@ -558,7 +548,7 @@ Specifically, the details of that particular harmony are added to the
 appropriate .R “harmony file” located at `/harmony/harmonies`. For
 example, the file describing how to harmonize RECS 2015 and ACS 2015
 variables is
-[RECS\_2015\_\_ACS\_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R).
+[RECS_2015\_\_ACS_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R).
 
 You should receive a pop-up message indicating if the harmony was
 successfully added to the local .R harmony file (it will be created, if
@@ -633,7 +623,7 @@ member “agep” value to 1 if less than 18 and 0 if 18 or more (see the
 field is the set to “sum” to instruct `harmonize()` to sum these values
 at the household level, which creates harmony with “numchild”.
 
-Very advanced example: Select “as\_comp1” for CEI 2015-2019 (Number of
+Very advanced example: Select “as_comp1” for CEI 2015-2019 (Number of
 males age 16 and over). Again, the ACS “agep” variable can be used to
 create harmony (as above for “numchild”), but we need to additionally
 restrict the harmony to males only. This is done by using the Adjustment
@@ -654,30 +644,31 @@ element defines a harmony. Like this one, defining the harmony between
 the “fuelheat” variable in the RECS and the “hfl” variable in the ACS.
 
 ``` r
+
 fuelheat__hfl = list(
-    RECS = list(
-      groups = 1:7,
-      levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
-      levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
-      breaks = "",
-      adj = ""),
-    ordered = FALSE,
-    comment = "",
-    modified = "2021-07-03 12:10:17"),
+RECS = list(
+groups = 1:7,
+levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
+breaks = "",
+adj = ""),
+ACS = list(
+groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
+levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
+breaks = "",
+adj = ""),
+ordered = FALSE,
+comment = "",
+modified = "2021-07-03 12:10:17"),
 ```
 
 This list object contains all of the information necessary to construct
 RECS and ACS microdata containing a new variable called
-"fuelheat\_\_hfl“; i.e. the harmonized version of the two associated
+“fuelheat\_\_hfl”; i.e. the harmonized version of the two associated
 heating fuel variables. This is precisely what the `harmonize()`
 function does – typically when called by `prepare()` as explained below
 – using all of the harmonies available in the specified harmony file.
 Note that harmonized variables are always indicated by a
-double-underscore (”\_\_").
+double-underscore (“\_\_“).
 
 Using the `harmony()` app to manually define harmonies and then letting
 `harmonize()` take care of subsequent data manipulation makes the
@@ -708,7 +699,7 @@ households.
 Ingestion of spatial datasets is generally less onerous than for survey
 data; there are fewer requirements that the processed data must meet.
 The general strategy will look familiar: Raw spatial data is stored in
-`/geo-raw`. The raw data is transformed to a "\*\_processed.rds" file
+`/geo-raw`. The raw data is transformed to a “\*\_processed.rds” file
 stored in `/geo-processed`. The associated .R file is stored in the same
 location.
 
@@ -736,14 +727,15 @@ head(irs[, 1:5])
 ```
 
     # A tibble: 6 × 5
-      zcta10 vintage `Mean income per return` `Mean income per p… `Mean people per …
-      <chr>    <int>                    <int>               <int>              <dbl>
-    1 35004     2018                    58600               28760               2.04
-    2 35005     2018                    41200               21200               1.94
-    3 35006     2018                    53100               25300               2.10
-    4 35007     2018                    62300               29240               2.13
-    5 35010     2018                    52900               25700               2.06
-    6 35014     2018                    50300               25900               1.94
+      zcta10 vintage `Mean income per return` `Mean income per person` Mean people…¹
+      <chr>    <int>                    <int>                    <int>         <dbl>
+    1 35004     2018                    58600                    28760          2.04
+    2 35005     2018                    41200                    21200          1.94
+    3 35006     2018                    53100                    25300          2.10
+    4 35007     2018                    62300                    29240          2.13
+    5 35010     2018                    52900                    25700          2.06
+    6 35014     2018                    50300                    25900          1.94
+    # … with abbreviated variable name ¹​`Mean people per return`
 
 The `irs` object contains processed spatial data constructed from the
 [IRS Statistics of Income
@@ -755,7 +747,7 @@ here](https://github.com/ummel/fusionData/blob/master/geo-processed/IRS-SOI/IRS-
 The “zcta10” column indicates the Zip Code Tabulation Area (circa 2010)
 associated with each observation.
 
-The “zcta10” variable is also found in the “geo\_concordance.fst” file,
+The “zcta10” variable is also found in the “geo_concordance.fst” file,
 which contains information about how to link geographic units to PUMA’s.
 Its creation relies heavily on data from the Missouri Census Data
 Center’s [Geocorr
@@ -801,7 +793,7 @@ and “bg10” in order to allow a smooth merge with the concordance file
 Unlike with processed *survey* data, the naming convention for processed
 spatial data files is quite relaxed. The function `compileSpatial()`
 automatically detects and compiles all files in `/geo-processed` ending
-with "\_processed.rds". As long as a processed spatial data file has the
+with “\_processed.rds”. As long as a processed spatial data file has the
 necessary suffix – and meets the two hard requirements mentioned above –
 it will be compiled into the `geo_predictors.fst` file.
 
@@ -857,6 +849,7 @@ data <- assemble(prep)
     Identifying donor fusion variables...
     Adding the following fusion variables:
      adqinsul, agecdryer, agecenac, agecwash, agedw, agefrzr, agerfri1, agerfri2, aircond, altfuelpev, amtmicro, appother, athome, attccool, attcheat, attic, atticfin, audit, auditchg, backup, basecool, basefin, baseheat, benother, blender, btuel, btuelahucol, btuelahuheat, btuelcdr, btuelcfan, btuelcok, btuelcol, btuelcw, btueldhum, btueldwh, btuelevapcol, btuelfrz, btuelhtbheat, btuelhtbpmp, btuelhum, btuellgt, btuelmicro, btuelnec, btuelplpmp, btuelrfg, btuelrfg1, btuelrfg2, btuelsph, btueltv1, btueltv2, btueltvrel, btuelwth, btufo, btufonec, btufosph, btufowth, btulp, btulpcdr, btulpcok, btulpnec, btulpsph, btulpwth, btung, btungcdr, btungcok, btunghtbheat, btungnec, btungplheat, btungsph, btungwth, cablesat, cdd30yr, cdd65, cdd80, cellar, cellphone, cenachp, coffee, coldma, combodvr, cooktuse, cooltype, crockpot, cufeetng, cufeetngcdr, cufeetngcok, cufeetnghtbheat, cufeetngnec, cufeetngplheat, cufeetngsph, cufeetngwth, cwasher, dbt1, dbt99, dishwash, dntheat, dolelahucol, dolelahuheat, dolelcdr, dolelcfan, dolelcok, dolelcol, dolelcw, doleldhum, doleldwh, dolelevapcol, dolelfrz, dolelhtbheat, dolelhtbpmp, dolelhum, dolellgt, dolelmicro, dolelnec, dolelplpmp, dolelrfg, dolelrfg1, dolelrfg2, dolelsph, doleltv1, doleltv2, doleltvrel, dolelwth, dolfonec, dolfosph, dolfowth, dollarel, dollarfo, dollarlp, dollarng, dollpcdr, dollpcok, dollpnec, dollpsph, dollpwth, dolngcdr, dolngcok, dolnghtbheat, dolngnec, dolngplheat, dolngsph, dolngwth, door1sum, drafty, dryer, dryrfuel, dryruse, dualcooktfuel, dualovenfuel, dvd, dwashuse, dwcycle, eelights, elcool, elfood, elother, elperiph, elwarm, elwater, energyasst, energyasst11, energyasst12, energyasst13, energyasst14, energyasst15, energyasstoth, equipage, equipaux, equipauxtype, equipm, equipmuse, escwash, esdishw, esdryer, esfreeze, esfrig, eslight, eswater, eswin, foodproc, foother, fopay, fowarm, fowater, freeaudit, fuelaux, fuelh2o, fuelh2o2, fuelpool, fueltub, gallonfo, gallonfonec, gallonfosph, gallonfowth, gallonlp, gallonlpcdr, gallonlpcok, gallonlpnec, gallonlpsph, gallonlpwth, gargcool, gargheat, gndhdd65, gwt, h2oheatapt, hdd30yr, hdd50, hdd65, heathome, highceil, hotma, ice, intdata, intdataacc, intstream, inwireless, kwh, kwhahucol, kwhahuheat, kwhcdr, kwhcfan, kwhcok, kwhcol, kwhcw, kwhdhum, kwhdwh, kwhevapcol, kwhfrz, kwhhtbheat, kwhhtbpmp, kwhhum, kwhlgt, kwhmicro, kwhnec, kwhplpmp, kwhrfg, kwhrfg1, kwhrfg2, kwhsph, kwhtv1, kwhtv2, kwhtvrel, kwhwth, lgtin4, lgtincan, lgtincfl, lgtincntl, lgtinled, lgtinnum, lgtoutcntl, lgtoutnum, locrfri2, lpcook, lpgpay, lpother, lpwarm, lpwater, micro, moisture, monpool, montub, morethan1h2o, ncombath, nhafbath, noacbroke, noacdays, noacel, noachelp, noheatbroke, noheatbulk, noheatdays, noheatel, noheathelp, noheatng, notmoist, numatticfan, numberac, numcfan, numfloorfan, numfreez, nummeal, numsmphone, numwholefan, oa_lat, othrooms, outgrill, outgrillfuel, outlet, oven, ovenfuel, ovenuse, payhelp, pelletamt, pelletbtu, periodel, periodfo, periodlp, periodng, playsta, pool, prkgplc1, protherm, prothermac, rebateapp, recbath, recycapp, ricecook, rooftype, scaleb, scalee, scaleg, sepcooktuse, sepdvr, sepovenuse, sizeofgarage, sizfreez, sizrfri1, sizrfri2, smartmeter, smarttherm, solar, solother, solwater, stories, stove, stovefuel, stovenfuel, studio, swampcol, swimpool, taxcreditapp, tempgone, tempgoneac, temphome, temphomeac, tempnite, tempniteac, thermain, thermainac, toast, toastovn, topfront, totalbtu, totalbtucdr, totalbtucok, totalbtuhtb, totalbtunec, totalbtupl, totalbtusph, totalbtuwth, totaldol, totaldolcdr, totaldolcok, totaldolhtb, totaldolnec, totaldolpl, totaldolsph, totaldolwth, totcsqft, tothsqft, totsqft_en, totucsqft, totusqft, tvaudiosys, tvcolor, tvonwd1, tvonwd2, tvonwe1, tvonwe2, tvsize1, tvsize2, tvtype1, tvtype2, typeglass, typerfr1, typerfr2, ugashere, ugcook, ugoth, ugwarm, ugwater, uprtfrzr, usecenac, useel, usefo, uselp, usemoisture, useng, usenotmoist, usesolar, usewood, usewwac, vcr, walltype, washload, wdother, wdpellet, wdwarm, wdwater, wheatage, wheatsiz, windows, winframe, woodamt, woodbtu, woodlogs, wsf, wwacage 
+    Applying integer scaling to spatial predictor variables...
     Merging donor spatial predictor variables...
     Merging recipient spatial predictor variables...
     Assembling output data frames...
@@ -875,16 +868,16 @@ lapply(data, dim)
 ```
 
     $RECS_2015
-    [1] 5686  641
+    [1] 5686  649
 
     $ACS_2015
-    [1] 1226728     234
+    [1] 1226728     242
 
 A key purpose of `prepare()` is to harmonize the donor and recipient
 “shared” variables. This is done internally by the `harmonize()`
 function, using the variable harmonies created by users via the
 `harmony()` tool. In this case, `harmonize()` is using the
-[RECS\_2015\_\_ACS\_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R)
+[RECS_2015\_\_ACS_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R)
 file to harmonize the donor and recipient microdata. Let’s look at a few
 of the shared variables after harmonization.
 
@@ -894,12 +887,12 @@ head(data$RECS_2015[v])
 ```
 
       weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp
-    1  12090              3               2               2            2
-    2  14400              2               1               2            2
-    3  23330              4               2               1            2
-    4  12170              3               2               4            2
-    5  16720              3               2               2            2
-    6  26060              0               2               1            1
+    1  10855              3               2               2            2
+    2  13165              2               1               2            2
+    3  22095              4               2               1            2
+    4  10935              3               2               4            2
+    5  15485              3               2               2            2
+    6  24825              0               2               1            1
 
 ``` r
 head(data$ACS_2015[v])
@@ -919,7 +912,7 @@ This is because `harmonize()` maps each original value/level to a
 (integer) group assignment as specified in the relevant `.R` harmony
 file. The one exception is when *numeric* variables in the two surveys
 are conceptually identical and are then included “as is” or
-(automatically) converted to percentiles.
+(automatically) converted to scaled values.
 
 Since RECS and ACS are both nationally representative surveys, the
 distribution of the harmonized variables should look pretty similar
@@ -984,12 +977,11 @@ located within the feasible set of PUMA’s. The calculation uses the
 efficient [gower
 package](https://cran.r-project.org/web/packages/gower/index.html); even
 so, random sampling of the ACS is necessary to make it tractable. An ACS
-household (or multiple if `implicates` &gt; 1) is then randomly
-selected, where the probability of selection is *P* / *S* and the
-associated PUMA is imputed to the donor household. That is, the naive,
-population-based probability of selection (*P*) is modified by the
-observable similarity of the donor household and each ACS household
-(*S*).
+household (or multiple if `implicates` \> 1) is then randomly selected,
+where the probability of selection is *P* / *S* and the associated PUMA
+is imputed to the donor household. That is, the naive, population-based
+probability of selection (*P*) is modified by the observable similarity
+of the donor household and each ACS household (*S*).
 
 ------------------------------------------------------------------------
 
@@ -999,7 +991,7 @@ recipient microdata. Pre-compiled spatial variables (those in
 microdata at the PUMA level, using imputed PUMA’s for the donor. Spatial
 variables are indicated by the double-dot (“..”) in the variable name,
 analogous to the way that harmonized variables are indicated by the
-double-underscore ("\_\_").
+double-underscore (“\_\_“).
 
 Let’s look at the variables in the recipient ACS microdata.
 
@@ -1113,17 +1105,21 @@ names(data$ACS_2015)
     [207] "eia.seds..lpgp"          "eia.seds..fllp"         
     [209] "eia.seds..elmh"          "eia.seds..ntth"         
     [211] "eia.seds..lpgh"          "eia.seds..flgh"         
-    [213] "irs.soi..mipr"           "irs.soi..mipp"          
-    [215] "irs.soi..mppr"           "irs.soi..mdpr"          
-    [217] "irs.soi..prsr"           "irs.soi..prjr"          
-    [219] "irs.soi..phohr"          "irs.soi..pppr"          
-    [221] "irs.soi..pvpr"           "irs.soi..prcntelr"      
-    [223] "irs.soi..prfr"           "irs.soi..prcntetr"      
-    [225] "irs.soi..prie"           "irs.soi..priu"          
-    [227] "irs.soi..eftr"           "irs.soi..palt2"         
-    [229] "irs.soi..pa2t5"          "irs.soi..pa5t7"         
-    [231] "irs.soi..pa7t1"          "irs.soi..pa1t2"         
-    [233] "irs.soi..pa2om"          "nrel.urdb..rsed"        
+    [213] "eia.seds..elce"          "eia.seds..ntge"         
+    [215] "eia.seds..lpge"          "eia.seds..flle"         
+    [217] "eia.seds..eleh"          "eia.seds..nteh"         
+    [219] "eia.seds..lpeh"          "eia.seds..fleh"         
+    [221] "irs.soi..mipr"           "irs.soi..mipp"          
+    [223] "irs.soi..mppr"           "irs.soi..mdpr"          
+    [225] "irs.soi..prsr"           "irs.soi..prjr"          
+    [227] "irs.soi..phohr"          "irs.soi..pppr"          
+    [229] "irs.soi..pvpr"           "irs.soi..prcntelr"      
+    [231] "irs.soi..prfr"           "irs.soi..prcntetr"      
+    [233] "irs.soi..prie"           "irs.soi..priu"          
+    [235] "irs.soi..eftr"           "irs.soi..palt2"         
+    [237] "irs.soi..pa2t5"          "irs.soi..pa5t7"         
+    [239] "irs.soi..pa7t1"          "irs.soi..pa1t2"         
+    [241] "irs.soi..pa2om"          "nrel.urdb..rsed"        
 
 The string to the left of the “..” identifies the spatial dataset that
 the variable comes from (e.g. “irs.soi”). The string to the right is a
@@ -1134,7 +1130,7 @@ naming/documentation convention (it is flexible by design), these
 non-nonsensical-but-unique names are the safest way to identify spatial
 variables.
 
-The "loc..\*" variables refer to the location variables directly
+The “loc..\*” variables refer to the location variables directly
 observed in the donor and assignable to recipient microdata on the basis
 of respondent PUMA.
 
@@ -1193,6 +1189,7 @@ data <- assemble(prep,
     Adding the following fusion variables:
      agecenac, cooltype, kwhcol 
     Performing principal components analysis...
+    Applying integer scaling to spatial predictor variables...
     Merging donor spatial predictor variables...
     Merging recipient spatial predictor variables...
     Assembling output data frames...
@@ -1203,17 +1200,13 @@ lapply(data, dim)
 ```
 
     $RECS_2015
-    [1] 26213    67
+    [1] 28430    67
 
     $ACS_2015
     [1] 1226728      64
 
 The number of observations in the donor microdata is now higher,
-reflecting the use of `implicates = 5`. Note that the number of rows has
-actually increased by less than a factor of five. This is because
-`assignLocation()` collapses duplicate household-PUMA observations and
-adjusts the sample “weight” column accordingly. This reduces the amount
-of data without affecting subsequent statistical results.
+reflecting the use of `implicates = 5`.
 
 The difference in the number of columns between the RECS and ACS
 microdata is due to the former’s inclusion of our three requested fusion
@@ -1267,73 +1260,5 @@ names(data$ACS_2015)
 ## Make it rain
 
 At this point, we are ready to fuse. This is straightforward using the
-`train()` and `fuse()` functions from the fusionModel package. To make
-this even easier, `assemble()` donor output includes a “fusion.vars”
-attribute that can be passed directly to `train()` to identify the
-variables available to be fused.
-
-    library(fusionModel)
-
-``` r
-fit <- train(data = data$RECS_2015, 
-             y = attr(data, "fusion.vars"), 
-             ignore = "recs_2015_hid", 
-             weight = "weight",
-             cores = 2,
-             maxcats = 10,
-             complexity = 0.01)
-```
-
-    3 fusion variables
-    62 initial predictor variables
-    26213 observations
-    Searching for derivative relationships...
-    Determining order of fusion variables...
-    Building fusion models...
-
-We then `fuse()` (i.e. simulate) the fusion variables onto the
-harmonized ACS microdata. This is a non-trivial exercise, since the
-recipient ACS microdata has 1226728 observations. Ensuring
-`induce = FALSE` (the default) eases the computation and memory burden
-considerably. The call below shouldn’t require more than about 5GB of
-RAM.
-
-``` r
-sim <- fuse(data = data$ACS_2015, train.object = fit)
-```
-
-A quick check that the fusion output looks plausible:
-
-``` r
-nrow(sim)
-```
-
-    [1] 1226728
-
-``` r
-head(sim)
-```
-
-         kwhcol                   agecenac                                 cooltype
-    1  576.3857 No central air conditioner Individual window/wall or portable units
-    2 2367.5607         10 to 14 years old          Central air conditioning system
-    3 3459.5585      Less than 2 years old          Central air conditioning system
-    4 4432.3754         10 to 14 years old          Central air conditioning system
-    5    0.0000 No central air conditioner                      No air conditioning
-    6 2298.4798           5 to 9 years old          Central air conditioning system
-
-``` r
-summary(data$RECS_2015$kwhcol)
-```
-
-       Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-          0     390    1113    1875    2533   20350 
-
-``` r
-summary(sim$kwhcol)
-```
-
-       Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-        0.0   371.1  1071.4  1836.8  2513.6 20350.0 
-
-Onward and upward!
+`train()` and `fuse()` functions from the [fusionModel
+package](https://github.com/ummel/fusionmodel).

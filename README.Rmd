@@ -42,6 +42,8 @@ Project directory name: fusionData
 
 You will be prompted to enter your Github username and password. After the repository has been cloned to your local project directory, you can install and load the package itself. You may be prompted to install some dependencies.
 
+*Note: if you use multi-factor authentication for your Github credentials, you will need to enable an SSH key, and will need to use `git@github.com:ummel/fusionData.git` as the Repository URL in the above setup parameters.
+
 ```r
 # Install the fusionData package locally
 devtools::install()
@@ -49,6 +51,11 @@ devtools::install()
 # Load fusionData package
 library(fusionData)
 ```
+
+You may be prompted to enter the password for the Google Drive account storing the remote files.
+
+* username: fusionACSdata
+* password: fusethis!!
 
 For full functionality, it is necessary to download the remotely-stored processed survey microdata and processed spatial data files. The following section ("Structure and usage") has more detail about this and the associated reasoning. See `?getSurveyProcessed` and `?getGeoProcessed` as well. To get up and running, you'll need to call the following commands.
 
@@ -59,11 +66,6 @@ getSurveyProcessed(survey = "all")
 # Download only the essential remote spatial data files
 getGeoProcessed(dataset = "essential")
 ```
-
-You will be prompted to enter the password for the Google Drive account storing the remote files.
-
-* username: fusionACSdata
-* password: fusethis!
 
 The download will take a few minutes. The files are automatically placed in the appropriate sub-directories of `/fusionData`, with the directories created if necessary. After successful download, your fusionData "system" is ready to go.
 
@@ -225,11 +227,11 @@ In practice, there is no reason for a typical user to ever open a survey's dicti
 
 The previous section showed how and where a survey's "dictionary.rds" file(s) are created. Whenever a dictionary file is added or updated, it is necessary to run the `compileDictionary()` function to compile all of fusionData's individual survey dictionaries into a single "universal" dictionary. The usage is straightforward:
 
-```{r, echo = TRUE}
+```r
 compileDictionary()
 ```
 
-As the console output tells us, `compileDictionary()` updates two files: `data/dictionary.rda` and `data/surveys.rda`. These files are part of the Github repository and are used by both the "Universal Survey Dictionary" and "Survey Harmonization Tool" Shiny apps that are part of fusionData.
+As the console output reveals, `compileDictionary()` updates two files: `data/dictionary.rda` and `data/surveys.rda`. These files are part of the Github repository and are used by both the "Universal Survey Dictionary" and "Survey Harmonization Tool" Shiny apps that are part of fusionData.
 
 The "Universal Survey Dictionary" is a Shiny app that can be accessed by the following call:
 
@@ -309,19 +311,19 @@ A harmony file can be `dget`-d to return a list of lists, where each element def
 ```r
 
 fuelheat__hfl = list(
-    RECS = list(
-      groups = 1:7,
-      levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
-      levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
-      breaks = "",
-      adj = ""),
-    ordered = FALSE,
-    comment = "",
-    modified = "2021-07-03 12:10:17"),
+RECS = list(
+groups = 1:7,
+levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
+breaks = "",
+adj = ""),
+ACS = list(
+groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
+levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
+breaks = "",
+adj = ""),
+ordered = FALSE,
+comment = "",
+modified = "2021-07-03 12:10:17"),
 
 ```
 This list object contains all of the information necessary to construct RECS and ACS microdata containing a new variable called "fuelheat__hfl"; i.e. the harmonized version of the two associated heating fuel variables. This is precisely what the `harmonize()` function does -- typically when called by `prepare()` as explained below -- using all of the harmonies available in the specified harmony file. Note that harmonized variables are always indicated by a double-underscore ("__").
@@ -399,7 +401,7 @@ head(data$RECS_2015[v])
 head(data$ACS_2015[v])
 ```
 
-Notice that the harmonized variable *values* are typically integers (possibly factorized); that is, they contain no intelligible labels. This is because `harmonize()` maps each original value/level to a (integer) group assignment as specified in the relevant `.R` harmony file. The one exception is when *numeric* variables in the two surveys are conceptually identical and are then included "as is" or (automatically) converted to percentiles.
+Notice that the harmonized variable *values* are typically integers (possibly factorized); that is, they contain no intelligible labels. This is because `harmonize()` maps each original value/level to a (integer) group assignment as specified in the relevant `.R` harmony file. The one exception is when *numeric* variables in the two surveys are conceptually identical and are then included "as is" or (automatically) converted to scaled values.
 
 Since RECS and ACS are both nationally representative surveys, the distribution of the harmonized variables should look pretty similar across the two data frames. We can confirm this for the `fuelheat__hfl` variable, which creates harmony between the RECS and ACS heating fuel variables ("fuelheat" and "hfl", respectively). We can compare the proportion of cases by harmonized value.
 
@@ -466,7 +468,7 @@ data <- assemble(prep,
 lapply(data, dim)
 ```
 
-The number of observations in the donor microdata is now higher, reflecting the use of `implicates = 5`. Note that the number of rows has actually increased by less than a factor of five. This is because `assignLocation()` collapses duplicate household-PUMA observations and adjusts the sample "weight" column accordingly. This reduces the amount of data without affecting subsequent statistical results.
+The number of observations in the donor microdata is now higher, reflecting the use of `implicates = 5`.
 
 The difference in the number of columns between the RECS and ACS microdata is due to the former's inclusion of our three requested fusion variables. Otherwise, both data frames are entirely consistent with one another; `assemble()` performs formal checks to ensure this is the case. Each microdata set includes a unique household identifier variable and an identical set of harmonized survey and spatial variables that can be exploited by the fusion process.
 
@@ -478,39 +480,4 @@ names(data$ACS_2015)
 
 ## Make it rain
 
-At this point, we are ready to fuse. This is straightforward using the `train()` and `fuse()` functions from the fusionModel package. To make this even easier, `assemble()` donor output includes a "fusion.vars" attribute that can be passed directly to `train()` to identify the variables available to be fused.
-
-```
-library(fusionModel)
-```
-
-```{r, echo = FALSE, results = "hide"}
-library(fusionModel)
-```
-
-```{r, echo = TRUE}
-fit <- train(data = data$RECS_2015, 
-             y = attr(data, "fusion.vars"), 
-             ignore = "recs_2015_hid", 
-             weight = "weight",
-             cores = 2,
-             maxcats = 10,
-             complexity = 0.01)
-```
-
-We then `fuse()` (i.e. simulate) the fusion variables onto the harmonized ACS microdata. This is a non-trivial exercise, since the recipient ACS microdata has `r nrow(data$ACS_2015) ` observations. Ensuring `induce = FALSE` (the default) eases the computation and memory burden considerably. The call below shouldn't require more than about 5GB of RAM.
-
-```{r, echo = TRUE, results = "hide"}
-sim <- fuse(data = data$ACS_2015, train.object = fit)
-```
-
-A quick check that the fusion output looks plausible:
-
-```{r, echo = TRUE}
-nrow(sim)
-head(sim)
-summary(data$RECS_2015$kwhcol)
-summary(sim$kwhcol)
-```
-
-Onward and upward!
+At this point, we are ready to fuse. This is straightforward using the `train()` and `fuse()` functions from the [fusionModel package](https://github.com/ummel/fusionmodel).
