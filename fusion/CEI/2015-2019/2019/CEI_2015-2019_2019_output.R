@@ -28,7 +28,6 @@ train.data <- fst::read_fst(file.path(in.dir, "CEI_2015-2019_2019_train.fst"))
 # Extract variable names from the prediction data (without loading to memory)
 pred.vars <- names(fst::fst(file.path(in.dir, "CEI_2015-2019_2019_predict.fst")))
 
-
 # Identify the fusion variables
 fusion.vars <- setdiff(names(train.data), c("weight", pred.vars))
 
@@ -112,14 +111,12 @@ gc()
 # Load the prediction data
 pred.data <- fst::read_fst(file.path(in.dir, "CEI_2015-2019_2019_predict.fst"))
 
-
 # Fuse multiple implicates to ACS
-fsn.path = file.path(out.dir, "CEI_2015-2019_2019_model.fsn")
 start = Sys.time()
 sim <- fuse(data = pred.data,
             file = fsn.path,
             k = 10,
-            M = 8,
+            M = 30,
             cores = num.cores)
 print(Sys.time() - start)
 
