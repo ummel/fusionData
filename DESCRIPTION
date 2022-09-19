@@ -22,7 +22,8 @@ Depends:
     gt,
     rhandsontable,
     shinyjs,
-    shinyWidgets
+    shinyWidgets,
+    matrixStats
 Imports: 
     labelled,
     pbapply,
