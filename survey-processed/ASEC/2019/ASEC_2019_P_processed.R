@@ -11,13 +11,9 @@ setwd(here())
 source("R/utils.R")
 source("R/createDictionary.R")
 
-# flag for testing code - only reads in subset of data 
-test = F
-
-
 # Data ----
 
-if (test == F){
+if (!file.exists('./survey-processed/ASEC/2019/P_data.rds')){
   # use IPUMSR package to read in extract and DDI (codebook)
   # will output a haven_labelled tible, with var values, labels, and descriptions
   
@@ -29,6 +25,10 @@ if (test == F){
   d <- read_ipums_micro(ddi)
   
   setwd(here())
+  
+  # Limit to occupied households (so matches ACS sample) ----
+  table(d$gq) # only 74 obs in group quarters
+  d <- filter(d, gq == 1)
   
   # Limit to P ----
   
@@ -44,16 +44,17 @@ if (test == F){
   var_info <- var_info[c(1, 2, pstart:pend), ]
   var_info <- as.data.table(var_info)
   
-  # # save both test data and ddi to read in so don't have to do the above each time
-  # setwd(here())
-  # saveRDS(d[1:10000, ], './survey-processed/ASEC/2019/P_data.rds')
-  # saveRDS(var_info, './survey-processed/ASEC/2019/P_info.rds')
+  # save both data and ddi to read in so don't have to do the above each time
+  saveRDS(d, './survey-processed/ASEC/2019/P_data.rds')
+  saveRDS(var_info, './survey-processed/ASEC/2019/P_info.rds')
 }else{
   
   d <- readRDS('./survey-processed/ASEC/2019/P_data.rds')
   var_info <- readRDS('./survey-processed/ASEC/2019/P_info.rds')
+  d <- as.data.table(d)
 
 }
+
 
 # Factors ----
 
@@ -69,10 +70,77 @@ names(d)[int]
 # convert integers to ordered factors - will be ordered based on IPUMS ordering  
 # d needs to be a data.table first 
 intvars <- names(d)[int]
-d <- as.data.table(d)
 d[ , (intvars) := lapply(.SD, as_factor, ordered = T),
    .SDcols = intvars]
 
+## ~ vet status ----
+# in the ACS,  multiple periods of military service are combined into one variable
+# try to create an equivalent in the ASEC
+# only use vet1, vet2, vet3 b/c ACS reports maximum 3 tours of duty
+d[ , vetserv := if_else(vet2 == 'NIU' & vet3 == 'NIU' & vet4 == 'NIU', as.character(vet1), 'Served multiple periods')]
+d[ , vetserv := factor(vetserv, levels = c(levels(vet1), 'Served multiple periods'), ordered = T)]
+
+# add to list of intvars
+intvars <- c(intvars, 'vetserv')
+
+## ~ number of own children ----
+
+# in the ACS, 'own children' are defined as never-married own children OF THE HOUSEHOLDER 
+# under the age of 18 --> create an equivalent variable in the ASEC
+d[ , ownchild := ifelse(age < 18 & marst == 'Never married/single' 
+                        & (momloc == 1 | poploc == 1 | momloc2 == 1 | poploc2 == 1), 1, 0)]
+
+# sum of own children of the householder
+d[ , noc := sum(ownchild), by = serial]
+
+# make own child factor
+d[ , ownchild := factor(ownchild, labels = c('Not child (<18) of householder', 
+                                             'Child (<18) of householder'), ordered = T)]
+
+# presence and age of own children 
+  # someone has an own child in the family *if* 
+  #   - someone's momloc/poploc/momloc2/poploc2 is the same as their pernum 
+  #   - that person is under 18
+  # NB: even though own children only refers to the number of own children of the householder
+
+# first, sum any observations under 18 that have parent location 1 
+d[ , nchild17 := ifelse(pernum == 1, sum(which(momloc == 1 & age <18 |
+                                               momloc2 == 1 & age <18 | 
+                                               poploc == 1 & age <18 |
+                                               poploc2 == 1 & age <18) != 0), NA), by = serial]
+
+# then loop through possible remaining parent locations, and sum those children 
+locmax <- pmax(max(d$momloc), max(d$momloc2), max(d$poploc), max(d$poploc2))
+
+for (i in c(2:locmax)){
+  d[ , nchild17 := ifelse(pernum == i, sum(which(momloc == i & age <18 |
+                                                 momloc2 == i & age <18 | 
+                                                 poploc == i & age <18 |
+                                                 poploc2 == i & age <18) != 0), nchild17),
+     by = serial]}
+
+
+# for anyone with pernum above locmax - they have no children present 
+d[ , nchild17 := ifelse(pernum > locmax, 0, nchild17)]
+
+#d[serial %in% c(27, 36, 68409), c('serial', 'pernum', 'nchild', 'age', 'momloc', 'momloc2', 'poploc', 'poploc2', 'nchild17')]
+
+# then create variable which combines nchild17 and sex - matches ACS paoc
+d[ , child_pres_age := fcase(sex == 'Male' | age < 16, 0,
+                             nchild17 == 0, 4, # no own children
+                             eldch < 6, 1, # only children under 6
+                             yngch >= 6 & nchild17 > 0, 2, # only children aged 6-17
+                             default = 3)] # children under 6 and children 6-17 (must be multiple chilren)
+
+
+# create labels
+d[ , child_pres_age := factor(child_pres_age, labels = c('NIU', 'only kids < 6', 'kids 6-17', 
+                                                         'kids < 6 and kids 6-17', 'no own kids'),
+                              ordered = T)]
+table(d$nchild, d$child_pres_age, useNA = 'always')
+
+# add the factor variables to the list 
+intvars <- c(intvars, 'ownchild', 'child_pres_age')
 
 # Blank Values ----
 
@@ -170,7 +238,7 @@ NIUreplace <- list(
   workly= 'Non-adult',
   wkswork2 = 'Less than 15 or did not work last year',
   wksunem2 = 'Less than 15 or did not work last year',
-  fullpart = l15,
+  fullpart = 'Less than 15 or did not work last year',
   nwlookwk = 'Less than 15 or did not work last year',
   pension = 'Less than 15 or did not work last year',
   firmsize = 'Less than 15 or did not work last year',
@@ -347,7 +415,9 @@ NIUreplace <- list(
   vet3 = 'Under 17 or have not served in the U.S. Armed Forces for 3 or more periods of service',
   vet4 = 'Under 17 or have not served in the U.S. Armed Forces for 4 or more periods of service',
   gotwic = 'Not female',
-  kidcneed = 'Over 14'
+  kidcneed = 'Over 14',
+  vetserv = 'Under 17 or have not served in the U.S. Armed Forces', 
+  child_pres_age = 'Male / female under 16'
 )
 
 # # specific that all these codes are NIU
@@ -426,8 +496,14 @@ d[ , (intvars) := lapply(.SD, droplevels), .SDcols = intvars]
 # Dictionary ----
 
 # label every variable with it's label from the IPUMS codebook
+# add in labels for additional variables that I have constructed
 d <- labelled::set_variable_labels(.data = d, 
-                              .labels = setNames(as.list(var_info$var_label),
+                              .labels = setNames(as.list(c(var_info$var_label, 
+                                                           "[constructed] Veteran's period(s) of service",
+                                                           "[constructed] Child of householder, under 18 and never married",
+                                                           "[constructed] Number of own children belonging to householder",
+                                                           "[constructed] Number of own children in household under 17",
+                                                           "[constructed] Presence and age of children, women only")),
                                                  names(d)))
 
 # drop flags and top code flags
@@ -450,7 +526,8 @@ saveRDS(dictionary, file = "survey-processed/ASEC/2019/ASEC_2019_P_dictionary.rd
 fst::write_fst(x = d, path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst", compress = 100)
   
 
-#d <- fst::read_fst(path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst")
+# d <- fst::read_fst(path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst") %>%  as.data.table()
+# dictionary <- readRDS(file = "survey-processed/ASEC/2019/ASEC_2019_P_dictionary.rds")
 
 # Compile Universal ----
 compileDictionary()
@@ -460,5 +537,26 @@ compileDictionary()
 # load('./data/dictionary.rda')
 # load('./data/surveys.rda')
 # 
-# universe()
+universe()
 # harmony()
+
+# # testing harmonize mutate code
+# d <- d %>%
+#   mutate(test = empstat)
+# class(d$test)
+# d <- d %>%
+#   mutate(test = if_else(age != '15', test, factor('NIU: Less than 15', ordered = T)))
+# 
+# # check if incretir == incrint1 + incrint2
+# d[ , check := incret1 + incret2]
+# summary(d$incretir)
+# summary(d$check)
+# 
+# d[incretir != 0 | check != 0] %>%
+# ggplot() +
+#   geom_density(aes(x = asinh(incretir)), color = 'red') +
+#   geom_density(aes(x = asinh(check)), color = 'blue') 
+
+
+# experiment with vet status
+  
