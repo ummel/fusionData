@@ -11,7 +11,7 @@ prep <- prepare(donor = "RECS_2015",
 
 # Removed pca for prep 
 data <- assemble(prep,
-                 fusion.variables = c("btung", "kwh", "cooltype", "scalee", 'noheatng', "btufo", "btulp",
+                 fusion.variables = c("btung", "kwh", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp",
                                       "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk'),
                  window = 2)
 
@@ -22,11 +22,11 @@ N <- nrow(data$RECS_2015)
 #Create new custom variabes 
 data$RECS_2015 <- data$RECS_2015 %>%
   mutate(
-    disconnect = scalee != "Never",
+    insec = scalee != "Never" | scaleg != "Never"| scaleb != "Never",
     noheat = noheatbroke == "Yes" | noheatbulk == "Yes" |  noheatel == "Yes" | noheatng == "Yes",
     noac = noacel == "Yes" | noacbroke == "Yes"
   ) %>%
-  select(-all_of(c("scalee", "noacel", "noacbroke", "noheatbroke", "noheatbulk", "noheatel", "noheatng")))
+  select(-all_of(c("scalee","scaleb",'scaleg', "noacel", "noacbroke", "noheatbroke", "noheatbulk", "noheatel", "noheatng")))
 
 # Clean up to clear memory
 rm(prep)
@@ -44,7 +44,7 @@ gc()
 
 #-----
 # Select desired fusion variables
-fusion.vars <- c("kwh","btung","btufo","btulp","cooltype","disconnect", "noheat", "noac")
+fusion.vars <- c("kwh","btung","btufo","btulp","cooltype","insec", "noheat", "noac")
 
 # Predictor variables
 # This is just a fancy way to pull the predictor variables from 'data' attributes
@@ -56,7 +56,7 @@ fsequence <- blockchain(data = data$RECS_2015,
                         y = fusion.vars,
                         x = pred.vars,
                         weight = "weight",
-                        cores = 5)  #Have to change this for Windows PC
+                        cores = 1)  #Have to change this for Windows/Mac
 
 #-----
 
@@ -68,7 +68,6 @@ train(data = data$RECS_2015,
       file = "production/v2/RECS/2015/RECS_2015.fsn",
       weight = "weight",
       nfolds = 5,
-      threads = 3,
       hyper = list(boosting = "gbdt",
                    feature_fraction = 0.8,
                    num_iterations = 1000,
@@ -91,7 +90,7 @@ train(data = data$RECS_2015,
 # Fuse variables to ACS for multiple implicates
 # Optimal settings for 'k' and 'max_dist' are unknown at moment -- using default values
 # See here re: multi-threading: https://github.com/ummel/fusionModel/issues/26
-sim <- fuseM(data = data$ACS_2015,
+sim <- fuse(data = data$ACS_2015,
              file = "production/v2/RECS/2015/RECS_2015.fsn",
              k = 5,
              M = 100)  # Using 100 implicates for consistency with v1 deliverable 
@@ -102,3 +101,7 @@ fst::write_fst(x = sim,
                compress = 100)
 
 #-----
+# Save simulation results to disk
+test <- fst::read_fst(
+               path = "production/v2/RECS/2015/RECS_2015-ACS_2015.fst")
+gc()
