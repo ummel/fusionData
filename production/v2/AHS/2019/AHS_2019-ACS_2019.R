@@ -14,29 +14,23 @@ prep <- prepare(donor = "AHS_2019",
                 implicates = 5)
 
 data <- assemble(prep,
-                  fusion.variables = c("cold","coldeq","coldeqfreq","coldhtcap","coldcost","coldutil","hotwater"),
+                  fusion.variables = c("cold","coldeq","coldhtcap","coldcost","coldutil","hmreneff"),
                   spatial.datasets = "all",
                   window = 2)
 
 N <- nrow(data$AHS_2019)
 
-# Create custom fusion variables
-# coldeqfreq has too many '0'. Changing it to factor 
-
-data$AHS_2019 <- data$AHS_2019 %>%
-  mutate(
-    coldeqfreq_flag = ifelse(coldeqfreq == '0', "No","Yes"),
-    coldeqfreq_flag = as.factor(coldeqfreq_flag)
-    )
-    
-fusion.vars <- c("cold","coldeq","coldeqfreq_flag","coldhtcap","coldcost","coldutil","hotwater")
+fusion.vars <- c("cold","coldeq","coldhtcap","coldcost","coldutil","hmreneff")
 pred.vars <- unlist(map(c("harmonized.vars", "location.vars", "spatial.vars"), ~ attr(data, .x)))
+
+
+rm(prep)
 
 yorder <- blockchain(data = data$AHS_2019, 
                      y = fusion.vars, 
                      x = pred.vars,
                      weight = "weight",
-                     cores = 3) # Change for Windows 
+                     cores = 1) # Change for Windows/Mac 
 
 # Train fusion model
 fit <- train(data = data$AHS_2019,
@@ -48,13 +42,13 @@ fit <- train(data = data$AHS_2019,
                           num_iterations = 1000,
                           learning_rate = 0.05),
              nfolds = 5,
-             threads = 3,
              weight = "weight")
+gc()
 
-sim <- fuseM(data = data$ACS_2019,
+sim <- fuse(data = data$ACS_2019,
              file = "production/v2/AHS/2019/AHS_2019.fsn",
              k = 5,
-             M = 2)  # Increase more for production 
+             M = 100)  # Increase more for production 
 
 # Save simulation results to disk
 fst::write_fst(x = sim,
