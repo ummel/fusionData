@@ -112,6 +112,22 @@ list(
     comment = "",
     modified = "2022-08-31 18:22:44"),
 
+  r_age__agep = list(
+    NHTS = list(
+      groups = 1,
+      levels = "Min: 5, Median: 40, Mean: 40.7, Max: 92",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = "",
+    comment = "",
+    modified = "2022-10-01 18:28:50"),
+
   r_hisp__hisp = list(
     NHTS = list(
       groups = 1:2,
