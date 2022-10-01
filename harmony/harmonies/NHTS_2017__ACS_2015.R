@@ -1,5 +1,21 @@
 list(
 
+  educ__schl = list(
+    NHTS = list(
+      groups = 0:5,
+      levels = c("No education", "Less than a high school graduate", "High school graduate or GED", "Some college or associates degree", "Bachelor's degree", "Graduate degree or professional degree"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 3, 3, 4, 5, 5, 5),
+      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2022-10-01 17:09:06"),
+
   hh_hisp__hisp = list(
     NHTS = list(
       groups = c(2, 1, 2),
@@ -95,6 +111,55 @@ list(
     ordered = FALSE,
     comment = "",
     modified = "2022-08-31 18:22:44"),
+
+  r_hisp__hisp = list(
+    NHTS = list(
+      groups = 1:2,
+      levels = c("Yes, Hispanic or Latino", "No, Not Hispanic or Latino"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+      levels = c("Not Spanish / Hispanic / Latino", "Mexican", "Puerto Rican", "Cuban", "Dominican", "Costa Rican", "Guatemalan", "Honduran", "Nicaraguan", "Panamanian", "Salvadoran", "Other Central American", "Argentinean", "Bolivian", "Chilean", "Colombian", "Ecuadorian", "Paraguayan", "Peruvian", "Uruguayan", "Venezuelan", "Other South American", "Spaniard", "All Other Spanish / Hispanic / Latino"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2022-10-01 18:12:36"),
+
+  r_race__rac1p = list(
+    NHTS = list(
+      groups = c(1, 2, 3, 4, 5, 6, 7, 1),
+      levels = c("Refused", "White", "Black or African American", "Asian", "American Indian or Alaska Native", "Native Hawaiian or other Pacific Islander", "Multiple responses selected", "Some other race"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(2, 3, 5, 5, 5, 4, 6, 1, 7),
+      levels = c("White alone", "Black or African American alone", "American Indian alone", "Alaska Native alone", "American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races", "Asian alone", "Native Hawaiian and Other Pacific Islander alone", "Some Other Race alone", "Two or More Races"),
+      breaks = "",
+      adj = "",
+      agg = logical(0)
+    ),
+    ordered = FALSE,
+    comment = "",
+    modified = "2022-10-01 18:04:31"),
+
+  r_sex__sex = list(
+    NHTS = list(
+      groups = 1:2,
+      levels = c("Male", "Female"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1:2,
+      levels = c("Male", "Female"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2022-10-01 17:39:28"),
 
   timetowk__jwmnp = list(
     NHTS = list(
