@@ -53,7 +53,7 @@ for (fuel in fuels) {
                weight = "weight",
                file = "./temp_model.fsn")
   
-  recipient[[fuelcons]] <- fuse(data = recipient, file = "./temp_model.fsn")$V1
+  recipient[[fuelcons]] <- fuse(data = recipient, file = "./temp_model.fsn")[[fuelcons]]
   file.remove("./temp_model.fsn")
   
   # Calculate the price in the donor dataset
@@ -90,7 +90,7 @@ for (fuel in fuels) {
   # multiplying the predicted price
   # with the predicted consumption
   recipient[[fuelexp]] <- 
-    fuse(data = recipient, file = "./temp_model.fsn")$V1*
+    fuse(data = recipient, file = "./temp_model.fsn")[[fuelprice]]*
     recipient[[fuelcons]]
   file.remove("./temp_model.fsn")
   

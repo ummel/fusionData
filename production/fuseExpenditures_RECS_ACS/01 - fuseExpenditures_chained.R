@@ -37,15 +37,12 @@ data <- assemble(prep,
 donor <- data$RECS_2015
 recipient <- data$ACS_2015
 
-# Adjust this line accordingly to load the chain function
-source("~/fusionModel/R/chain.R")
-
 # Finds the best sequence to impute the fuel consumptions
-y.order <- chain(donor, 
-                 y = paste0("btu",fuels), 
-                 x = setdiff(intersect(names(donor),c(names(recipient))),
-                             c(paste0("btu",fuels),paste0("dollar",fuels),"weight")), 
-                 w = "weight")
+y.order <- blockchain(donor, 
+                      y = paste0("btu",fuels), 
+                      x = setdiff(intersect(names(donor),c(names(recipient))),
+                                  c(paste0("btu",fuels),paste0("dollar",fuels),"weight")), 
+                      w = "weight")
 
 # Fit and fuse fuel consumptions
 fit <- train(data = donor, 
@@ -103,7 +100,7 @@ for (fuel in fuels) {
   # multiplying the predicted price
   # with the predicted consumption
   recipient[[fuelexp]] <- 
-    fuse(data = recipient, file = "./temp_model.fsn")$V1*
+    fuse(data = recipient, file = "./temp_model.fsn")[[fuelprice]]*
     recipient[[fuelcons]]
   file.remove("./temp_model.fsn")
   
