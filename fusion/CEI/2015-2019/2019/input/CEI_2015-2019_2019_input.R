@@ -1,6 +1,18 @@
 library(fusionData)
 library(fusionModel)
 
+# Number of cores to use
+ncores <- 3
+
+# Donor and recipient survey identifiers
+donor <- "CEI_2015-2019"
+recipient <- "ACS_2019"
+
+# Directory in /fusion where results will be saved
+# This is automatically constructed from 'donor' and 'recipient', assuming recipient is ACS-based
+acs.vintage <- substring(recipient, 5)
+dir <- paste("fusion", sub("_", "/", donor), acs.vintage, "input", sep = "/")
+
 #-----
 
 # Obtain CEI fusion variable names  from fusionacsdata@gmail.com GDrive account
@@ -18,7 +30,7 @@ fusion.vars <- googlesheets4::read_sheet("13GRKkVZXapHtP7oK1WUh0Yu7OQ_9icd17wUGu
 prep <- prepare(donor = "CEI_2015-2019",
                 recipient = "ACS_2019",
                 respondent = "household",
-                implicates = 5)
+                implicates = 1)
 
 data <- assemble(prep,
                  fusion.variables = fusion.vars,
@@ -67,7 +79,7 @@ fusion.vars <- c(fusion.vars, "mortint_share", "tax_rate")
 # Imputation is done via a LightGBM model fit to RECS 2015 microdata; see imputeHeatingFuel() function and script
 # The ACS heating fuel variable ('hfl') is then harmonized to match the RECS fuel types imputed to CEI households
 
-source("fusion/CEI/2015-2019/2019/imputeHeatingFuel.R")
+source("fusion/CEI/2015-2019/2019/input/imputeHeatingFuel.R")
 cei <- read_fst("survey-processed/CEX/CEI/CEI_2015-2019_H_processed.fst")
 temp <- tibble(cei_hid = cei$cei_hid,
                hfl = imputeHeatingFuel(cei.h = cei)) %>%
@@ -96,24 +108,44 @@ rm(cei, temp)
 
 #-----
 
-# Fast prescreen of potential predictors
-pred.vars <- prescreen(data = data$`CEI_2015-2019`,
-                       y = fusion.vars,
-                       x = setdiff(names(data$`CEI_2015-2019`), c("cei_hid", "weight", fusion.vars)),
-                       weight = "weight",
-                       fraction = 0.50,
-                       cor_thresh = 0.025,
-                       lasso_thresh = 0.95,
-                       cores = 3)
+# Specify the predictors in the harmonized donor data that will be used for validation subsets
+# We select the variables that best reflect the following socioeconomic and geographic concepts:
+#  -- income; race/ethnicity; education; household size; housing tenure; and a relatively high-resolution location variable
+# These variables are "forced" as predictors in prepXY() and carried along in 'prep' for use by validate() in /output.R
+sub.vars <- c("fincbtxm__hincp", "ref_race__rac1p", "educ_ref__schl",
+              "fam_size__np", "cutenure__ten", "loc..division")
+
+# Identify the shared 'pred.vars'
+pred.vars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), "weight")
+
+# !!! TEMP TEST -- limit to smaller set of fusion variables for testing
+#fusion.vars <- c("cloftw", "eathome", "airshp", "gas", "elec")
+
+# Determine fusion order and subset of 'pred.vars' to use with each fusion variable/block
+prep <- prepXY(data = data[[1]],
+               y = fusion.vars,
+               x = pred.vars,
+               weight = "weight",
+               xforce = sub.vars,
+               cores = ncores)
+
+# Save output from prepXY()
+saveRDS(prep, file = file.path(dir, paste(donor, acs.vintage, "prep.rds", sep = "_")))
 
 #-----
 
+# Update 'pred.vars' to the subset of predictors retained in 'prep'
+pred.vars <- attr(prep, "xpredictors")
+
+# Set cores for 'fst' to use when writing to disk
+threads_fst(ncores)
+
 # Save training data to disk
-data$`CEI_2015-2019` %>%
-  select(one_of(c("weight", fusion.vars, pred.vars))) %>%
-  write_fst(path = paste0("fusion/CEI/2015-2019/2019/CEI_2015-2019_2019_train.fst"), compress = 100)
+data[[1]] %>%
+  select(one_of(c("weight", unlist(prep$y), pred.vars))) %>%
+  write_fst(path = file.path(dir, paste(donor, acs.vintage, "train.fst", sep = "_")), compress = 100)
 
 # Save prediction data to disk
-data$ACS_2019 %>%
+data[[2]] %>%
   select(one_of(pred.vars)) %>%
-  write_fst(path = paste0("fusion/CEI/2015-2019/2019/CEI_2015-2019__2019_predict.fst"), compress = 100)
+  write_fst(path = file.path(dir, paste(donor, acs.vintage, "predict.fst", sep = "_")), compress = 100)
