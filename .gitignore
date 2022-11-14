@@ -12,5 +12,6 @@ fusionData.Rproj
 *.rds
 *.fsn
 *.csv.gz
+*.fsd
 !*dictionary.rds
 README_cache
