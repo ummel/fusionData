@@ -307,18 +307,21 @@ assemble <- function(x,
 
   # Reorder output variables for nicer viewing
   # Convert numeric 'hvars' in certain cases; see convert2scaled()/convertPercentile() in utils.R
+  # Row-order the results by the identifier variable(s)
 
   cat("Assembling output data frames...\n")
 
   dout <- dout %>%
     select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
     #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
-    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3))
+    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
+    arrange_at(did)
 
   rout <- rout %>%
     select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
     #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
-    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3))
+    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
+    arrange_at(rid)
 
   #-----
 
@@ -339,25 +342,30 @@ assemble <- function(x,
   miss <- !map2_lgl(dlevels, rlevels, identical)
   if (any(miss)) stop("Incompatible levels for the following predictor variables\n", paste(names(miss)[miss], collapse = ", "))
 
-  #-----
+  #----
 
-  # Set attributes for the returned objects
-
-  # Assign "fusion.vars" "harmonized.vars", and "spatial.vars" attributes to 'dout'
-  # setattr(dout, "fusion.vars", fvars)
-  # setattr(dout, "harmonized.vars", hvars)
-  # setattr(dout, "location.vars", lvars)
-  # setattr(dout, "spatial.vars", svars)
-  # setattr(dout, "replicate.vars", rvars)
+  # !TESTING! -- perhaps move?
+  # Issue is that there are potentially spatial variables that we want to check that are only added in assemble()
+  # Compute absolute error
+  # wd <- dout$weight / sum(dout$weight)
+  # wr <- rout$weight / sum(rout$weight)
   #
-  # # Same for recipient, but excluding "fusion.vars"
-  # setattr(rout, "harmonized.vars", hvars)
-  # setattr(rout, "location.vars", lvars)
-  # setattr(rout, "spatial.vars", svars)
+  # prop <- sapply(fxvars, function(v) {
+  #   pd <- xtabs(wd ~ dout[[v]])
+  #   pr <- xtabs(wr ~ rout[[v]])
+  #   m <- matrix(c(pd, pr), ncol = 2, dimnames = list(NULL, c("donor", "recipient")))
+  #   m
+  #   #list(error = sum(abs(pr - pd)) / 2, prop = m)
+  # })
+  #
+  # err <- sapply(prop, function(x) sum(abs(x[, 2] - x[, 1])) / 2)
+
+  #-----
 
   # Return as list
   result <- setNames(list(dout, rout), c(donor, recipient))
 
+  # Set attributes for the returned objects
   setattr(result, "fusion.vars", fvars)
   setattr(result, "harmonized.vars", hvars)
   setattr(result, "location.vars", lvars)
