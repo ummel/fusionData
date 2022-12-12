@@ -96,6 +96,22 @@ list(
     comment = "",
     modified = "2022-06-22 20:59:31"),
 
+  homeown__ten = list(
+    NHTS = list(
+      groups = 1:3,
+      levels = c("Own", "Rent", "Some other arrangement"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 1, 2, 3),
+      levels = c("Owned with mortgage or loan (include home equity loans)", "Owned free and clear", "Rented", "Occupied without payment of rent"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2022-12-06 13:57:48"),
+
   pc__laptop = list(
     NHTS = list(
       groups = c(2, 1, 1, 1, 1),
@@ -160,6 +176,22 @@ list(
     ordered = FALSE,
     comment = "",
     modified = "2022-10-01 18:04:31"),
+
+  r_relat__relp = list(
+    NHTS = list(
+      groups = 1:7,
+      levels = c("Self", "Spouse/Unmarried partner", "Child", "Parent", "Brother/Sister", "Other relative", "Non-relative"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 2, 3, 3, 3, 5, 4, 1, 6, 6, 6, 7, 7, 6, 3, 7, 7, 7),
+      levels = c("Reference person", "Husband / Wife", "Biological son or daughter", "Adopted son or daughter", "Stepson or stepdaughter", "Brother or sister", "Father or mother", "Grandchild", "Parent-in-law", "Son-in-law or daughter-in-law", "Other relative", "Roomer or boarder", "Housemate or roommate", "Unmarried partner", "Foster child", "Other nonrelative", "Institutionalized group quarters population", "Noninstitutionalized group quarters population"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2022-10-13 16:15:37"),
 
   r_sex__sex = list(
     NHTS = list(
