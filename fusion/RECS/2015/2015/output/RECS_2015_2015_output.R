@@ -4,7 +4,7 @@ library(fusionModel)
 dir <- "fusion/RECS/2015/2015/input"
 
 # Number of cores to use
-ncores <- 3
+ncores <- 1
 
 # Number of implicates to generate
 nimps <- 40
