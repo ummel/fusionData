@@ -2,7 +2,7 @@ library(fusionData)
 library(fusionModel)
 
 # Number of cores to use
-ncores <- 3
+ncores <- 1
 
 # Donor and recipient survey identifiers
 donor <- "RECS_2015"
@@ -19,14 +19,15 @@ dir <- paste("fusion", sub("_", "/", donor), acs.vintage, "input", sep = "/")
 prep <- prepare(donor = donor,
                 recipient = recipient,
                 respondent = "household",
-                implicates = 1)
+                implicates = 5)
 
 # Specify fusion variables to be retained in harmonization results
+# Removed pca for prep 
 data <- assemble(prep,
-                 fusion.variables = c("btung", "kwh", "cooltype", "scalee", 'noheatng', "btufo", "btulp",
-                                      "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk',
-                                      'totalbtu', 'totalbtusph', 'btuelahucol', 'btuelcol'),
+                 fusion.variables = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp",
+                                      "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma'),
                  window = 2)
+
 
 rm(prep)
 
@@ -36,15 +37,13 @@ rm(prep)
 # These are useful combinations of original donor variables
 data[[1]] <- data[[1]] %>%
   mutate(
-    disconnect = scalee != "Never",
+    insec = scalee != "Never" | scaleg != "Never"| scaleb != "Never",
     noheat = noheatbroke == "Yes" | noheatbulk == "Yes" |  noheatel == "Yes" | noheatng == "Yes",
-    noac = noacel == "Yes" | noacbroke == "Yes"
-    #heating_share = totalbtusph / totalbtu,
-    #cooling_share = (btuelahucol + btuelcol) / totalbtu,
-    #other_share = 1 - heating_share - cooling_share
+    noac = noacel == "Yes" | noacbroke == "Yes",
+    med = hotma == "Yes" | coldma == "Yes"
   ) %>%
-  select(-all_of(c("scalee", "noacel", "noacbroke", "noheatbroke", "noheatbulk", "noheatel", "noheatng",
-                   'totalbtu', 'totalbtusph', 'btuelahucol', 'btuelcol')))
+  select(-all_of(c("scalee","scaleb",'scaleg', "noacel", "noacbroke", "noheatbroke",
+                   "noheatbulk", "noheatel", "noheatng",'hotma','coldma')))
 
 # Identify the 'fusion.vars'
 fusion.vars <- setdiff(setdiff(names(data[[1]]), names(data[[2]])), "recs_2015_hid")
