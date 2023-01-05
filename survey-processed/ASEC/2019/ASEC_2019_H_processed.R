@@ -1,4 +1,7 @@
-library(tidyverse)
+## Script to process ASEC household data 
+rm(list = ls())
+options(scipen=999)
+
 source("R/utils.R")
 source("R/createDictionary.R")
 source("R/imputeMissing.R")
@@ -8,28 +11,46 @@ library(pacman)
 p_load(here, tidyverse, data.table, ipumsr, fusionData, fusionModel)
 
 # Download IPUMS data using the ipumsr package
-
-# NOTE: To load data, you must download both the extract's data and the DDI
-# and also set the working directory to the folder with these files (or change the path below).
-
-if (!require("ipumsr")) stop("Reading IPUMS data into R requires the ipumsr package. It can be installed using the following command: install.packages('ipumsr')")
-ddi <- read_ipums_ddi("~/Downloads/drive-download-20220720T171049Z-001/cps_00057.xml", lower_vars = T)
-data <- read_ipums_micro(ddi)
-
-#-----
-
-data <- filter(data, gq == 1)
-
-# Collect only household data
-
-pstart <- which(names(data) == 'pernum')
-d_H <- data[,1:pstart-1]
-
-# Collect only household variable information
-
-var_info <- ddi$var_info
-var_info <- var_info[1:pstart-1, ]
-var_info <- as.data.table(var_info)
+if (!file.exists('./survey-processed/ASEC/2019/H_data.rds')){
+  # use IPUMSR package to read in extract and DDI (codebook)
+  # will output a haven_labelled tible, with var values, labels, and descriptions
+  
+  # set to raw data directory for read_ipums commands to work
+  setwd('./survey-raw/ASEC/2019/')
+  
+  # when reading in, convert variable names to lower
+  ddi <- read_ipums_ddi("cps_00057.xml", lower_vars = T)
+  d <- read_ipums_micro(ddi)
+  
+  setwd(here())
+  
+  # Limit to occupied households (so matches ACS sample) ----
+  table(d$gq) # only 74 obs in group quarters
+  d <- filter(d, gq == 1)
+  
+  # Limit to H ----
+  
+  # limit to person level data - person variable end at 'pernum'
+  hend <- which(names(d) == 'pernum')-1
+  
+  # make sure to include serial and year in person level so can be merged back to H
+  d <- d[ , c(1:hend)]
+  
+  # also limit varinfo in ddi to person level vars
+  var_info <- ddi$var_info
+  var_info <- var_info[c(1:hend), ]
+  var_info <- as.data.table(var_info)
+  
+  # save both data and ddi to read in so don't have to do the above each time
+  saveRDS(d, './survey-processed/ASEC/2019/H_data.rds')
+  saveRDS(var_info, './survey-processed/ASEC/2019/H_info.rds')
+}else{
+  
+  d_H <- readRDS('./survey-processed/ASEC/2019/H_data.rds')
+  var_info <- readRDS('./survey-processed/ASEC/2019/H_info.rds')
+  d_H <- as.data.table(d_H)
+  
+}
 
 #-----
 
@@ -178,6 +199,7 @@ value_check_without_state_name <- value_check_without_state_name %>% mutate(weig
 value_check_without_state_name <- value_check_without_state_name[,col_order]
 
 # Turn integer variables from factor type
+# FIX - not all these should be converted to numeric from factor (eg. faminc)
 
 value_check_without_state_name <- value_check_without_state_name %>%
   mutate(
