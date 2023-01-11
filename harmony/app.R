@@ -456,9 +456,13 @@ server <- function(input, output, session) {
 
   #-----
 
-  # Selected variables
+  # Selected variables names
   dvar <- reactive({map_chr(str_split(input$dvar, ":"), 1)})
   rvar <- reactive({map_chr(str_split(input$rvar, ":"), 1)})
+
+  # Selected variables types ("Household" or "Person")
+  dtype <- reactive({ifelse(substring(map_chr(str_split(input$dvar, ":"), 2), 3, 3) == "H", "Household", "Person")})
+  rtype <- reactive({ifelse(substring(map_chr(str_split(input$rvar, ":"), 2), 3, 3) == "H", "Household", "Person")})
 
   # Standard given name of the harmonized variable
   hvar <- reactive({paste(dvar(), rvar(), sep = "__")})
@@ -485,10 +489,12 @@ server <- function(input, output, session) {
   #-----
 
   # Info about the selected donor variables
-  dinfo <- reactive({filter(dictionary, Survey == input$dsvy, Vintage == input$dvint, Variable %in% dvar())})
+  #dinfo <- reactive({filter(dictionary, Survey == input$dsvy, Vintage == input$dvint, Variable %in% dvar())})
+  dinfo <- reactive({filter(dictionary, Survey == input$dsvy, Vintage == input$dvint, Respondent %in% dtype(), Variable %in% dvar())})
 
   # Info about the selected ACS variables
-  rinfo <- reactive({filter(dictionary, Survey == "ACS", Vintage == input$rvint, Variable %in% rvar())})
+  #rinfo <- reactive({filter(dictionary, Survey == "ACS", Vintage == input$rvint, Variable %in% rvar())})
+  rinfo <- reactive({filter(dictionary, Survey == "ACS", Vintage == input$rvint, Respondent %in% rtype(), Variable %in% rvar())})
 
   #----
 
