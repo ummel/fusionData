@@ -1,7 +1,7 @@
 library(fusionModel)
 
 # Directory in /fusion where input files are located
-dir <- "fusion/AHS/2019/2019/input"
+dir <- "fusion/NHTS/2017/2015/input"
 
 # Number of cores to use
 ncores <- 1

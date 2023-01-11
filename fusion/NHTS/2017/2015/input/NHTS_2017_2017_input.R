@@ -2,10 +2,10 @@ library(fusionData)
 library(fusionModel)
 
 # Number of cores to use
-ncores <- 1
+ncores <- 3
 
 # Donor and recipient survey identifiers
-donor <- "RECS_2015"
+donor <- "NHTS_2017"
 recipient <- "ACS_2015"
 
 # Directory in /fusion where results will be saved
@@ -22,12 +22,9 @@ prep <- prepare(donor = donor,
                 implicates = 5)
 
 # Specify fusion variables to be retained in harmonization results
-# Removed pca for prep 
 data <- assemble(prep,
-                 fusion.variables = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp",
-                                      "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma'),
+                 fusion.variables = c('bike2save','walk2save','price','place','gstotcst','vmt_mile','ptrans'),
                  window = 2)
-
 
 rm(prep)
 
@@ -37,16 +34,12 @@ rm(prep)
 # These are useful combinations of original donor variables
 data[[1]] <- data[[1]] %>%
   mutate(
-    insec = scalee != "Never" | scaleg != "Never"| scaleb != "Never",
-    noheat = noheatbroke == "Yes" | noheatbulk == "Yes" |  noheatel == "Yes" | noheatng == "Yes",
-    noac = noacel == "Yes" | noacbroke == "Yes",
-    med = hotma == "Yes" | coldma == "Yes"
-  ) %>%
-  select(-all_of(c("scalee","scaleb",'scaleg', "noacel", "noacbroke", "noheatbroke",
-                   "noheatbulk", "noheatel", "noheatng",'hotma','coldma')))
+    travel = ifelse(bike2save == 'Strongly agree'| walk2save == 'Strongly agree',"Yes","No"),
+    travel = as.factor(travel)) %>%
+  select(-all_of(c("bike2save","walk2save")))
 
 # Identify the 'fusion.vars'
-fusion.vars <- setdiff(setdiff(names(data[[1]]), names(data[[2]])), "recs_2015_hid")
+fusion.vars <- c('price','place','travel','gstotcst','vmt_mile','ptrans')
 
 # Temporary test of blocked variables
 # Manually assign the "*_share" fusion variables to a block
@@ -59,8 +52,8 @@ fusion.vars <- setdiff(setdiff(names(data[[1]]), names(data[[2]])), "recs_2015_h
 # We select the variables that best reflect the following socioeconomic and geographic concepts:
 #  -- income; race/ethnicity; education; household size; housing tenure; and a relatively high-resolution location variable
 # These variables are "forced" as predictors in prepXY() and carried along in 'prep' for use by validate() in /output.R
-sub.vars <- c("moneypy__hincp", "householder_race__rac1p", "education__schl",
-              "nhsldmem__np", "kownrent__ten", "loc..recs_division")
+sub.vars <- c("hhfaminc__hincp", "hh_race__rac1p", "educ__schl",
+              "hhsize__np", "homeown__ten", "loc..division")
 
 # Identify the shared 'pred.vars'
 pred.vars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), "weight")

@@ -26,7 +26,7 @@ if (!file.exists('./survey-processed/ASEC/2019/P_data.rds')){
   
   setwd(here())
   
-  # Limit to occupied households (so matches ACS sample) ----
+  ## Limit to occupied households (so matches ACS sample) ----
   table(d$gq) # only 74 obs in group quarters
   d <- filter(d, gq == 1)
   
@@ -527,7 +527,7 @@ fst::write_fst(x = d, path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.f
   
 
 # d <- fst::read_fst(path = "survey-processed/ASEC/2019/ASEC_2019_P_processed.fst") %>%  as.data.table()
-# dictionary <- readRDS(file = "survey-processed/ASEC/2019/ASEC_2019_P_dictionary.rds")
+dictionary <- readRDS(file = "survey-processed/ASEC/2019/ASEC_2019_P_dictionary.rds")
 
 # Compile Universal ----
 compileDictionary()
@@ -538,7 +538,7 @@ compileDictionary()
 # load('./data/surveys.rda')
 # 
 universe()
-# harmony()
+harmony()
 
 # # testing harmonize mutate code
 # d <- d %>%
