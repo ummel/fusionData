@@ -669,7 +669,7 @@ server <- function(input, output, session) {
         ungroup() %>%
         gt() %>%
         cols_align("center") %>%
-        fmt_missing(columns = everything(), missing_text = "") %>%
+        sub_missing(columns = everything(), missing_text = "") %>%
         tab_options(table.align = "left") %>%
         tab_style(
           style = list(
