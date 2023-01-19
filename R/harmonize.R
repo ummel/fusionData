@@ -50,7 +50,8 @@ harmonize <- function(harmony.file, respondent, output = "both") {
   hnames <- names(H)
 
   # Load dictionary in order to tag each variable as household- or person-level
-  data("dictionary", package = "fusionData")
+  #data("dictionary", package = "fusionData")
+  load("data/dictionary.rda")
   dict.vars <- paste(paste(dictionary$Survey, dictionary$Vintage, sep = "_"), dictionary$Variable)
 
   dnames <- map_chr(splitNames(hnames), 1)
