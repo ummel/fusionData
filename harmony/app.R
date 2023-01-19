@@ -10,8 +10,8 @@ library(shiny)
 # Load dictionary and survey summary data
 #data(dictionary, package = "fusionData")
 #data(surveys, package = "fusionData")
-load("data/dictionary.rda")
-load("data/surveys.rda")
+load("./www/dictionary.rda")
+load("./www/surveys.rda")
 
 # Functions specific to the 'harmony' app
 source("R/harmony2dotR.R")

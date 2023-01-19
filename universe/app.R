@@ -15,13 +15,13 @@ library(shiny)
 
 # Load dictionary and survey summary data
 # Detect if in a local environment or deployed remotely
-if (basename(getwd()) == "fusionData") {
-  data(dictionary, package = "fusionData")
-  data(surveys, package = "fusionData")
-} else {
-  load("./www/dictionary.rda")
-  load("./www/surveys.rda")
-}
+# if (basename(getwd()) == "fusionData") {
+#   data(dictionary, package = "fusionData")
+#   data(surveys, package = "fusionData")
+# } else {
+load("./www/dictionary.rda")
+load("./www/surveys.rda")
+#}
 
 # Remove 'Type' variable from dictionary
 dictionary <- subset(dictionary, select = -Type)

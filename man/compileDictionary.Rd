@@ -7,10 +7,10 @@
 compileDictionary()
 }
 \value{
-Saves \code{dictionary.rds} and \code{surveys.rds} data frames to disk.
+Saves \code{dictionary.rda} and \code{surveys.rda} data frames to disk in \code{/data}, \code{/universe/www}, and \code{/harmony/www}.
 }
 \description{
-Compiles all of the individual survey data dictionaries in \code{/survey-processed} into two tibbles?compile that is saved to disk for use by \link{dictionary} and \link{harmony} Shiny apps.
+Compiles all of the individual survey data dictionaries in \code{/survey-processed} into two tibbles that are saved to disk for use by fusionData package as well as \link{universe} and \link{harmony} Shiny apps.
 }
 \examples{
 compileDictionary()

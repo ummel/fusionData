@@ -1,9 +1,9 @@
 #' Compile universal survey dictionary
 #'
 #' @description
-#' Compiles all of the individual survey data dictionaries in \code{/survey-processed} into two tibbles?compile that is saved to disk for use by \link{dictionary} and \link{harmony} Shiny apps.
+#' Compiles all of the individual survey data dictionaries in \code{/survey-processed} into two tibbles that are saved to disk for use by fusionData package as well as \link{universe} and \link{harmony} Shiny apps.
 #'
-#' @return Saves \code{dictionary.rds} and \code{surveys.rds} data frames to disk.
+#' @return Saves \code{dictionary.rda} and \code{surveys.rda} data frames to disk in \code{/data}, \code{/universe/www}, and \code{/harmony/www}.
 #'
 #' @examples
 #' compileDictionary()
@@ -36,12 +36,19 @@ compileDictionary <- function() {
   # saveRDS(dictionary, "harmony/dictionary.rds", compress = TRUE)
   # saveRDS(surveys, "harmony/surveys.rds", compress = TRUE)
 
+  # Save compiled dictionary files to /data
   usethis::use_data(dictionary, overwrite = TRUE)
   usethis::use_data(surveys, overwrite = TRUE)
 
-  # ALSO save copies to /universe Shiny app (so it can deploy remotely)
+  # ALSO save copies to /universe Shiny app
+  cat("Saving 'dictionary' and 'surveys' to /universe/www\n")
   save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
+
+  # ALSO save copies to /harmony Shiny app
+  cat("Saving 'dictionary' and 'surveys' to /harmony/www\n")
+  save(dictionary, file = "harmony/www/dictionary.rda", compress = TRUE)
+  save(surveys, file = "harmony/www/surveys.rda", compress = TRUE)
 
   # Print summary of data outputs
   message("dictionary.rds dimensions: ", paste(dim(dictionary), collapse = " x "))
