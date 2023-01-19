@@ -242,6 +242,22 @@ list(
     comment = "Changes ASEC 15 yr olds to be in NIU category to match ACS NIU category. Assumed that ASEC 'armed forces' includes armed forces at work and not at work. ",
     modified = "2022-08-31 17:46:23"),
 
+  faminc__fincp = list(
+    ASEC = list(
+      groups = 1:16,
+      levels = c("Under $5,000", "$5,000 - 7,499", "$7,500 - 9,999", "$10,000 - 12,499", "$12,500 - 14,999", "$15,000 - 19,999", "$20,000 - 24,999", "$25,000 - 29,999", "$30,000 - 34,999", "$35,000 - 39,999", "$40,000 - 49,999", "$50,000 - 59,999", "$60,000 - 74,999", "$75,000 - 99,999", "$100,000 - 149,999", "$150,000 and over"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1:16,
+      levels = c("Less than 5000", "[5000 to 7500)", "[7500 to 10000)", "[10000 to 12500)", "[12500 to 15000)", "[15000 to 20000)", "[20000 to 25000)", "[25000 to 30000)", "[30000 to 35000)", "[35000 to 40000)", "[40000 to 50000)", "[50000 to 60000)", "[60000 to 75000)", "[75000 to 1e+05)", "[1e+05 to 150000)", "150000 or more"),
+      breaks = c(5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 1e+05, 150000),
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2023-01-11 08:37:08"),
+
   famkind__hht = list(
     ASEC = list(
       groups = 1:3,
@@ -257,6 +273,22 @@ list(
     ordered = TRUE,
     comment = "Although famkind in ASEC is at the person level - it is the same for all people in a family ",
     modified = "2022-09-13 09:44:20"),
+
+  foodstmp__fs = list(
+    ASEC = list(
+      groups = 1:2,
+      levels = c("No", "Yes"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "",
+    modified = "2023-01-06 15:55:07"),
 
   ftype__sfr = list(
     ASEC = list(
@@ -305,6 +337,38 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2022-08-31 18:27:38"),
+
+  hhincome__hincp = list(
+    ASEC = list(
+      groups = 1,
+      levels = "Min: -13000, Median: 63000, Mean: 90000, Max: 2250000",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: -15350, Median: 65700, Mean: 92400, Max: 2940000",
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = "",
+    comment = "",
+    modified = "2023-01-06 15:58:44"),
+
+  hhtenure__ten = list(
+    ASEC = list(
+      groups = 1:3,
+      levels = c("Owned or being bought", "Rented for cash", "Occupied without payment of cash rent"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 1, 2, 3),
+      levels = c("Owned with mortgage or loan (include home equity loans)", "Owned free and clear", "Rented", "Occupied without payment of rent"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "Can't distinguish between owned with or without mortgage in ASEC",
+    modified = "2023-01-06 16:03:12"),
 
   himcaidnw__hins4 = list(
     ASEC = list(
@@ -612,6 +676,22 @@ list(
     comment = "",
     modified = "2022-09-13 13:23:43"),
 
+  numprec__np = list(
+    ASEC = list(
+      groups = 1,
+      levels = "Min: 1, Median: 2, Mean: 2.457, Max: 16",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: 1, Median: 2, Mean: 2.47, Max: 20",
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = "",
+    comment = "",
+    modified = "2023-01-06 16:10:02"),
+
   occ__socp = list(
     ASEC = list(
       groups = 1:26,
@@ -643,6 +723,38 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2022-09-13 13:11:32"),
+
+  ownershp__ten = list(
+    ASEC = list(
+      groups = 1:3,
+      levels = c("Owned or being bought", "No cash rent", "With cash rent"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 1, 3, 2),
+      levels = c("Owned with mortgage or loan (include home equity loans)", "Owned free and clear", "Rented", "Occupied without payment of rent"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "Same as hhtenure in ASEC",
+    modified = "2023-01-06 16:14:17"),
+
+  phone__tel = list(
+    ASEC = list(
+      groups = c(1, 1, 2),
+      levels = c("No, no phone available", "Yes, phone available", "Yes, phone in household"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "Only 'phone in household' (not also 'phone available') is equivalent to the ACS's question on phone service. From IPUMS: 'For later census years and the ACS, category 3 in IPUMS-CPS is comparable to a 'yes' response in IPUMS-USA.'",
+    modified = "2023-01-06 16:20:05"),
 
   prvtcovnw__privcov = list(
     ASEC = list(
@@ -676,6 +788,22 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2022-09-02 13:49:01"),
+
+  recs_division__region = list(
+    ASEC = list(
+      groups = c(2, 3, 1, 4, 1, 4, 3, 2, 3),
+      levels = c("East North Central", "East South Central", "Middle Atlantic", "Mountain", "New England", "Pacific", "South Atlantic", "West North Central", "West South Central"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1:4,
+      levels = c("Northeast", "Midwest", "South", "West"),
+      breaks = "",
+      adj = "",
+      agg = "reference"),
+    ordered = FALSE,
+    comment = "",
+    modified = "2023-01-06 16:26:19"),
 
   relate__relshipp = list(
     ASEC = list(
@@ -756,6 +884,22 @@ list(
     ordered = "",
     comment = "",
     modified = "2022-09-02 16:59:19"),
+
+  unitsstr__bld = list(
+    ASEC = list(
+      groups = 1:6,
+      levels = c("Mobile home or trailer", "2 family building", "3-4 family building", "5-9 family building", "One unit, unspecified type", "10+ units in structure"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 5, 5, 2, 3, 4, 6, 6, 6, NA),
+      levels = c("Mobile home or trailer", "One-family house detached", "One-family house attached", "2 Apartments", "3-4 Apartments", "5-9 Apartments", "10-19 Apartments", "20-49 Apartments", "50 or more apartments", "Boat, RV, van, etc."),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = TRUE,
+    comment = "No code for 'boat, RV, van etc' in CPS - left out",
+    modified = "2023-01-06 16:35:04"),
 
   vacovnw__hins6 = list(
     ASEC = list(
