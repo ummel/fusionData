@@ -646,7 +646,7 @@ list(
 
   nativity__nativity = list(
     ASEC = list(
-      groups = c(3, 2, 2, 2, 2, 1),
+      groups = c(2, 2, 2, 2, 2, 1),
       levels = c("Unknown", "Both parents native-born", "Father foreign, mother native", "Mother foreign, father native", "Both parents foreign", "Foreign born"),
       breaks = "",
       adj = ""),
@@ -657,7 +657,7 @@ list(
       adj = "",
       agg = ""),
     ordered = FALSE,
-    comment = "No equivalent of 'unknown' in the ACS",
+    comment = "No equivalent of 'unknown' in the ACS - assume unknown is Native",
     modified = "2022-09-13 10:37:25"),
 
   noc__noc = list(
