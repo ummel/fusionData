@@ -159,10 +159,6 @@ asec <- asec %>%
   rename(county14 = county) %>%
   filter(county14 != "County not identified")
 
-test <- geocorr %>%
-  left_join(asec, by = c("state", "county14")) %>%
-  filter(!is.na(asec_county))
-
 ## RECS ----
 
 # RECS 'recs_iecc_zone' variable
@@ -188,7 +184,8 @@ result <- geocorr %>%
   left_join(recs.climate, by = c("state", "county10")) %>%
   left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
   left_join(asec, by = c("state", "county14")) %>%
-  mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified"))) %>%
+  mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
+         asec_division = if_else(!str_detect(recs_division, "Mountain"), recs_division, "Mountain")) %>%
   # left_join(cbsasize, by = "cbsa13") %>%
   # mutate(cex_cbsasize = ifelse(ur12 == "U" & !is.na(cbsa13), cex_cbsasize, "Rural"),
   #        cex_metro = ifelse(ur12 == "U" & !is.na(cbsa13) & cbsatype13 == "Metro", "Metro", "Not metro")) %>%

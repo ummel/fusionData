@@ -166,16 +166,17 @@ geonames <- names(geocon)
 
 ## region -> same as recs divisions ----
 # note: in geocondordance, recs_divsion has Mountain North and Mountain South, but CPS just has Mountain
+# --> make asec_division its own variable in geoconcordance.fst
 d[ , region := str_remove(region, ' Division')]
 d[ , region := as.factor(region)]
 
-# change the name to recs_division to match geoconcord
-setnames(d, 'region', 'recs_division')
-var_info[var_name == 'region', var_name := 'recs_divsion']
+# change the name to asec_division to match newly created var in geoconcord
+setnames(d, 'region', 'asec_division')
+var_info[var_name == 'region', var_name := 'asec_divsion']
 intvars <- setdiff(intvars, 'region')
 
-table(d$recs_division)
-table(geocon$recs_division)
+table(d$asec_division)
+table(geocon$asec_division)
 
 ## state ----
 table(d$statefip)
