@@ -534,8 +534,8 @@ compileDictionary()
 
 # # check universal dictionary
 # asec_dictionary <- dictionary
-# load('./data/dictionary.rda')
-# load('./data/surveys.rda')
+load('./data/dictionary.rda')
+load('./data/surveys.rda')
 # 
 universe()
 harmony()
