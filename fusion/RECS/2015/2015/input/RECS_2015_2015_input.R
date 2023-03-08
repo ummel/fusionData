@@ -25,7 +25,7 @@ prep <- prepare(donor = donor,
 # Removed pca for prep 
 data <- assemble(prep,
                  fusion.variables = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp",
-                                      "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma'),
+                                      "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk'),
                  window = 2)
 
 
@@ -40,10 +40,9 @@ data[[1]] <- data[[1]] %>%
     insec = scalee != "Never" | scaleg != "Never"| scaleb != "Never",
     noheat = noheatbroke == "Yes" | noheatbulk == "Yes" |  noheatel == "Yes" | noheatng == "Yes",
     noac = noacel == "Yes" | noacbroke == "Yes",
-    med = hotma == "Yes" | coldma == "Yes"
   ) %>%
   select(-all_of(c("scalee","scaleb",'scaleg', "noacel", "noacbroke", "noheatbroke",
-                   "noheatbulk", "noheatel", "noheatng",'hotma','coldma')))
+                   "noheatbulk", "noheatel", "noheatng")))
 
 # Identify the 'fusion.vars'
 fusion.vars <- setdiff(setdiff(names(data[[1]]), names(data[[2]])), "recs_2015_hid")
