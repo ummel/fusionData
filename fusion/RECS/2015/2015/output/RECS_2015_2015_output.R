@@ -7,7 +7,7 @@ dir <- "fusion/RECS/2015/2015/input"
 ncores <- 1
 
 # Number of implicates to generate
-nimps <- 40
+nimps <- 30
 
 # Output files path stub
 out.path <- file.path(sub("input", "output", dir), sub("train.fst$", "", list.files(dir, "train\\.fst$")))
