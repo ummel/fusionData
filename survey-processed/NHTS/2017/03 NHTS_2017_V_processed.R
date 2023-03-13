@@ -48,6 +48,10 @@ codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet 
     label = ifelse(grepl("Not ascertained", label) | grepl("I don't know", label) | grepl("Don't know", label) | grepl("I prefer not to answer",label) | grepl("Refused", label), NA, label)   # Set label to NA if value is "I don't know", "Not ascertained",  (these observations are to be imputed eventually)
     ) %>%
 
+  mutate(
+    label =  ifelse((var == 'OD_READ'|var == 'ANNMILES'|var == 'MODEL') & (is.na(label)),"Appropriate skip",label)) %>% 
+  
+  
   mutate_all(trimws)
 
   
@@ -61,8 +65,11 @@ as.vars <- codebook %>%
 
 as.values <- list(
   HFUEL = "No hybrid car",
-  VEHOWNMO = 0
- 
+  VEHOWNMO = 0,
+  OD_READ = "No reading taken",
+  ANNMILES = 0,
+  MODEL = "No model"
+  
 )
 
     # These are cases where the variable measures a continuous/numeric concept,
@@ -199,14 +206,14 @@ na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
 # Select variables that would be imputed
-y_in <- c("VEHAGE","FUELTYPE","VEHTYPE","GSYRGAL","GSTOTCST","GSCOST")
-y_ex <- setdiff(names(na.count),y_in)
+#y_in <- c("VEHAGE","FUELTYPE","VEHTYPE","GSYRGAL","GSTOTCST","GSCOST")
+#y_ex <- setdiff(names(na.count),y_in)
 
 # Impute NA values in 'd'
 imp <- imputeMissing(data = d,
                     N = 1,
                    weight = "WTHHFIN",
-                   y_exclude = y_ex,
+                   y_exclude = c('PERSONID','FEGEMPGA'),
                    x_exclude = c("HOUSEID", "PERSONID"))
 
 # Replace NA's in 'd' with the imputed values

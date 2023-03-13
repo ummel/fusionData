@@ -30,6 +30,7 @@ d_03 <- merge(d_02,d_v, by = c('HOUSEID'),  all.x=TRUE)
 
 #Merge household data and summarized trip-level data
 d <- merge(d_03,d_t, by = c('HOUSEID'),  all.x=TRUE)
+rm(d_01,d_02,d_03)
 
 #Replace NA arising from trip-level merger with O. This could be due to household members not traveling
 for (v in names(d_t)) {
@@ -62,8 +63,8 @@ codebook_h <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", shee
   mutate(
     label = ifelse(var == 'HHSTFIPS', value,label),
     label = ifelse(var == 'HH_CBSA', value,label) ,
-    label = ifelse(value == 'XXXXX',NA,label)
-  ) %>%
+    label = ifelse(value == 'XXXXX',"None",label),
+    label =  ifelse((var == 'TAXI'|var == 'PARA'|var == 'BUS'|var == 'BIKE'|var == 'TRAIN') & (is.na(label)),"Appropriate skip",label)) %>%  #For these variables NA values are replaced instead of imputing 
   mutate_all(trimws)
 
 
@@ -75,7 +76,7 @@ codebook_t <- fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_codeb
 
 #Merge trip,vehicle, and household codebooks
 codebook <-   bind_rows(codebook_h,codebook_v,codebook_t) %>% distinct(var,value,label, .keep_all = T)
-
+rm(codebook_h,codebook_v,codebook_t)
 
 # Add replicate household weight variables to codebook
 
@@ -93,14 +94,18 @@ codebook <- rbind(codebook[common_cols], replicate_weight_labels[common_cols])
 
 # Variables with  "Appropriate skip" values
 # These are the variables for which suitable replacement values must be specified below
-
 as.vars <- codebook %>%
   filter(label == "Appropriate skip") %>%
   pull(var) %>%
   unique()
 
 as.values <- list(
-  CAR = "No personal car use"
+  CAR = "No personal car use",
+  BUS = "No bus available",
+  BIKE = "No bike available",
+  TAXI = "No taxi available",
+  TRAIN = "No train available",
+  PARA = "No para-transit available"
 )
 
     # These are cases where the variable measures a continuous/numeric concept,
@@ -141,9 +146,9 @@ stopifnot(!any(codebook$label == "Appropriate skip", na.rm = TRUE))
 
 ordered.factors <- list(
 
-  BIKE = c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  BIKE = c("No bike available","Never","A few times a year","A few times a month","A few times a week","Daily"),
   BIKE2SAVE = c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
-  BUS = c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  BUS = c("No bus available","Never","A few times a year","A few times a month","A few times a week","Daily"),
   CAR = c("No personal car use","Never","A few times a year","A few times a month","A few times a week","Daily"),
   HBHTNRNT = c("0-4%","5-14%","15-24%","25-34%","35-44%","45-54%","55-64%","65-74%","75-84%","85-94%","95-100%"),
   HBHUR = c("Second City","Rural","Suburban","Small Town","Urban"),
@@ -157,7 +162,7 @@ ordered.factors <- list(
   LIF_CYC = c("one adult, no children","2+ adults, no children","one adult, youngest child 0-5","2+ adults, youngest child 0-5","one adult, youngest child 6-15","2+ adults, youngest child 6-15","one adult, youngest child 16-21","2+ adults, youngest child 16-21","one adult, retired, no children","2+ adults, retired, no children"),
   MSACAT = c("Not in MSA","MSA less than 1 million","MSA of 1 million or more, and not in 1","MSA of 1 million or more, with rail"),
   MSASIZE = c("Not in MSA or CMSA","In an MSA of Less than 250,000","In an MSA of 250,000 - 499,999","In an MSA of 500,000 - 999,999","In an MSA or CMSA of 1,000,000 - 2,999,999","In an MSA or CMSA of 3 million or more","Not in MSA or CMSA"),
-  PARA =  c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  PARA =  c("No para-transit available","Never","A few times a year","A few times a month","A few times a week","Daily"),
   PC =  c("Never","A few times a year","A few times a month","A few times a week","Daily"),
   PLACE = c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
   PRICE =  c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
@@ -165,8 +170,8 @@ ordered.factors <- list(
   RAIL =c("MSA does not have rail, or hh not in an MSA","MSA has rail"),
   SPHONE =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
   TAB =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
-  TAXI =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
-  TRAIN =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  TAXI =c("No taxi available","Never","A few times a year","A few times a month","A few times a week","Daily"),
+  TRAIN =c("No train available","Never","A few times a year","A few times a month","A few times a week","Daily"),
   URBAN = c("Not in urban area","In an area surrounded by urban areas", "In an urban area","In an Urban cluster"),
   URBANSIZE = c("Not in an urbanized area","50,000 - 199,999","200,000 - 499,999","500,000 - 999,999","1 million or more without heavy rail","1 million or more with heavy rail"),
   WALK =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
@@ -250,24 +255,19 @@ for(v in names(d_v))
   if(v != "HOUSEID")
 {d[[v]]= ifelse(d$HHVEHCNT == 0,0,d[[v]])}
 
+
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 # See which variables have NA's
 na.count
 
-# Select variables that would be imputed
-y_in <- c("HOMEOWN","HHFAMINC","PC","SPHONE","CAR","HH_HISP","HH_RACE","WEBUSE17","PRICE","PTRANS","PLACE","WALK2SAVE","BIKE2SAVE",
-          "bestmile")
-
-y_ex <- setdiff(names(na.count),y_in)
 
 ## Impute NA values in 'd'
 imp <- imputeMissing(data = d,
                     N = 1,
                    weight = "WTHHFIN",
-                   y_exclude = y_ex,
-                     x_exclude = c("HOUSEID"))
+                   x_exclude = c("HOUSEID",'SMPLSRCE','SCRESP'))
 
 # Replace NA's in 'd' with the imputed values
 d[names(imp)] <- imp
@@ -281,65 +281,73 @@ d1 <- d %>%
     nhts_region = CENSUS_R,
     nhts_division = CENSUS_D,
     cbsa13 = HH_CBSA,
-    state = HHSTFIPS
-  ) %>% mutate(state = str_pad(state, 2, pad ="0")) %>% mutate (state = as.factor(state))
+    state = HHSTFIPS) %>% 
+  
+  mutate(
+    ur12 = ifelse(URBRUR == 'Rural','R','U'),
+    state = str_pad(state, 2, pad ="0"),
+    state = as.factor(state)) 
 
 #Remove entries with travel flag at the state-division level. This could be due to the response being from a non-home location
 #Similar filter was used in the BTS model
 geo2 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
-  select('state','division','region')  %>% unique()
+        select('state','division','region') %>% unique()
 
-d_travel_2 <-  d1  %>%
+dxx <-  d1  %>%
   merge(.,geo2, by ='state') %>%
   mutate(travel_flag = ifelse(nhts_division == division, 'No','Yes')) %>%
-  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag'))
+  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag')) %>%
+  rename(
+    region = nhts_region ,
+    division = nhts_division)
 
-
-d2 <- d_travel_2 %>% filter(is.na(cbsa13))
 
 #Remove entries with travel flag at the cbsa-division level.This could be due to the response being from a non-home location
 #Similar filter was used in the BTS model
-geo1 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
-  select('cbsa13','division','region')  %>% unique()
+#geo1 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
+ # select('cbsa13','division','region')  %>% unique()
 
-d_travel_1 <-  d_travel_2  %>% filter(!is.na(cbsa13)) %>%
-  merge(.,geo1, by ='cbsa13') %>%
-  mutate(travel_flag = ifelse((nhts_division == division) & (nhts_region == region), 'No','Yes')) %>%
-  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag'))
+#d_travel_1 <-  d_travel_2  %>% filter(!is.na(cbsa13)) %>%
+#  merge(.,geo1, by ='cbsa13') %>%
+#  mutate(travel_flag = ifelse((nhts_division == division) & (nhts_region == region), 'No','Yes')) %>%
+#  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag'))
 
-d <- bind_rows(d2,d_travel_1)  %>%
-  rename(
-    region = nhts_region ,
-    division = nhts_division,
-  )
+#dxx <- bind_rows(d2,d_travel_1)  %>%
+ # rename(
+#    region = nhts_region ,
+ #   division = nhts_division)
 
 
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
 
-gvars <- intersect(gnames, names(d))
+gvars <- intersect(gnames, names(dxx))
 
 # Class new/added geo identifiers as unordered factors
-d <- d %>%
-  mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE))
+dxx <- dxx %>%
+  mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE)) %>% 
+  
+  #CBSA correction: There are some CBSA which have been suppressed in NHTS but available in geoconcordance.fst
+  #We could drop these entries altogehter, randomly assign CBSA to the households, or just drop the CBSA variable. Chose #3
+    mutate(
+    cbsa13 = ifelse((state ==  '09'|state ==  '10'|state ==  '15'|state ==  '34') & (cbsa13 == "None"),NA,cbsa13 ))
 
 #----------------
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
-h.final <- d %>%
+h.final <- dxx %>%
   mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
   labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
-
-
-  rename(
+  
+    rename(
     nhts_2017_hid = HOUSEID,
     weight      = WTHHFIN,# Rename ID and weight variables to standardized names
   ) %>%
-
+  
   rename_with(~ gsub("WTHHFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTHHFIN")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
   select(nhts_2017_hid, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
@@ -355,3 +363,5 @@ compileDictionary()
 
 # Save data to disk (.fst)
 fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_H_processed.fst", compress = 100)
+
+

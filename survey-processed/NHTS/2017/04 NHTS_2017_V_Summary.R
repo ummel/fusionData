@@ -31,7 +31,7 @@ nhts_v_s1 <- nhts_v %>% select(vehtype, nhts_2017_hid, bestmile,gstotcst,gsyrgal
   summarize_if(is.numeric,sum) 
 
 #Summarize all vehicle types and fuel types at the household level by total    
-nhts_v_s2 <- nhts_v %>% select(vehtype, nhts_2017_hid, bestmile,gstotcst,gsyrgal) %>% 
+nhts_v_s2 <- nhts_v %>% select(vehtype, nhts_2017_hid, bestmile, gstotcst, gsyrgal) %>% 
               group_by(nhts_2017_hid) %>% 
               summarize_if(is.numeric,sum)
 

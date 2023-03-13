@@ -62,8 +62,10 @@ codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet 
     mutate(
      label = ifelse(var == "PHYACT" & value == "01","rarely or never does any physical activity",label), 
      label = ifelse(var == "PHYACT" & value == "02","some light or moderate physical activities",label), 
-     label = ifelse(var == "PHYACT" & value == "03","some vigorous physical activities",label) 
-           )%>%
+     label = ifelse(var == "PHYACT" & value == "03","some vigorous physical activities",label),
+     label = ifelse((var == "CARRODE" |var == "WRKTIME"|var == "FLEXTIME"|var == "YEARMILE"|var == "WRKTRANS"|
+                     var == "GCDWORK"|var == "DISTTOWK17"|var == "DISTTOSC17"|var == "BIKE_DFR"|var == "BIKE_GKP") & is.na(label),"Appropriate skip",label))%>%
+       
     mutate_all(trimws)
   
   
@@ -84,7 +86,6 @@ as.values <- list(
   BIKESHARE = "No bike sharing usage",
   BIKE_DFR  = "No biking",
   BIKE_GKP = "No biking",
-  CARRODE = "No people in vehicle to work",
   CARSHARE = "No car share program usage",
   CONDNIGH = "No medical conditions",
   CONDPUB = "No medical conditions",
@@ -135,7 +136,12 @@ as.values <- list(
   YRTOUS = "No year of arrival in US",
   YEARMILE = 0,
   MCUSED = 0,
-  WORKER = "No worker status"
+  WORKER = "No worker status",
+  
+  CARRODE = 0,
+  GCDWORK = 0,
+  DISTTOWK17= 0,
+  DISTTOSC17 = 0
 )
 
   # These are cases where the variable measures a continuous/numeric concept,
@@ -179,7 +185,7 @@ ordered.factors <- list(
 
   BIKE4EX = c("No biking for exercise",0:99),
   BIKESHARE = c("No bike sharing usage",0:99),
-  CARRODE = c("No people in vehicle to work",0:20),
+  CARRODE = c(0:20),
   CARSHARE = c("No car share program usage",0:90),
   DELIVER = c("No online delivery", 0:99),
   EDUC = c("No education","Less than a high school graduate", "High school graduate or GED","Some college or associates degree","Bachelor's degree","Graduate degree or professional degree"),
@@ -280,7 +286,7 @@ na.count  # See which variables have NA's
 imp <- imputeMissing(data = d,
                     N = 1,
                    weight = "WTPERFIN",
-                    y_exclude = c("WRKTRANS","CARRODE","YEARMILE","GCDWORK","WKSTFIPS","DISTTOWK17","DISTTOSC17 ","BIKE_DFR","BIKE_GKP"),
+                    y_exclude = c("WKSTFIPS"),
                     x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
 
 # Replace NA's in 'd' with the imputed values

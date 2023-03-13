@@ -1,5 +1,21 @@
 list(
 
+  borninus__cit = list(
+    NHTS = list(
+      groups = 1:2,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 1, 2, 2, 2),
+      levels = c("Born in the U.S.", "Born in Puerto Rico, Guam, the U.S. Virgin Islands, or the Northern Marianas", "Born abroad of American parent(s)", "U.S. citizen by naturalization", "Not a citizen of the U.S."),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2023-03-11 23:06:39"),
+
   educ__schl = list(
     NHTS = list(
       groups = 0:5,
@@ -11,10 +27,10 @@ list(
       levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
       breaks = "",
       adj = "",
-      agg = "reference"),
+      agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-03-07 22:21:31"),
+    modified = "2023-03-11 23:07:42"),
 
   hh_hisp__hisp = list(
     NHTS = list(
@@ -111,6 +127,22 @@ list(
     ordered = FALSE,
     comment = "",
     modified = "2022-12-06 13:57:48"),
+
+  numadlt__agep = list(
+    NHTS = list(
+      groups = 0,
+      levels = "Min: 1, Median: 2, Mean: 1.893, Max: 10",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1:0,
+      levels = c("Less than 18", "18 or more"),
+      breaks = 18,
+      adj = "",
+      agg = "sum"),
+    ordered = "",
+    comment = "",
+    modified = "2023-03-11 22:59:34"),
 
   occat__occp = list(
     NHTS = list(
@@ -224,6 +256,22 @@ list(
     comment = "",
     modified = "2023-03-07 22:29:36"),
 
+  tab__tablet = list(
+    NHTS = list(
+      groups = c(1, 2, 2, 2, 2),
+      levels = c("Never", "A few times a year", "A few times a month", "A few times a week", "Daily"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2023-03-12 12:19:56"),
+
   timetowk__jwmnp = list(
     NHTS = list(
       groups = 1,
@@ -235,10 +283,11 @@ list(
       levels = "Min: 0, Median: 0, Mean: 11.64, Max: 165",
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = "",
     comment = "",
-    modified = "2022-06-27 22:10:07"),
+    modified = "2023-03-11 23:09:12"),
 
   webuse17__access = list(
     NHTS = list(
@@ -256,6 +305,22 @@ list(
     comment = "",
     modified = "2023-02-20 16:31:55"),
 
+  worker__wkw = list(
+    NHTS = list(
+      groups = 1:2,
+      levels = c("No", "Yes"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 2, 2, 2, 2, 2, 2),
+      levels = c("Less than 16 years old / Did not work during the past 12 months", "50 to 52 weeks worked during past 12 months", "48 to 49 weeks worked during past 12 months", "40 to 47 weeks worked during past 12 months", "27 to 39 weeks worked during past 12 months", "14 to 26 weeks worked during past 12 months", "Less than 14 weeks worked during past 12 months"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2023-03-11 23:18:18"),
+
   wrkcount__wif = list(
     NHTS = list(
       groups = 1:4,
@@ -271,7 +336,7 @@ list(
     ),
     ordered = TRUE,
     comment = "",
-    modified = "2022-08-03 13:29:50"),
+    modified = "2023-03-11 23:14:57"),
 
   wrktime__jwap = list(
     NHTS = list(
@@ -288,6 +353,22 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2023-03-07 22:26:28"),
+
+  wrktrans__jwtr = list(
+    NHTS = list(
+      groups = c(1, 10, 9, 2, 2, 2, 2, 7, 8, 11, 3, 3, 3, 3, 3, 5, 4, 2, 2, 11, 6, 11),
+      levels = c("No mode to work", "Walk", "Bicycle", "Car", "SUV", "Van", "Pickup truck", "Golf cart / Segway", "Motorcycle / Moped", "RV (motor home, ATV, snowmobile)", "School bus", "Public or commuter bus", "Paratransit / Dial-a-ride", "Private / Charter / Tour / Shuttle bus", "City-to-city bus (Greyhound, Megabus)", "Amtrak / Commuter rail", "Subway / Elevated / Light rail / Street car", "Taxi / Limo (including Uber / Lyft)", "Rental car (including Zipcar / Car2Go)", "Airplane", "Boat / Ferry / Water taxi", "Something Else"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 2, 3, 4, 4, 5, 6, 7, 8, 9, 10, 1, 11),
+      levels = c("Not a worker--not in the labor force, including persons under 16 years; unemployed; employed, with a job but not at work; Armed Forces, with a job but not at work", "Car, truck, or van", "Bus or trolley bus", "Streetcar or trolley car (carro publico in Puerto Rico)", "Subway or elevated", "Railroad", "Ferryboat", "Taxicab", "Motorcycle", "Bicycle", "Walked", "Worked at home", "Other method"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2023-03-11 23:52:25"),
 
   youngchild__hupac = list(
     NHTS = list(
