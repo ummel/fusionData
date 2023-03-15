@@ -58,7 +58,7 @@ rm(prep,sim,recipient_acs)
 # These variables are "forced" as predictors in prepXY() and carried along in 'prep' for use by validate() in /output.R
 recipient_exp <- data.frame(matrix(ncol=5,nrow=0))
 
-for (i in 40:1)
+for (i in 30:1)
 {
   recipientM <- recipient %>% filter(M == i)
   cat("Implicate number:",i)
@@ -139,7 +139,7 @@ gc()
 export <- read_fsd("fusion/RECS/2015/2015/output/RECS_2015_2015_fused.fsd")  %>% 
        cbind(.,recipient_exp)
 
-write_fst(export,path= "fusion/RECS/2015/2015/output/RECS_2015_2015_fused_merged.fst",compress= 100)
+write_fst(export, path= "fusion/RECS/2015/2015/output/RECS_2015_2015_fused_merged.fst",compress= 100)
 
 
 

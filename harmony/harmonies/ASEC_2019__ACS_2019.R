@@ -3,7 +3,7 @@ list(
   age__agep = list(
     ASEC = list(
       groups = 1:82,
-      levels = c("Under 1 year", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80-84", "85+"),
+      levels = c("Under 1 year", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "85"),
       breaks = "",
       adj = ""),
     ACS = list(
@@ -139,7 +139,7 @@ list(
       groups = c(1, 3, 2),
       levels = c("Less than 5 years old", "Yes", "No"),
       breaks = "",
-      adj = "if_else(age >= 15, ddrs, factor(\"Less than 5 years old\",\nordered = T)\n)",
+      adj = "if_else(agep >= 15, ddrs, factor(\"Less than 5 years old\")\n)",
       agg = logical(0)
     ),
     ordered = TRUE,
@@ -217,10 +217,10 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 13, 14, 15, 16),
-      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
+      groups = c(1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 13, 14, 15, 16),
+      levels = c("NIU: Less than 15", "No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
       breaks = "",
-      adj = "ifelse(age < 15, 1, schl)",
+      adj = "if_else(agep < 15, factor(\"NIU: Less than 15\", levels = c(\"NIU: Less than 15\", levels(schl)), ordered=T\n), factor(schl, levels = c(\"NIU: Less than 15\", levels(schl)))\n)",
       agg = ""),
     ordered = TRUE,
     comment = "Limit ACS to under 15",
@@ -309,9 +309,9 @@ list(
   fullpart__wkhp = list(
     ASEC = list(
       groups = 1:3,
-      levels = c("NIU: Less than 15", "Full-time", "Part-time"),
+      levels = c("NIU: Less than 15 or did not work last year", "Full-time", "Part-time"),
       breaks = "",
-      adj = "if_else(age != '15', fullpart, factor('NIU: Less than 15',\nordered = T)\n)"),
+      adj = "if_else(age != '15', fullpart, factor('NIU: Less than 15 or did not work last year',\nordered = T)\n)"),
     ACS = list(
       groups = c(1, 3, 2),
       levels = c("Less than 1", "[1 to 35)", "35 or more"),
@@ -646,7 +646,7 @@ list(
 
   nativity__nativity = list(
     ASEC = list(
-      groups = c(3, 2, 2, 2, 2, 1),
+      groups = c(2, 2, 2, 2, 2, 1),
       levels = c("Unknown", "Both parents native-born", "Father foreign, mother native", "Mother foreign, father native", "Both parents foreign", "Foreign born"),
       breaks = "",
       adj = ""),
@@ -657,7 +657,7 @@ list(
       adj = "",
       agg = ""),
     ordered = FALSE,
-    comment = "No equivalent of 'unknown' in the ACS",
+    comment = "No equivalent of 'unknown' in the ACS - assume unknown is Native",
     modified = "2022-09-13 10:37:25"),
 
   noc__noc = list(
@@ -789,7 +789,7 @@ list(
     comment = "",
     modified = "2022-09-02 13:49:01"),
 
-  recs_division__region = list(
+  asec_division__region = list(
     ASEC = list(
       groups = c(2, 3, 1, 4, 1, 4, 3, 2, 3),
       levels = c("East North Central", "East South Central", "Middle Atlantic", "Mountain", "New England", "Pacific", "South Atlantic", "West North Central", "West South Central"),
@@ -828,10 +828,10 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(3, 2, 2),
-      levels = c("No, has not attended in the last 3 months", "Yes, public school or public college", "Yes, private school or college or home school"),
+      groups = c(1, 3, 2, 2),
+      levels = c("NIU: Less than 16 or older than 55", "No, has not attended in the last 3 months", "Yes, public school or public college", "Yes, private school or college or home school"),
       breaks = "",
-      adj = "ifelse(age < 16 | age > 55, 1, sch)",
+      adj = "if_else(agep < 16 | agep > 55, factor(\"NIU: Less than 16 or older than 55\", levels = c(\"NIU: Less than 16 or older than 55\", levels(sch))\n), factor(sch, levels = c(\"NIU: Less than 16 or older than 55\", levels(sch)))\n)",
       agg = ""),
     ordered = TRUE,
     comment = "",
@@ -874,7 +874,7 @@ list(
       groups = 1,
       levels = "Min: 0, Median: 12, Mean: 20.06, Max: 99",
       breaks = "",
-      adj = "if_else(age != '15', uhrsworkly, NA,\nordered = T)\n)"),
+      adj = ""),
     ACS = list(
       groups = 1,
       levels = "Min: 0, Median: 15, Mean: 20.33, Max: 99",
@@ -882,7 +882,7 @@ list(
       adj = "",
       agg = ""),
     ordered = "",
-    comment = "",
+    comment = "Slight misalignment in universe - CPS starts at 15 and ACS starts at 16, before those is zero for both",
     modified = "2022-09-02 16:59:19"),
 
   unitsstr__bld = list(
@@ -892,13 +892,13 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(1, 5, 5, 2, 3, 4, 6, 6, 6, NA),
+      groups = c(1, 5, 5, 2, 3, 4, 6, 6, 6, 1),
       levels = c("Mobile home or trailer", "One-family house detached", "One-family house attached", "2 Apartments", "3-4 Apartments", "5-9 Apartments", "10-19 Apartments", "20-49 Apartments", "50 or more apartments", "Boat, RV, van, etc."),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = TRUE,
-    comment = "No code for 'boat, RV, van etc' in CPS - left out",
+    comment = "No code for 'boat, RV, van etc' in CPS - placed in Mobile home or trailer",
     modified = "2023-01-06 16:35:04"),
 
   vacovnw__hins6 = list(
@@ -920,7 +920,7 @@ list(
   vetserv__vps = list(
     ASEC = list(
       groups = 1:11,
-      levels = c("NIU", "September 2001 or later", "August 1990 to August 2001", "May 1975 to July 1990", "Vietnam Era (August 1964 to April 1975)", "February 1955 to July 1964", "Korean War (July 1950 to January 1955)", "January 1947 to June 1950", "World War II (December 1941 to December 1946)", "November 1941 or earlier", "Served multiple periods"),
+      levels = c("NIU: Under 17 or have not served in the U.S. Armed Forces", "September 2001 or later", "August 1990 to August 2001", "May 1975 to July 1990", "Vietnam Era (August 1964 to April 1975)", "February 1955 to July 1964", "Korean War (July 1950 to January 1955)", "January 1947 to June 1950", "World War II (December 1941 to December 1946)", "November 1941 or earlier", "Served multiple periods"),
       breaks = "",
       adj = ""),
     ACS = list(
@@ -975,7 +975,7 @@ list(
       groups = 1:4,
       levels = c("Less than 16 years old", "Within the past 12 months", "1-5 years ago", "Over 5 years ago or never worked"),
       breaks = "",
-      adj = "if_else(age > 49, factor('Less than 16 years old', ordered == T), wkl)",
+      adj = "if_else(agep <= 49, wkl, factor(\"Less than 16 years old\", \nordered = T))",
       agg = ""),
     ordered = TRUE,
     comment = "Adjust NIU to the smallest overlapping age range: 16-49",

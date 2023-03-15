@@ -73,8 +73,10 @@ nhts_h <-  fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_processe
 
 
 #Summarize numeric trip variables by trip type at the household level
+
 nhts_h_s1 <- nhts_h %>% select(whytrp2s, nhts_2017_hid,which(sapply(., is.numeric))) %>% drop_na() %>%
-            group_by(nhts_2017_hid,whytrp2s) %>% summarise(
+            group_by(nhts_2017_hid,whytrp2s) %>% 
+            summarise(
               trpmilad = weighted.mean(trpmilad,weight,na.rm = TRUE),
               trpmiles = weighted.mean(trpmiles,weight,na.rm = TRUE),
               vmt_mile = weighted.mean(vmt_mile,weight,na.rm = TRUE),
@@ -87,7 +89,6 @@ nhts_h_s1 <- nhts_h %>% select(whytrp2s, nhts_2017_hid,which(sapply(., is.numeri
 nhts_h_s1_res <-  reshape(getanID(nhts_h_s1, c('nhts_2017_hid','whytrp2s')), 
                         timevar="whytrp2s",idvar=c("nhts_2017_hid"),direction="wide") 
 
-
 #Summarize numeric trip variables at the household level overall 
 nhts_h_s2 <- nhts_h %>% select(nhts_2017_hid,weight,which(sapply(., is.numeric))) %>%
                       group_by(nhts_2017_hid) %>% 
@@ -98,8 +99,7 @@ nhts_h_s2 <- nhts_h %>% select(nhts_2017_hid,weight,which(sapply(., is.numeric))
                         trwaittm = weighted.mean(trwaittm,weight,na.rm = TRUE),
                         numtrans = weighted.mean(numtrans,weight,na.rm = TRUE),
                         tregrtm = weighted.mean(tregrtm,weight,na.rm = TRUE),
-                        trvlcmin = weighted.mean(trvlcmin,weight,na.rm = TRUE)
-                        )
+                        trvlcmin = weighted.mean(trvlcmin,weight,na.rm = TRUE))
 
 #Count number of trips by trip type 
 #nhts_h_count <- nhts_h %>% select(whytrp2s, nhts_2017_hid,which(sapply(., is.numeric))) %>%

@@ -18,23 +18,6 @@ state.merge <- readRDS("geo-raw/miscellaneous/Geographic entities to merge on st
 
 #----------
 
-# RECS 'recs_iecc_zone' variable
-# This links raw IECC codes to those used in RECS 2009 and 2015
-recs.iecc <- tibble(
-  iecc_zone = c("1A*", "2A*", "2B", "2B*", "3A", "3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
-  recs_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK")
-) %>%
-  mutate(recs_iecc_zone = paste0("IECC climate zone", ifelse(grepl("-", recs_iecc_zone), "s ", " "), recs_iecc_zone))
-
-recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
-  mutate(recs_ba_zone = ifelse(ba_zone %in% c('Cold', 'Very Cold'), 'Cold/Very Cold', ba_zone),
-         recs_ba_zone = ifelse(recs_ba_zone %in% c('Hot-Dry', 'Mixed-Dry'), 'Hot-Dry/Mixed-Dry', recs_ba_zone)) %>%
-  left_join(recs.iecc, by = "iecc_zone") %>%
-  select(state, county10, starts_with("recs_")) %>%
-  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS IECC climate zone", "RECS Building American climate zone"))
-
-#----------
-
 # Unzpip the compressed geocorr file in geo-raw/concordance
 unzip(zipfile = "geo-raw/concordance/geocorr2018_2116808121.csv.zip", exdir = tempdir())
 geocorr.file <- list.files(path = tempdir(), pattern = "^geocorr", full.names = TRUE)
@@ -162,6 +145,37 @@ stopifnot(!anyNA(climdiv))
 #          cex_cbsasize = c("Less than 100 thousand", "100-500 thousand", "0.5-1.0 million", "1-5 million", "More than 5 million")[cex_cbsasize]) %>%
 #   select(-pop10)
 
+# Custom Variables ----
+
+## ASEC ----
+
+# Include CPS-ASEC county codes - not identified for each observation 
+
+asec <- readRDS("geo-processed/ASEC/asec_county.rds")
+
+# rename to be consistent with the processed H data 
+asec <- asec %>%
+  mutate(asec_county = county) %>%
+  rename(county14 = county) %>%
+  filter(county14 != "County not identified")
+
+## RECS ----
+
+# RECS 'recs_iecc_zone' variable
+# This links raw IECC codes to those used in RECS 2009 and 2015
+recs.iecc <- tibble(
+  iecc_zone = c("1A*", "2A*", "2B", "2B*", "3A", "3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
+  recs_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK")
+) %>%
+  mutate(recs_iecc_zone = paste0("IECC climate zone", ifelse(grepl("-", recs_iecc_zone), "s ", " "), recs_iecc_zone))
+
+recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
+  mutate(recs_ba_zone = ifelse(ba_zone %in% c('Cold', 'Very Cold'), 'Cold/Very Cold', ba_zone),
+         recs_ba_zone = ifelse(recs_ba_zone %in% c('Hot-Dry', 'Mixed-Dry'), 'Hot-Dry/Mixed-Dry', recs_ba_zone)) %>%
+  left_join(recs.iecc, by = "iecc_zone") %>%
+  select(state, county10, starts_with("recs_")) %>%
+  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS IECC climate zone", "RECS Building American climate zone"))
+
 #----------
 
 # Merge various datasets
@@ -169,6 +183,9 @@ result <- geocorr %>%
   left_join(state.merge, by = "state") %>%
   left_join(recs.climate, by = c("state", "county10")) %>%
   left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
+  left_join(asec, by = c("state", "county14")) %>%
+  mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
+         asec_division = if_else(!str_detect(recs_division, "Mountain"), recs_division, "Mountain")) %>%
   # left_join(cbsasize, by = "cbsa13") %>%
   # mutate(cex_cbsasize = ifelse(ur12 == "U" & !is.na(cbsa13), cex_cbsasize, "Rural"),
   #        cex_metro = ifelse(ur12 == "U" & !is.na(cbsa13) & cbsatype13 == "Metro", "Metro", "Not metro")) %>%

@@ -14,7 +14,6 @@ setwd("/Users/karthikakkiraju/Documents/FusionData/")
 #This file is to process trip-level data
 #This will be later summarized at the household level and merged with the household file
 
-
 # Load raw NHTS 2017 trip level data
 d_t0 <- read.csv("survey-raw/NHTS/2017/trippub.csv") 
 #----
@@ -115,8 +114,7 @@ as.values <- list(
   VEHTYPE = "No vehicle type",
   VMT_MILE = 0,
   WHODROVE = "No",
-  WORKER = "No worker status"
-)
+  WORKER = "No worker status")
 
     # These are cases where the variable measures a continuous/numeric concept,
   # but inserting a zero-value for "Not applicable" entries does not make sense.
@@ -256,14 +254,12 @@ na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-y_in <- c("TRVLCMIN","TRPMILES","TRPTRANS",'TRPACCMP',"TRPHHACC","TRWAITTM","NUMTRANS","TRACCTM","TREGRTM","WHYFROM","WHYTO")
-y_ex <- setdiff(names(na.count),y_in)
 
 ## Impute NA values in 'd'
 imp <- imputeMissing(data = d,
                     N = 1,
                    weight = "WTTRDFIN",
-                   y_exclude = y_ex,
+                   y_exclude = "DWELTIME",
                      x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
 
 # Replace NA's in 'd' with the imputed values

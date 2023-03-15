@@ -166,16 +166,17 @@ geonames <- names(geocon)
 
 ## region -> same as recs divisions ----
 # note: in geocondordance, recs_divsion has Mountain North and Mountain South, but CPS just has Mountain
+# --> make asec_division its own variable in geoconcordance.fst
 d[ , region := str_remove(region, ' Division')]
 d[ , region := as.factor(region)]
 
-# change the name to recs_division to match geoconcord
-setnames(d, 'region', 'recs_division')
-var_info[var_name == 'region', var_name := 'recs_divsion']
+# change the name to asec_division to match newly created var in geoconcord
+setnames(d, 'region', 'asec_division')
+var_info[var_name == 'region', var_name := 'asec_divsion']
 intvars <- setdiff(intvars, 'region')
 
-table(d$recs_division)
-table(geocon$recs_division)
+table(d$asec_division)
+table(geocon$asec_division)
 
 ## state ----
 table(d$statefip)
@@ -203,9 +204,15 @@ d[county == '0', county := 'County not identified']
 d[ , county := as.factor(county)]
 table(d$county)
 
-# change name to match geoconcord
-setnames(d, 'county', 'county14')
-var_info[var_name == 'county', var_name := 'county14']
+# b/c county is not always identified, it will not have all the same levels as in 
+# geoconcordance --> create a new variable in geoconcordance to match 
+# --> output a list of ASEC counties that are identified
+dcounty <- unique(d[ , c('state', 'county')])
+saveRDS(dcounty, "./geo-processed/ASEC/asec_county.rds")
+
+# set name to asec_county so unique in geoconcordance
+setnames(d, 'county', 'asec_county')
+var_info[var_name == 'county', var_name := 'asec_county']
 
 ## metarea ----
 # Variable METAREA has two missing codes - ‘Missing data’ and ‘Other metropolitan area unidentified’ → these seem to refer to the same type of observation based on the variable METRO, they both seem to refer to people in metro areas that are not identified due to data confidentiality
@@ -273,6 +280,8 @@ saveRDS(dictionary, file = "survey-processed/ASEC/2019/ASEC_2019_H_dictionary.rd
 
 # Save Data ----
 fst::write_fst(x = d, path = "survey-processed/ASEC/2019/ASEC_2019_H_processed.fst", compress = 100)
+
+fwrite(select(dictionary, variable, description), file = 'survey-processed/ASEC/2019/ASEC_2019_H_var_list.csv')
 
 # Compile Universal ----
 compileDictionary()
