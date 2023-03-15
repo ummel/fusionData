@@ -8,6 +8,8 @@ fusionData.Rproj
 /R/dev
 /survey-raw
 /geo-raw
+data/dictionary.rda
+data/surveys.rda
 *.fst
 *.rds
 *.fsn
@@ -15,3 +17,4 @@ fusionData.Rproj
 *.fsd
 !*dictionary.rds
 README_cache
+docs
