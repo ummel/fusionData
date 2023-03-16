@@ -8,8 +8,8 @@ fusionData.Rproj
 /R/dev
 /survey-raw
 /geo-raw
-data/dictionary.rda
-data/surveys.rda
+*dictionary.rda
+*surveys.rda
 *.fst
 *.rds
 *.fsn
