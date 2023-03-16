@@ -31,6 +31,9 @@
     <loc>https://ummel.github.io/fusionData/reference/fusionData-package.html</loc>
   </url>
   <url>
+    <loc>https://ummel.github.io/fusionData/reference/fusionInput.html</loc>
+  </url>
+  <url>
     <loc>https://ummel.github.io/fusionData/reference/getGeoProcessed.html</loc>
   </url>
   <url>
@@ -50,5 +53,8 @@
   </url>
   <url>
     <loc>https://ummel.github.io/fusionData/reference/universe.html</loc>
+  </url>
+  <url>
+    <loc>https://ummel.github.io/fusionData/reference/uploadFiles.html</loc>
   </url>
 </urlset>
