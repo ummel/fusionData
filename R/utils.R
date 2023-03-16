@@ -360,3 +360,18 @@ scale2integer <- function(x, y = NULL, precision = 2) {
   }
 
 }
+
+#-------------------
+
+# Version of match.call() that returns default argument values when not explicitly stated
+# 'exclude' allows particular function arguments to be excluded from result
+# https://stackoverflow.com/questions/14397364/match-call-with-default-arguments
+
+match.call.defaults <- function(..., exclude = NULL) {
+  call <- evalq(match.call(expand.dots = FALSE), parent.frame(1))
+  formals <- evalq(formals(), parent.frame(1))
+  for (i in setdiff(names(formals), c(names(call), exclude)))
+    call[i] <- list(formals[[i]])
+  match.call(sys.function(sys.parent()), call)
+}
+
