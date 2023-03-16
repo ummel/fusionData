@@ -4,7 +4,7 @@
 #' Assembles data inputs to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}} to perform survey fusion. Adds fusion, replicate weight, and/or spatial variables and checks that donor and recipient output data frames are consistent.
 #'
 #' @param x List object produced by \code{\link{prepare}}.
-#' @param fusion.variables Character. Names of donor variables to be included in output as fusion candidates. If NULL (default), an attempt is made to return all donor variables not used in harmonization process.
+#' @param fusion.variables Character. Names of donor variables to be included in output as fusion candidates. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process.
 #' @param spatial.datasets Character. Vector of requested spatial datasets to merge (e.g. `"EPA-SLD"`) or either of two special values: `"all"` (default) or `"none"`.
 #' @param window Integer. Size of allowable temporal window, in years, when merging spatial variables. `window = 0` (default) means that a spatial variable is only included if it has the same vintage as the survey. See Details.
 #' @param pca Numeric. Controls whether/how PCA is used to reduce dimensionality of spatial variables. Default (NULL) is no PCA. If non-NULL, should be a numeric vector of length two; e.g. \code{pca = c(50, 0.95)}. First number is the maximum number of components to return; second number is target proportion of variance explained. See Details.

@@ -4,18 +4,27 @@
 \alias{prepare}
 \title{Prepare microdata inputs for assembly}
 \usage{
-prepare(donor, recipient, respondent, implicates = 1, collapse = FALSE)
+prepare(
+  donor,
+  recipient,
+  respondent,
+  implicates = 1,
+  collapse = FALSE,
+  ncores = getOption("fusionData.cores")
+)
 }
 \arguments{
 \item{donor}{Character. Donor survey identifier (e.g. \code{"RECS_2015"}).}
 
-\item{recipient}{Character. Recipient (ACS) survey identifier (e.g. \code{"ACS_2019"}).}
+\item{recipient}{Character. Recipient (ACS) survey identifier (e.g. \code{"ACS_2015"}).}
 
 \item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
 
 \item{implicates}{Integer. Number of PUMA implicates to return for the donor microdata.}
 
 \item{collapse}{Logical. Should rows be collapsed and weighting factors aggregated when there are multiple imputations of the same household-PUMA?}
+
+\item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
 }
 \value{
 A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{\link{assemble}}.

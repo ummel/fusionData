@@ -4,10 +4,11 @@
 # harmonized: Output from call to \link{harmonize}.
 # m: Integer. Number of implicates when imputing PUMA for donor observations.
 # collapse: Logical. Should rows be collapsed and weighting factors aggregated when there are multiple imputations of the same household-PUMA?
+# ncores: number of compute cores; used by gower::gower_topn()
 
 #-----
 
-assignLocation <- function(harmonized, m, collapse) {
+assignLocation <- function(harmonized, m, collapse, ncores) {
 
   # Variables in geolink defining the "target" geography (i.e. uniquely-identified PUMA's)
   gtarget <- c("state", "puma10")
@@ -153,7 +154,7 @@ assignLocation <- function(harmonized, m, collapse) {
   #i <- 5
   #N <- 1000
 
-  sampleIntersection <- function(i, N = 1000) {
+  sampleIntersection <- function(i, N = 1000, ncores) {
 
     # Subset 'D' for intersection 'i' and remove columns with NA values
     d <- subset(D, id == i)
@@ -166,7 +167,7 @@ assignLocation <- function(harmonized, m, collapse) {
       slice_sample(n = min(N, nrow(.)))
 
     # Gower distance for top-N most similar respondents
-    G <- gower::gower_topn(x = d[, ..X], y = r[, ..X], n = nrow(r), nthread = mc.cores)
+    G <- gower::gower_topn(x = d[, ..X], y = r[, ..X], n = nrow(r), nthread = ncores)
 
     # Initial 'weight' of each recipient observation
     # This is the "naive" likelihood of selecting each household in 'r'
@@ -206,7 +207,8 @@ assignLocation <- function(harmonized, m, collapse) {
   D <- pbapply::pblapply(X = sort(unique(D$id)),
                          FUN = sampleIntersection,
                          cl = 1L,  # This defaults to lapply() execution but gives a nice progress bar/timer
-                         N = 1000) %>%
+                         N = 1000,
+                         ncores = ncores) %>%
     rbindlist() %>%
     setcolorder(c(did, rid, gtarget, gkeep))
 

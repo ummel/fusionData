@@ -6,6 +6,7 @@
 #' @param harmony.file Character. Name of a .R harmony file located at \code{/harmony/harmonies}.
 #' @param respondent Character. Should the output microdata be at the \code{"household"} or \code{"person"} level?
 #' @param output Character. Can be \code{"both"}, \code{"donor"}, or \code{"recipient"}, indicating which microdata to return.
+#' @param ncores Integer. Number of physical CPU cores used for parallel computation.
 #'
 #' @return When \code{output = "both"}, a list of length 2 containing the donor and recipient data frames. Otherwise, a single data frame.
 #'
@@ -23,7 +24,10 @@
 
 #-----
 
-harmonize <- function(harmony.file, respondent, output = "both") {
+harmonize <- function(harmony.file,
+                      respondent,
+                      output = "both",
+                      ncores = getOption("fusionData.cores")) {
 
   # Load the harmonization list
   H <- dget(file.path("harmony/harmonies", harmony.file))
@@ -50,7 +54,6 @@ harmonize <- function(harmony.file, respondent, output = "both") {
   hnames <- names(H)
 
   # Load dictionary in order to tag each variable as household- or person-level
-  #data("dictionary", package = "fusionData")
   load("data/dictionary.rda")
   dict.vars <- paste(paste(dictionary$Survey, dictionary$Vintage, sep = "_"), dictionary$Variable)
 
@@ -262,7 +265,7 @@ harmonize <- function(harmony.file, respondent, output = "both") {
     #for (i in 1:length(H)) test <- makeHarmony(i)
 
     # Process in parallel and combine results into data frame
-    out <- pbapply::pblapply(X = 1:length(H), FUN = makeHarmony, cl = mc.cores) %>%
+    out <- pbapply::pblapply(X = 1:length(H), FUN = makeHarmony, cl = ncores) %>%
       setNames(names(H)) %>%
       as.data.frame()
 

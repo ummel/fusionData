@@ -4,7 +4,12 @@
 \alias{harmonize}
 \title{Create harmonized microdata}
 \usage{
-harmonize(harmony.file, respondent, output = "both")
+harmonize(
+  harmony.file,
+  respondent,
+  output = "both",
+  ncores = getOption("fusionData.cores")
+)
 }
 \arguments{
 \item{harmony.file}{Character. Name of a .R harmony file located at \code{/harmony/harmonies}.}
@@ -12,6 +17,8 @@ harmonize(harmony.file, respondent, output = "both")
 \item{respondent}{Character. Should the output microdata be at the \code{"household"} or \code{"person"} level?}
 
 \item{output}{Character. Can be \code{"both"}, \code{"donor"}, or \code{"recipient"}, indicating which microdata to return.}
+
+\item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
 }
 \value{
 When \code{output = "both"}, a list of length 2 containing the donor and recipient data frames. Otherwise, a single data frame.

@@ -16,7 +16,7 @@ assemble(
 \arguments{
 \item{x}{List object produced by \code{\link{prepare}}.}
 
-\item{fusion.variables}{Character. Names of donor variables to be included in output as fusion candidates. If NULL (default), an attempt is made to return all donor variables not used in harmonization process.}
+\item{fusion.variables}{Character. Names of donor variables to be included in output as fusion candidates. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process.}
 
 \item{spatial.datasets}{Character. Vector of requested spatial datasets to merge (e.g. \code{"EPA-SLD"}) or either of two special values: \code{"all"} (default) or \code{"none"}.}
 

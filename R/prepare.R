@@ -4,10 +4,11 @@
 #' Prepares data inputs to pass to \code{\link{assemble}}. Harmonizes common variables for the specified donor and recipient surveys, imputes PUMA for donor records, and samples location variables for recipient records.
 #'
 #' @param donor Character. Donor survey identifier (e.g. `"RECS_2015"`).
-#' @param recipient Character. Recipient (ACS) survey identifier (e.g. `"ACS_2019"`).
+#' @param recipient Character. Recipient (ACS) survey identifier (e.g. `"ACS_2015"`).
 #' @param respondent Character. Desired respondent level of microdata. Either `"household"` or `"person"`.
 #' @param implicates Integer. Number of PUMA implicates to return for the donor microdata.
 #' @param collapse Logical. Should rows be collapsed and weighting factors aggregated when there are multiple imputations of the same household-PUMA?
+#' @param ncores Integer. Number of physical CPU cores used for parallel computation.
 #'
 #' @return A list of length two containing output data frames specific to donor and recipient output, respectfully. Can be passed to \code{\link{assemble}}.
 #'
@@ -47,7 +48,8 @@ prepare <- function(donor,
                     recipient,
                     respondent,
                     implicates = 1,
-                    collapse = FALSE) {
+                    collapse = FALSE,
+                    ncores = getOption("fusionData.cores")) {
 
   # Validate arguments
   stopifnot({
@@ -58,12 +60,17 @@ prepare <- function(donor,
   #-----
 
   # Harmonize data for specified donor and recipient surveys
-  data <- harmonize(harmony.file = paste0(donor, "__", recipient, ".R"), respondent = respondent)
+  data <- harmonize(harmony.file = paste0(donor, "__", recipient, ".R"),
+                    respondent = respondent,
+                    ncores = ncores)
 
   #-----
 
   # Impute PUMA for the donor
-  location.data <- assignLocation(harmonized = data, m = implicates, collapse = collapse)
+  location.data <- assignLocation(harmonized = data,
+                                  m = implicates,
+                                  collapse = collapse,
+                                  ncores = ncores)
 
   #----
 
