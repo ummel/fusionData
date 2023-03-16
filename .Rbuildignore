@@ -13,3 +13,7 @@
 ^geo-raw$
 ^geo-processed$
 ^production
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
