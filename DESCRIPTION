@@ -1,31 +1,39 @@
 Package: fusionData
 Title: Data backend for fusionACS platform
-Version: 0.3.0
-Authors@R: 
-    person(given = "Kevin",
-           family = "Ummel",
-           role = c("aut", "cre"),
-           email = "ummel@sas.upenn.edu")
+Version: 1.0.0
+Authors@R: c(
+    person(given = "Kevin", family = "Ummel", role = c("aut", "cre"), email = "ummel@berkeley.edu"),
+    person(given = "Karthik", family = "Akkiraju", role = "ctb"),
+    person(given = "Hero", family = "Ashman", role = "ctb"),
+    person(given = "Cora", family = "Kingdon", role = "ctb"),
+    person(given = "Miguel", family = "Poblete Cazenave", role = "ctb"),
+    person(given = "Steven", family = "Herrera Tenorio", role = "ctb"))
 Description: Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.
 License: proprietary
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Depends: 
-    R (>= 3.5.0),
-    shiny,
-    fst,
-    data.table,
-    tidyverse,
+    R (>= 3.5.0)
+Imports: 
+    devtools,
+    labelled,
+    pbapply,
+    spatstat.geom,
+    gower,
     DT,
     gt,
     rhandsontable,
     shinyjs,
     shinyWidgets,
-    matrixStats
-Imports: 
-    labelled,
-    pbapply,
-    spatstat.geom,
-    gower
+    matrixStats,
+    dplyr,
+    purrr,
+    stringr,
+    tibble,
+    fst,
+    shiny,
+    data.table,
+    fusionModel
+URL: https://ummel.github.io/fusionData/

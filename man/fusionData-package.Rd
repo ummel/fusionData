@@ -8,8 +8,24 @@
 \description{
 Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://ummel.github.io/fusionData/}
+}
+
+}
 \author{
-\strong{Maintainer}: Kevin Ummel \email{ummel@sas.upenn.edu}
+\strong{Maintainer}: Kevin Ummel \email{ummel@berkeley.edu}
+
+Other contributors:
+\itemize{
+  \item Karthik Akkiraju [contributor]
+  \item Hero Ashman [contributor]
+  \item Cora Kingdon [contributor]
+  \item Miguel Poblete Cazenave [contributor]
+  \item Steven Herrera Tenorio [contributor]
+}
 
 }
 \keyword{internal}
