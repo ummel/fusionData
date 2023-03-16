@@ -9,7 +9,6 @@
 #' @import tibble
 #' @import fst
 #' @import devtools
-#' @import fusionModel
 #' @rawNamespace import(shinyjs, except = c(html, runExample, alert))
 #' @rawNamespace import(matrixStats, except = c(count))
 #' @rawNamespace import(shiny, except = c(dataTableOutput, renderDataTable, validate))
