@@ -1,9 +1,14 @@
-library(tidyverse)
-library(gt)
-library(rhandsontable)
-library(shinyjs)
-library(shinyWidgets)
-library(shiny)
+suppressPackageStartupMessages({
+  library(gt)
+  library(rhandsontable)
+  library(shinyjs)
+  library(shinyWidgets)
+  library(shiny)
+  library(stringr)
+  library(purrr)
+  library(dplyr)
+  library(tidyr)
+})
 
 #-----
 
@@ -64,7 +69,7 @@ binLabels <- function(x, summary.values) {
 
       if (x == "*") {
 
-        validate(need(diff(rng) <= 100, 'More than 100 integer values; too many to display'))
+        shiny::validate(need(diff(rng) <= 100, 'More than 100 integer values; too many to display'))
         rng[1]:rng[2]
 
       } else {
@@ -73,7 +78,7 @@ binLabels <- function(x, summary.values) {
         y <- parseNumbers(x)
 
         # Validate input values
-        validate(
+        shiny::validate(
           need(!anyNA(y), 'Input should be numbers separated by commas (ex: 3, 5, 7)'),
           need(!is.unsorted(y, strictly = TRUE), 'Values should be in ascending order'),
           need(y[1] > rng[1], paste0('First value must be greater than ', rng[1])),
@@ -669,7 +674,7 @@ server <- function(input, output, session) {
         ungroup() %>%
         gt() %>%
         cols_align("center") %>%
-        fmt_missing(columns = everything(), missing_text = "") %>%
+        sub_missing(columns = everything(), missing_text = "") %>%
         tab_options(table.align = "left") %>%
         tab_style(
           style = list(

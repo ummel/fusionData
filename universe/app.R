@@ -10,8 +10,10 @@
 # Example from here: https://shiny.rstudio.com/gallery/datatables-options.html
 # datatables formatting options: https://datatables.net/reference/option/
 # Also see here: ?DT::datatable
-
-library(shiny)
+suppressPackageStartupMessages({
+  library(shiny)
+  library(DT)
+})
 
 # Load dictionary and survey summary data
 # Detect if in a local environment or deployed remotely

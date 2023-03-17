@@ -5,9 +5,9 @@ account: ummel
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6571224
-bundleId: 6196798
+bundleId: 6969169
 url: https://ummel.shinyapps.io/fusionACS_Dictionary/
-when: 1660342886.56097
-lastSyncTime: 1660342886.561
+when: 1679017965.55259
+lastSyncTime: 1679017965.55262
 asMultiple: FALSE
 asStatic: FALSE

@@ -11,9 +11,9 @@
 #' @export
 
 universe <- function() {
-  runApp(appDir = "universe",
-         launch.browser = TRUE,
-         quiet = TRUE,
-         display.mode = "normal",
-         test.mode = FALSE)
+  shiny::runApp(appDir = "universe",
+                launch.browser = TRUE,
+                quiet = TRUE,
+                display.mode = "normal",
+                test.mode = FALSE)
 }

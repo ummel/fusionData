@@ -11,9 +11,9 @@
 #' @export
 
 harmony <- function() {
-  runApp(appDir = "harmony",
-         launch.browser = TRUE,
-         quiet = TRUE,
-         display.mode = "normal",
-         test.mode = FALSE)
+  shiny::runApp(appDir = "harmony",
+                launch.browser = TRUE,
+                quiet = TRUE,
+                display.mode = "normal",
+                test.mode = FALSE)
 }
