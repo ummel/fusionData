@@ -54,7 +54,7 @@ library(fusionData)
 
 You may be prompted to enter the password for the Google Drive account storing the remote files.
 
-* username: fusionACSdata
+* username: [provided]
 * password: [provided]
 
 For full functionality, it is necessary to download the remotely-stored processed survey microdata and processed spatial data files. The following section ("Structure and usage") has more detail about this and the associated reasoning. See `?getSurveyProcessed` and `?getGeoProcessed` as well. To get up and running, you'll need to call the following commands.

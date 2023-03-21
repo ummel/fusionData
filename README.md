@@ -71,7 +71,7 @@ library(fusionData)
 You may be prompted to enter the password for the Google Drive account
 storing the remote files.
 
--   username: fusionACSdata
+-   username: [provided]
 -   password: [provided]
 
 For full functionality, it is necessary to download the remotely-stored
