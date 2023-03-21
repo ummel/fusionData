@@ -62,7 +62,7 @@ drive_dircreate <- function(dir) {
   if (!x[1] %in% c("~", "My Drive")) stop("'dir' must start with 'My Drive' or '~' to denote home directory")
   x[1] <- "~"
   check <- TRUE
-  #cat("Creating Google Drive directory structure:\n", dir, "\n")
+  cat("drive_dircreate(): Creating Google Drive directory structure for:\n", dir, "\n")
   for (i in 2:length(x)) {
     root <- paste(x[1:(i-1)], collapse = "/")
     if (check) {

@@ -2,7 +2,7 @@
 % Please edit documentation in R/fusionInput.R
 \name{fusionInput}
 \alias{fusionInput}
-\title{Generate /input files needed for fusion}
+\title{Generate input files needed for fusion}
 \usage{
 fusionInput(
   donor,
@@ -10,7 +10,7 @@ fusionInput(
   respondent,
   fuse = NULL,
   force = NULL,
-  notes = NULL,
+  note = NULL,
   test_mode = TRUE,
   ncores = getOption("fusionData.cores")
 )
@@ -26,19 +26,47 @@ fusionInput(
 
 \item{force}{Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.}
 
-\item{notes}{Character. Optional notes supplied by user. These are added to the log file for reference.}
+\item{note}{Character. Optional note supplied by user. Added to the log file for reference.}
 
 \item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in /fusion (no underscore).}
 
 \item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
 }
 \value{
-Saves resulting /input data files to appropriate local directory and (optionally) to remote Google Drive storage. Also saves a .txt log file alongside data files that records console output from \code{fusionInput()}.
+Invisibly returns path to local directory where files were saved. Messages printed to console noting progress. Resulting \code{/input} data files are saved to appropriate local directory and (optionally) to remote Google Drive storage. Also saves a .txt log file alongside data files that records console output from \code{fusionInput}.
 }
 \description{
-Handles all operations needed to generate /input files from successfully ingested and harmonized donor survey microdata. Also (optionally) uploads resulting local /input data files to correct location in remote storage (via \code{\link{uploadFiles}}).
-\cr\cr NOTE: Argument \code{test_mode} is \code{TRUE} by default. It must be explicitly set to \code{FALSE} to create (or possibly overwrite) production data in local /fusion directory.
+Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Also (optionally) uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
+\cr\cr NOTE: Argument \code{test_mode} is \code{TRUE} by default. It must be explicitly set to \code{FALSE} to create (or possibly overwrite) production data in local \code{/fusion} directory. By default, \code{fusionInput} only operates on the \code{/fusion_} directory (underscore intentional).
 }
 \details{
-The following steps:
+The function checks arguments and determines the file path to the appropriate \code{/input} directory (creating it if necessary), based on \code{donor}, \code{recipient}, \code{respondent}, and \code{test_mode}. It then executes the following steps:
+\enumerate{
+\item \strong{Check for custom pre-processing script}. Looks for an \emph{optional}, pre-existing .R script in \code{/input} starting with "(00)". This script can be used to inject custom code prior to any other operations. Most likely, the custom code is used to set or modify function arguments that cannot be specified manually at function call. If found, the .R file is \code{\link{source}}-d locally and code comments are printed to the console.
+\item \strong{prepare() microdata}. \code{\link{prepare}} is called with sensible default values.
+\item \strong{assemble() microdata}. \code{\link{assemble}} is called with sensible default values. Output from \code{\link{assemble}} consists of an object named \code{data} with the harmonized donor microdata in \code{data[[1]]} and harmonized ACS microdata in \code{data[[2]]}.
+\item \strong{Check for custom .R scripts}. Looks for \emph{optional}, pre-existing .R scripts in \code{/input} starting with "(01)", "(02)", etc. These scripts can be used to inject custom code prior to next step. Most likely, the custom code is used to add or remove non-standard variables from \code{data} or otherwise adjust the default harmonized microdata. The custom code must modify the \code{fuse} vector (or list) if changes to the initial function argument are desired. If found, the .R files are \code{\link{source}}-d locally and code comments are printed to the console.
+\item \strong{Check categorical harmonized variables}. Computes the similarity of donor and ACS categorical harmonized variables by comparing proportions for the observable factor levels. Under the assumption that the donor and ACS sample the same underlying population, we expect the proportions to be fairly similar. Returns a "Similarity score" for each categorical harmonized variable, ranging from 0 to 1. Variables with scores below ~0.8 should probably be checked by the analyst (via \code{\link{harmony}}) to confirm that the harmonization strategy is valid. User is prompted in the console to indicate which variables should be ignored/dropped/removed, if any.
+\item \strong{Check location variables}. Checks the number of factor levels in each location predictor variable and compares to the number of levels in the "representative" location variable passed via \code{force}. If a location variable has more levels than the representative one, it is flagged as a potential issue since it suggests the presence of a location variable with greater spatial resolution than the one known to be representative. User is prompted in the console to indicate if they would like to remove the flagged variable(s).
+\item \strong{Check fusion and predictor variables}. The full set of fusion and potential predictor variables is determined. Summary information is printed to the console. User is prompted in the console to confirm that everything looks OK before proceeding.
+\item \strong{Run fusionModel::prepXY()}. \code{\link[fusionModel]{prepXY}} is called with sensible default values. The output is written to the appropriate \code{/input} directory and noted in console. \code{\link[fusionModel]{prepXY}} argument \code{fraction} is automatically set to use 10\% of donor observations or 50k rows (10k in test mode), whichever is higher. Sampling often has minimal effect on results but speeds up computation.
+\item \strong{Write training and prediction datasets to disk}. The (donor) training and (ACS) prediction datasets are written to the appropriate \code{/input} directory as fully-compressed \code{\link[fst]{fst}} files. Output file names noted in console. In test mode, no more than 10k rows of each is written to disk (for speed). In this case, the expected production file size is printed to the console.
+\item \strong{Upload /input files to Google Drive}. User is prompted in the console to confirm if they would like to upload resulting \code{/input} data files to the analogous location in the remote Google Drive storage.
+\item \strong{fusionInput() is finished!}. Upon completion, a log file named \code{"inputlog.txt"} is written to \code{/input} for reference.
+}
+
+The user is prompted for console input (including asking about GDrive upload) \emph{only} if \code{\link{interactive}} is \code{TRUE}. Otherwise, the steps proceed without user input.
+}
+\examples{
+# Since 'test_mode = TRUE' by default, this will affect files in local /fusion_ directory
+dir <- fusionInput(donor = "RECS_2015",
+                   recipient = "ACS_2015",
+                   respondent = "household",
+                   fuse = c("btung", "btuel", "cooltype"),
+                   force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division"),
+                   note = "Hello world. Reminder: running in test mode by default.")
+
+# List files in the target /input directory
+list.files(dir)
+
 }
