@@ -1,16 +1,16 @@
 #' Generate input files needed for fusion
 #'
 #' @description
-#' Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Also (optionally) uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
-#' \cr\cr NOTE: Argument \code{test_mode} is \code{TRUE} by default. It must be explicitly set to \code{FALSE} to create (or possibly overwrite) production data in local \code{/fusion} directory. By default, \code{fusionInput} only operates on the \code{/fusion_} directory (underscore intentional).
+#' Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Optionally uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
+#' \cr\cr!!! Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
 #'
 #' @param donor Character. Donor survey identifier (e.g. `"RECS_2015"`).
 #' @param recipient Character. Recipient (ACS) survey identifier (e.g. `"ACS_2015"`).
 #' @param respondent Character. Desired respondent level of microdata. Either `"household"` or `"person"`.
 #' @param fuse Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process.
 #' @param force Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.
-#' @param note Character. Optional note supplied by user. Added to the log file for reference.
-#' @param test_mode Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in /fusion (no underscore).
+#' @param note Character. Optional note supplied by user. Inserted in the log file for reference.
+#' @param test_mode Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).
 #' @param ncores Integer. Number of physical CPU cores used for parallel computation.
 #'
 #' @details The function checks arguments and determines the file path to the appropriate \code{/input} directory (creating it if necessary), based on \code{donor}, \code{recipient}, \code{respondent}, and \code{test_mode}. It then executes the following steps:
@@ -24,7 +24,7 @@
 #' 1. **Run fusionModel::prepXY()**. \code{\link[fusionModel]{prepXY}} is called with sensible default values. The output is written to the appropriate \code{/input} directory and noted in console. \code{\link[fusionModel]{prepXY}} argument \code{fraction} is automatically set to use 10% of donor observations or 50k rows (10k in test mode), whichever is higher. Sampling often has minimal effect on results but speeds up computation.
 #' 1. **Write training and prediction datasets to disk**. The (donor) training and (ACS) prediction datasets are written to the appropriate \code{/input} directory as fully-compressed \code{\link[fst]{fst}} files. Output file names noted in console. In test mode, no more than 10k rows of each is written to disk (for speed). In this case, the expected production file size is printed to the console.
 #' 1. **Upload /input files to Google Drive**. User is prompted in the console to confirm if they would like to upload resulting \code{/input} data files to the analogous location in the remote Google Drive storage.
-#' 1. **fusionInput() is finished!**. Upon completion, a log file named \code{"inputlog.txt"} is written to \code{/input} for reference.
+#' 1. **fusionInput() is finished!** Upon completion, a log file named \code{"inputlog.txt"} is written to \code{/input} for reference.
 #'
 #' The user is prompted for console input (including asking about GDrive upload) *only* if \code{\link{interactive}} is \code{TRUE}. Otherwise, the steps proceed without user input.
 #'
@@ -45,8 +45,6 @@
 #' @export
 
 #---------------------------
-#---------------------------
-
 # TESTING
 
 # RECS
@@ -106,6 +104,9 @@ fusionInput <- function(donor,
 
   # Respondent identifier ("H" or "P")
   rid <- substring(toupper(respondent), 1, 1)
+  respondent = ifelse(rid == "H", "household", "person")
+  donor <- toupper(donor)
+  recipient <- toupper(recipient)
 
   # Check input arguments
   stopifnot({
@@ -135,15 +136,17 @@ fusionInput <- function(donor,
 
   #-----
 
-  # Directory in /fusion where results will be saved
-  # This is automatically constructed from 'donor' and 'recipient', assuming recipient is ACS-based
-  acs.vintage <- substring(recipient, 5)
-  stub <- paste(ifelse(test_mode, "fusion_", "fusion"), sub("_", "/", donor), acs.vintage, "input", rid, sep = "/")  # TEST with fusion_
+  # Check validity of the working directory path
+  # Also check if "/fusionData" is part of the path, as this is required
+  input <- normalizePath(getwd())
+  b <- strsplit(input, .Platform$file.sep, fixed = TRUE)[[1]]
+  i <- which(b == "fusionData")
+  if (length(i) == 0) stop("'/fusionData' is not part of the working directory's normalized path; this is required.")
+  stub <- paste(b[1:i], collapse = .Platform$file.sep)
 
   #-----
 
   # Report initial messages to console and log
-
   cat(format(tstart, usetz = TRUE), "\n")
   cat(R.version.string, "\n")
   cat("Platform:", R.Version()$platform, "\n")
@@ -161,15 +164,17 @@ fusionInput <- function(donor,
   # Write 'note' argument to log file (and console), if requested
   if (!is.null(note)) cat("User-supplied note:\n", note, "\n\n")
 
-  # Create the /input directory, if necessary
-  dir <- normalizePath(stub, mustWork = FALSE)
+  # Directory in /fusionData where /input results will be saved
+  # This is automatically constructed from 'donor' and 'recipient', assuming recipient is ACS-based
+  acs.vintage <- substring(recipient, 5)
+  dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs.vintage, rid, "input")
+  cat("Result files will be saved to:\n", dir, "\n\n")
   if (dir.exists(dir)) {
-    cat("The local /input directory already exists:\n")
+    cat("The local /input directory already exists.\n")
   } else {
     dir.create(dir, recursive = TRUE)
-    cat("The local /input directory was created:\n")
+    cat("The local /input directory was created.\n")
   }
-  cat(dir, "\n")
 
   # Update 'stub' to include file name information
   stub <- file.path(dir, paste(donor, acs.vintage, rid, sep = "_"))
@@ -212,7 +217,7 @@ fusionInput <- function(donor,
   cat("\n|=== assemble() microdata ===|\n\n")
 
   # Specify fusion variables to be retained in harmonization results
-  if (is.null(fuse)) stop("'fuse' is not specified or constructed on-the-fly")
+  #if (is.null(fuse)) stop("'fuse' is not specified or constructed on-the-fly")
   data <- fusionData::assemble(prep,
                                fusion.variables = unlist(fuse),
                                spatial.datasets = "all",
@@ -468,12 +473,16 @@ fusionInput <- function(donor,
   rm(data)
   invisible(gc())
   cat("Prediction dataset saved to:", paste0(basename(pfile), " (", fsize, " MB)"), "\n")
-  if (test_mode & fsize.true > fsize) cat("Test mode: saved partial prediction data. Expected production file size is ~", fsize.true, "MB\n" )
+  if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
 
   #-----
 
   cat("\n|=== Upload /input files to Google Drive ===|\n\n")
-  if (ask) uploadFiles(files = c(xfile, tfile, pfile), ask = TRUE)
+  if (ask) {
+    uploadFiles(files = c(xfile, tfile, pfile), ask = TRUE)
+  } else {
+    cat("Non-interactive session: skipping upload to Google Drive\n")
+  }
 
   #-----
 
@@ -481,16 +490,16 @@ fusionInput <- function(donor,
 
   # Report processing time
   tout <- difftime(Sys.time(), tstart)
-  cat("fusionInput() total processing time:", signif(as.numeric(tout), 3), attr(tout, "units"), "\n", sep = " ")
+  cat("Total processing time:", signif(as.numeric(tout), 3), attr(tout, "units"), "\n", sep = " ")
 
   # Finish logging and copy log file to /input
   log.path <- file.path(dir, paste(donor, acs.vintage, rid, "inputlog.txt", sep = "_"))
-  cat("\nfusionInput() log file saved to:\n", log.path)
+  cat("\nLog file saved to:\n", log.path)
   sink(type = "output")
   close(log.txt)
   invisible(file.copy(from = log.temp, to = log.path, overwrite = TRUE))
 
-  # Return the /input location invisibly
+  # Return the /input path invisibly
   return(invisible(dir))
 
 }

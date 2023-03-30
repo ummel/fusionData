@@ -26,9 +26,9 @@ fusionInput(
 
 \item{force}{Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.}
 
-\item{note}{Character. Optional note supplied by user. Added to the log file for reference.}
+\item{note}{Character. Optional note supplied by user. Inserted in the log file for reference.}
 
-\item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in /fusion (no underscore).}
+\item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).}
 
 \item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
 }
@@ -36,8 +36,8 @@ fusionInput(
 Invisibly returns path to local directory where files were saved. Messages printed to console noting progress. Resulting \code{/input} data files are saved to appropriate local directory and (optionally) to remote Google Drive storage. Also saves a .txt log file alongside data files that records console output from \code{fusionInput}.
 }
 \description{
-Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Also (optionally) uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
-\cr\cr NOTE: Argument \code{test_mode} is \code{TRUE} by default. It must be explicitly set to \code{FALSE} to create (or possibly overwrite) production data in local \code{/fusion} directory. By default, \code{fusionInput} only operates on the \code{/fusion_} directory (underscore intentional).
+Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Optionally uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
+\cr\cr!!! Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
 }
 \details{
 The function checks arguments and determines the file path to the appropriate \code{/input} directory (creating it if necessary), based on \code{donor}, \code{recipient}, \code{respondent}, and \code{test_mode}. It then executes the following steps:
@@ -52,7 +52,7 @@ The function checks arguments and determines the file path to the appropriate \c
 \item \strong{Run fusionModel::prepXY()}. \code{\link[fusionModel]{prepXY}} is called with sensible default values. The output is written to the appropriate \code{/input} directory and noted in console. \code{\link[fusionModel]{prepXY}} argument \code{fraction} is automatically set to use 10\% of donor observations or 50k rows (10k in test mode), whichever is higher. Sampling often has minimal effect on results but speeds up computation.
 \item \strong{Write training and prediction datasets to disk}. The (donor) training and (ACS) prediction datasets are written to the appropriate \code{/input} directory as fully-compressed \code{\link[fst]{fst}} files. Output file names noted in console. In test mode, no more than 10k rows of each is written to disk (for speed). In this case, the expected production file size is printed to the console.
 \item \strong{Upload /input files to Google Drive}. User is prompted in the console to confirm if they would like to upload resulting \code{/input} data files to the analogous location in the remote Google Drive storage.
-\item \strong{fusionInput() is finished!}. Upon completion, a log file named \code{"inputlog.txt"} is written to \code{/input} for reference.
+\item \strong{fusionInput() is finished!} Upon completion, a log file named \code{"inputlog.txt"} is written to \code{/input} for reference.
 }
 
 The user is prompted for console input (including asking about GDrive upload) \emph{only} if \code{\link{interactive}} is \code{TRUE}. Otherwise, the steps proceed without user input.
