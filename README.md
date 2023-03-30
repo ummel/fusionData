@@ -2,22 +2,23 @@ fusionData
 ================
 Kevin Ummel (<ummel@berkeley.edu>)
 
--   <a href="#overview" id="toc-overview">Overview</a>
--   <a href="#setup-and-install" id="toc-setup-and-install">Setup and
-    install</a>
--   <a href="#usage-and-structure" id="toc-usage-and-structure">Usage and
-    structure</a>
--   <a href="#ingest-survey-data" id="toc-ingest-survey-data">Ingest survey
-    data</a>
--   <a href="#document-variables" id="toc-document-variables">Document
-    variables</a>
--   <a href="#harmonize-variables" id="toc-harmonize-variables">Harmonize
-    variables</a>
--   <a href="#compile-spatial-data" id="toc-compile-spatial-data">Compile
-    spatial data</a>
--   <a href="#prepare-for-fusion" id="toc-prepare-for-fusion">Prepare for
-    fusion</a>
--   <a href="#make-it-rain" id="toc-make-it-rain">Make it rain</a>
+- <a href="#overview" id="toc-overview">Overview</a>
+- <a href="#setup-and-install" id="toc-setup-and-install">Setup and
+  install</a>
+- <a href="#usage-and-structure" id="toc-usage-and-structure">Usage and
+  structure</a>
+- <a href="#ingest-survey-data" id="toc-ingest-survey-data">Ingest survey
+  data</a>
+- <a href="#document-variables" id="toc-document-variables">Document
+  variables</a>
+- <a href="#harmonize-variables" id="toc-harmonize-variables">Harmonize
+  variables</a>
+- <a href="#compile-spatial-data" id="toc-compile-spatial-data">Compile
+  spatial data</a>
+- <a href="#prepare-fusion-inputs" id="toc-prepare-fusion-inputs">Prepare
+  fusion inputs</a>
+- <a href="#generate-fusion-outputs"
+  id="toc-generate-fusion-outputs">Generate fusion outputs</a>
 
 ## Overview
 
@@ -33,9 +34,10 @@ overall fusionACS workflow:
     the American Community Survey (ACS).
 4.  **Compile spatial data**: Compile data from multiple spatial
     datasets for merging with survey microdata.
-5.  **Prepare for fusion**: Prepare donor and ACS/recipient microdata
-    inputs passed to the [fusionModel
-    package](https://github.com/ummel/fusionModel).
+5.  **Prepare fusion inputs**: Prepare harmonized donor and ACS
+    microdata fusion inputs.
+6.  **Generate fusion outputs**: Fuse donor variables to ACS microdata
+    using [fusionModel](https://github.com/ummel/fusionModel).
 
 ## Setup and install
 
@@ -50,15 +52,22 @@ Repository URL: https://github.com/ummel/fusionData
 Project directory name: fusionData
 ```
 
-You will be prompted to enter your Github username and password. After
-the repository has been cloned to your local project directory, you can
-install and load the package itself. You may be prompted to install some
-dependencies.
-
-\*Note: if you use multi-factor authentication for your Github
-credentials, you will need to enable an SSH key, and will need to use
+You will be prompted to enter your Github username and password. You may
+be prompted to install some package dependencies. If you use
+multi-factor authentication for your Github credentials, you will need
+to enable an SSH key, and will need to use
 `git@github.com:ummel/fusionData.git` as the Repository URL in the above
 setup parameters.
+
+Although fusionData is structured (and loadable) as a *R* package, it
+also acts as a code and data *repository* that is shared and
+continuously modified by authorized users. fusionData grows over time as
+new surveys and spatial datasets – and the code needed to process and
+manipulate them – are added. fusionData is *not public*.
+
+Now that the shared Github repository has been cloned to your local
+drive (in a `/fusionData` project directory), we can install the package
+locally and load it.
 
 ``` r
 # Install the fusionData package locally
@@ -68,39 +77,41 @@ devtools::install()
 library(fusionData)
 ```
 
-You may be prompted to enter the password for the Google Drive account
-storing the remote files.
+Whenever the `fusionData` package is loaded, it checks that the current
+working directory is set to your local `/fusionData` directory (it will
+issue an error otherwise). This is because the package works with (and
+expects) a particular directory structure locally that is mimicked in
+the Github repository.
 
--   username: [provided]
--   password: [provided]
+You may be redirected to a browser window to enter the password for the
+Google Drive account storing fusionData’s remote files.
+
+- username: \[provided\]
+- password: \[provided\]
 
 For full functionality, it is necessary to download the remotely-stored
 processed survey microdata and processed spatial data files. The
-following section (“Structure and usage”) has more detail about this and
-the associated reasoning. See `?getSurveyProcessed` and
-`?getGeoProcessed` as well. To get up and running, you’ll need to call
-the following commands.
+following section (“Usage and structure”) provides more detail about
+this and the associated reasoning. See `?getSurveyProcessed` and
+`?getGeoProcessed` as well.
+
+For example, to run most of the code in this README you minimally
+require:
 
 ``` r
-# Download all remote processed survey microdata files
-getSurveyProcessed(survey = "all")
+# Download RECS 2015 processed survey microdata file
+getSurveyProcessed(survey = "RECS_2015")
 
 # Download only the essential remote spatial data files
 getGeoProcessed(dataset = "essential")
 ```
 
-The download will take a few minutes. The files are automatically placed
-in the appropriate sub-directories of `/fusionData`, with the
-directories created if necessary. After successful download, your
-fusionData “system” is ready to go.
+The downloads will take a few minutes. The files are automatically
+placed in the appropriate sub-directories of `/fusionData` on your local
+drive, with the directories created if necessary. After successful
+download, your fusionData “system” is ready to go.
 
 ## Usage and structure
-
-Although fusionData is structured (and loadable) as a R package, it is
-better to think of it as a code and data *repository* that is shared and
-continuously modified by authorized users. fusionData is expected to
-grow over time as new surveys and spatial datasets – and the code needed
-to process and manipulate them – are added. fusionData is *not public*.
 
 As you modify code and files in your local `/fusionData` project
 directory, you will need to commit and push those changes to the Github
@@ -109,74 +120,80 @@ good practice to pull the latest version of the repository from Github
 prior to making any modifications. That way, you know you are working
 from the latest shared version.
 
-Since Github places limits on file/repository size, I decided to store
-certain data files “remotely” – that is, outside of the Github
-repository. Specifically, the lowest-level “raw” data inputs and the
-associated “processed” versions of that data (details below). Over time,
-it is expected that these types of data files could become quite large
-in the aggregate.
+Since Github places limits on file/repository size, we store certain
+data files “remotely” – that is, outside of the Github repository. The
+remotely-stored data files are integral to the overall fusionData
+“system”, but they are not present in the Github repository itself.
+Instead, the remote files (and associated directory structure) are
+stored in Google Drive and can be automatically and safely added to a
+user’s *local* `/fusionData` folder using provided functions. Once the
+remote files are added, the user’s local fusionData package is fully
+functional. Remote data files are fairly static. So, a user typically
+only needs to update (re-download) remote files to their local
+fusionData directory if important changes have been made.
 
-The remotely-stored “raw” and “processed” data files are integral to the
-overall fusionData “system”, but they are not present in the Github
-repository itself. Instead, the remote files (and associated directory
-structure) are stored in Google Drive and can be automatically and
-safely added to a user’s *local* fusionData folder using provided
-functions. Once the remote files are added, the user’s local fusionData
-package is fully functional.
+You don’t generally need to keep track of which files are stored
+remotely and which are in the Github repository (the
+[.gitignore](https://github.com/ummel/fusionData/blob/master/.gitignore)
+file handles this).
 
-Remote data files should be rather static over time. So, it is expected
-that a user will need to update (re-download) the remote files to their
-local fusionData directory only infrequently. However, when users add or
-modify *code* (or smaller, ancillary data files), the changes are then
-pushed to the Github repository where they become subject to code
-reviews, versioning control, and accessible to other authorized users.
-
-In short: The Github repository stores any and all code needed to build
-and document the fusionData architecture. But certain,
-infrequently-modified data files are stored remotely. Users can add the
-remote files to their local installation of fusionData and only code and
-ancillary data files are pushed to Github when modified.
-
-Changes or additions to the remote files is likely to be rare, and will
-be done “by hand” to prevent any inadvertent changes.
+**In summary: The Github repository stores the code needed to build and
+document the fusionData architecture. Large and/or infrequently-modified
+data files are stored remotely. Users can download/upload remote files
+to/from their local `/fusionData` directory as-needed. When users add or
+modify *code*, the changes are committed locally and then pushed to the
+Github repository where they become subject to code reviews, versioning
+control, and accessible to other users.**
 
 Below is an overview of the top-level directories in the fusionData
 repository, including both Github-based and “remote” elements.
 
+### `/.github`
+
+Auto-generated files for producing fusionData’s [public documentation
+website](https://ummel.github.io/fusionData/). *Most users do not need
+to access/modify this directory.*
+
 ### `/R`
 
-`.R` scripts defining functions for doing “fusionData things”. Not all
-are exported.
-
-### `/data`
-
-Shared, package-wide `.rda` data files. Loadable via `data()`, as usual
-for R packages.
-
-### `/data-raw`
-
-`.R` scripts needed to create any package-wide `.rda` objects in
-`/data`, as usual for R packages.
+`.R` scripts defining functions for doing “fusionData things” (not all
+are exported). *Most users do not need to access/modify this directory.*
 
 ### `/man`
 
 Documentation (i.e. “manual”) of functions in `/R` and data in `/data`,
-as usual for R packages.
+as usual for R packages. *Most users do not need to access/modify this
+directory.*
+
+### `/data`
+
+Package-wide `.rda` data files. Loadable via `data()`, as usual for R
+packages. *Most users do not need to access/modify this directory.*
+
+### `/data-raw`
+
+`.R` scripts needed to create any package-wide `.rda` objects in
+`/data`, as usual for R packages. *Most users do not need to
+access/modify this directory.*
 
 ### `/universe`
 
 Directory for the “Universal Survey Dictionary” Shiny app. The app
-itself can be run by calling `universe()`.
+itself can be run by calling `universe()`. *Most users do not need to
+access/modify this directory.*
 
 ### `/harmony`
 
 Directory for the “Survey Harmonization Tool” Shiny app. The app itself
-can be run by calling `harmony()`.
+can be run by calling `harmony()`. *Most users do not need to
+access/modify this directory.*
 
 ### `/survey-processed`
 
-Contains processed survey data and associated code. Subdirectories refer
-to specific surveys and vintages.
+Contains processed survey data and associated code. Sub-directories
+refer to specific surveys and vintages. *Users responsible for ingesting
+raw survey microdata will add their custom processing code to this
+directory.*
 
 Example: `/survey-processed/RECS/2015`
 
@@ -214,8 +231,9 @@ package take advantage of this.
 ### `/survey-raw`
 
 A remote directory (i.e. not present in the Github repository)
-containing *raw* survey data files. Subdirectories refer to specific
-surveys and vintages.
+containing *raw* survey data files. Sub-directories refer to specific
+surveys and vintages. *Users responsible for ingesting raw survey
+microdata will add the raw data files to this directory.*
 
 Example: `/survey-raw/RECS/2015`
 
@@ -230,8 +248,12 @@ original/raw data.
 
 ### `/geo-processed`
 
-Contains processed spatial data and associated code. Subdirectories
-refer to specific spatial datasets.
+Contains processed spatial data and associated code. Sub-directories
+refer to specific spatial datasets. *Most users do not need to
+access/modify this directory.* For users who are not modifying or adding
+spatial datasets, it is sufficient to call
+`getGeoProcessed(dataset = "essential")` to load the essential “geo”
+files.
 
 Example: `/geo-processed/EPA-SLD`
 
@@ -258,7 +280,7 @@ the Github repository ([see
 here](https://github.com/ummel/fusionData/blob/master/geo-processed/EPA-SLD/epa-sld_v3_processed.R)),
 but the .rds file is stored remotely.
 
-Importantly, the `/geo-processed` remote content *also* includes three
+Importantly, the `/geo-processed` remote content *also* includes two
 “essential” spatial data files that are, in practice, all that most
 users will need to perform data fusion locally. These files and their
 roles are described in more detail later on.
@@ -266,15 +288,12 @@ roles are described in more detail later on.
 1.  `geo_predictors.fst`
 2.  `concordance/geo_concordance.fst`
 
-For users who are not modifying or adding spatial datasets, it is
-sufficient to call `getGeoProcessed(dataset = "essential")` to load the
-essential “geo” files.
-
 ### `/geo-raw`
 
 A remote directory (i.e. not present in the Github repository)
-containing *raw* spatial data files. Subdirectories refer to specific
-spatial datasets.
+containing *raw* spatial data files. Sub-directories refer to specific
+spatial datasets. *Most users do not need to access/modify this
+directory.*
 
 Example: `/geo-raw/EPA-SLD`
 
@@ -283,12 +302,20 @@ directory by calling `getGeoRaw()`. However, in practice, there is no
 reason for a user to store raw spatial data locally unless it is for a
 spatial dataset that they are actively processing or editing.
 
+### `/fusion`
+
+Contains production-level fusion input and output files generated by
+`fusionInput()` and `fusionOutput()`. Users will call these functions to
+perform fusion but typically don’t need to access/modify the directory
+itself. Almost all fusion input/output files are stored remotely given
+their size. The only files that are pushed to the Github repository are
+.txt log files that contain information about the `fusionInput()` and
+`fusionOutput()` function calls.
+
 ### `/production`
 
-Directory containing code and possibly data from “production” fusion
-runs. This is likely a temporary inclusion. As additional fusion results
-are produced, we should create a more structured way of storing and
-organizing production data outputs.
+A now-DEPRECATED directory containing code and possibly data from older
+“production” fusion runs. Superseded by `/fusion`.
 
 ## Ingest survey data
 
@@ -302,29 +329,29 @@ script (possibly multiple scripts) that must be written manually. The
 goal is to produce a data.frame containing microdata observations that
 (ideally) meet the following conditions:
 
--   Contains as many observations and variables as possible.
--   Variable names and descriptions are taken from the official
-    codebook, possibly modified for clarity.
--   Official variable names are coerced to lower-case alphanumeric,
-    possibly using single underscores.
--   Codes used in the raw data are replaced with descriptive labels from
-    the codebook; e.g. integer values are replaced with associated
-    factor levels.
--   All “valid blanks” in the raw data are set to plausible values; NA’s
-    are often actual zeros or some other knowable value based on the
-    question structure.
--   All “invalid blanks” or missing values in the raw data are imputed;
-    a generic imputation function is provided for this purpose.
--   Ordered factors are used and defined whenever possible (as opposed
-    to unordered).
--   Standard column names are used for unique household identifiers
-    (e.g. “acs_2019_hid”); for person-level microdata the
-    within-household person identifier (integer) is always “pid”.
--   Standard column names are used for observation weights; “weight” for
-    the primary weighting variable and “rep_1”, etc. for replicate
-    weights.
--   Variables identifying respondent location are consistent with those
-    defined in `geo-processed/concordance/geo_concordance.fst`.
+- Contains as many observations and variables as possible.
+- Variable names and descriptions are taken from the official codebook,
+  possibly modified for clarity.
+- Official variable names are coerced to lower-case alphanumeric,
+  possibly using single underscores.
+- Codes used in the raw data are replaced with descriptive labels from
+  the codebook; e.g. integer values are replaced with associated factor
+  levels.
+- All “valid blanks” in the raw data are set to plausible values; NA’s
+  are often actual zeros or some other knowable value based on the
+  question structure.
+- All “invalid blanks” or missing values in the raw data are imputed; a
+  generic imputation function is provided for this purpose.
+- Ordered factors are used and defined whenever possible (as opposed to
+  unordered).
+- Standard column names are used for unique household identifiers
+  (e.g. “acs_2019_hid”); for person-level microdata the within-household
+  person identifier (integer) is always “pid”.
+- Standard column names are used for observation weights; “weight” for
+  the primary weighting variable and “rep_1”, etc. for replicate
+  weights.
+- Variables identifying respondent location are consistent with those
+  defined in `geo-processed/concordance/geo_concordance.fst`.
 
 Let’s look at a few of the variables in the processed RECS 2015
 microdata to get a sense of what preferred output looks like. Note that
@@ -405,11 +432,11 @@ the associated code in
 `/survey-processed/RECS/2015/RECS_2015_H_processed.R`.
 
 Given the variety of survey data structures and conventions, there is no
-strict procedure for how the .R file should be written. However, there
-are common steps and tools likely to be applicable to most surveys. The
-`RECS_2015_H_processed.R` script is a good “template” in this regard,
-since it includes many common operations – including imputation of NA’s
-using the provided `imputeMissing()` function.
+strict procedure for how the .R file(s) should be written. However,
+there are common steps and tools likely to be applicable to most
+surveys. The `RECS_2015_H_processed.R` script is a good “template” in
+this regard, since it includes many common operations – including
+imputation of NA’s using the provided `imputeMissing()` function.
 
 The RECS 2015 has a comparatively simple microdata and documentation
 structure: household-level microdata in a single .csv file with an
@@ -456,12 +483,6 @@ In practice, there is no reason for a typical user to ever open a
 survey’s dictionary file. The preferred and much more useful way to
 explore survey metadata and variable descriptions is via the
 `universe()` function described in the next section.
-
-*As of August 2021, American Community Survey (ACS) microdata has been
-ingested for 2015 and 2019.* It is expected that additional vintages
-will eventually be added to allow temporal alignment with the further
-vintages of donor surveys. The .R scripts used to process the 2015 and
-2019 ACS microdata can serve as templates for ingesting other vintages.
 
 ## Document variables
 
@@ -644,7 +665,6 @@ element defines a harmony. Like this one, defining the harmony between
 the “fuelheat” variable in the RECS and the “hfl” variable in the ACS.
 
 ``` r
-
 fuelheat__hfl = list(
 RECS = list(
 groups = 1:7,
@@ -658,7 +678,7 @@ breaks = "",
 adj = ""),
 ordered = FALSE,
 comment = "",
-modified = "2021-07-03 12:10:17"),
+modified = "2021-07-03 12:10:17")
 ```
 
 This list object contains all of the information necessary to construct
@@ -814,26 +834,81 @@ fusion process are `geo_predictors.fst` and `geo_concordance.fst`, both
 of which can be obtained by calling
 `getGeoProcessed(dataset = "essential")`.
 
-## Prepare for fusion
+## Prepare fusion inputs
 
-The following example shows how the fusionData `prepare()` and
-`assemble()` functions to generate complete, consistent, and harmonized
-microdata that can then be passed to the [fusionModel
-package](https://github.com/ummel/fusionModel) to fuse donor variables
-to ACS microdata.
+Once a donor survey is successfully ingested and harmonized, it is
+possible to move on to the final step: fusion! The fusion process
+consists of two parts. First, the necessary “input” data files are
+prepared. Second, those inputs are used to generate the final fusion
+“output”.
 
-The simplest usage is shown below. In this case, we are requesting
-microdata outputs at the household-level that will allow us to
-(subsequently) fuse RECS 2015 donor variables to ACS 2015 recipient
-microdata. `prepare()` and `assemble()` are separate functions only
-because `prepare()` tends to be more expensive. It can usually be called
-just once (possibly saving the output to disk), while `assemble()` is
-then invoked multiple times to debug or test different assembly options.
+As of fusionData v1.0, these two steps are helpfully wrapped into the
+`fusionInput()` and `fusionOutput()` functions, respectively. These
+functions safely execute all of the steps required for successful
+fusion. In practice, users need only call the two high-level functions
+and ensure that the resulting console output and log files look good.
+
+For a worked example, let’s prepare the required inputs for fusion of
+the RECS 2015 to the ACS 2015 (in test mode, of course!). This requires
+the processed microdata for both surveys to be present in your local
+`/fusionData` installation. If you haven’t already, you can download
+these files using:
 
 ``` r
-# Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata
-prep <- prepare(donor = "RECS_2015", recipient = "ACS_2015", respondent = "household")
+getSurveyProcessed(survey = "RECS_2015")
+getSurveyProcessed(survey = "ACS_2015")
 ```
+
+You will also need to install the [fusionModel
+package](https://github.com/ummel/fusionModel):
+
+``` r
+devtools::install_github("ummel/fusionModel")
+```
+
+Now let’s make a call to `fusionInput()`. The function arguments are
+fully documented in `?fusionInput`. If you run this code in an
+interactive session, you will be prompted at the console to approve
+certain steps before proceeding (again, this is all documented). The
+console output is designed to be very informative and describe what is
+being done behind the scenes.
+
+``` r
+input.dir <- fusionInput(donor = "RECS_2015",
+                         recipient = "ACS_2015",
+                         respondent = "household",
+                         fuse = c("btung", "btuel", "cooltype"),
+                         force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division"),
+                         note = "Hello world. This is a worked example for the package README!")
+```
+
+    2023-03-30 16:39:06 MDT 
+    R version 4.2.3 (2023-03-15) 
+    Platform: x86_64-pc-linux-gnu 
+    fusionData v1.0.0
+    fusionModel v2.2.2
+
+    fusionInput(donor = "RECS_2015", recipient = "ACS_2015", respondent = "household", 
+        fuse = c("btung", "btuel", "cooltype"), force = c("moneypy", 
+            "householder_race", "education", "nhsldmem", "kownrent", 
+            "recs_division"), note = "Hello world. This is a worked example for the package README!", 
+        test_mode = TRUE, ncores = getOption("fusionData.cores"))
+
+    fusionInput() is running in TEST mode.
+
+    User-supplied note:
+     Hello world. This is a worked example for the package README! 
+
+    Result files will be saved to:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/input 
+
+    The local /input directory already exists.
+
+    |=== Check for custom pre-processing script ===|
+
+    None found.
+
+    |=== prepare() microdata ===|
 
     Harmonizing RECS_2015 (donor) microdata at household level
     Harmonizing ACS_2015 (recipient) microdata at household level
@@ -841,424 +916,357 @@ prep <- prepare(donor = "RECS_2015", recipient = "ACS_2015", respondent = "house
     Imputing PUMA for donor observations...
     Assigning location variables to recipient observations...
 
-``` r
-# Assemble using default options
-data <- assemble(prep)
-```
+    |=== assemble() microdata ===|
 
     Identifying donor fusion variables...
-    Adding the following fusion variables:
-     adqinsul, agecdryer, agecenac, agecwash, agedw, agefrzr, agerfri1, agerfri2, aircond, altfuelpev, amtmicro, appother, athome, attccool, attcheat, attic, atticfin, audit, auditchg, backup, basecool, basefin, baseheat, benother, blender, btuel, btuelahucol, btuelahuheat, btuelcdr, btuelcfan, btuelcok, btuelcol, btuelcw, btueldhum, btueldwh, btuelevapcol, btuelfrz, btuelhtbheat, btuelhtbpmp, btuelhum, btuellgt, btuelmicro, btuelnec, btuelplpmp, btuelrfg, btuelrfg1, btuelrfg2, btuelsph, btueltv1, btueltv2, btueltvrel, btuelwth, btufo, btufonec, btufosph, btufowth, btulp, btulpcdr, btulpcok, btulpnec, btulpsph, btulpwth, btung, btungcdr, btungcok, btunghtbheat, btungnec, btungplheat, btungsph, btungwth, cablesat, cdd30yr, cdd65, cdd80, cellar, cellphone, cenachp, coffee, coldma, combodvr, cooktuse, cooltype, crockpot, cufeetng, cufeetngcdr, cufeetngcok, cufeetnghtbheat, cufeetngnec, cufeetngplheat, cufeetngsph, cufeetngwth, cwasher, dbt1, dbt99, dishwash, dntheat, dolelahucol, dolelahuheat, dolelcdr, dolelcfan, dolelcok, dolelcol, dolelcw, doleldhum, doleldwh, dolelevapcol, dolelfrz, dolelhtbheat, dolelhtbpmp, dolelhum, dolellgt, dolelmicro, dolelnec, dolelplpmp, dolelrfg, dolelrfg1, dolelrfg2, dolelsph, doleltv1, doleltv2, doleltvrel, dolelwth, dolfonec, dolfosph, dolfowth, dollarel, dollarfo, dollarlp, dollarng, dollpcdr, dollpcok, dollpnec, dollpsph, dollpwth, dolngcdr, dolngcok, dolnghtbheat, dolngnec, dolngplheat, dolngsph, dolngwth, door1sum, drafty, dryer, dryrfuel, dryruse, dualcooktfuel, dualovenfuel, dvd, dwashuse, dwcycle, eelights, elcool, elfood, elother, elperiph, elwarm, elwater, energyasst, energyasst11, energyasst12, energyasst13, energyasst14, energyasst15, energyasstoth, equipage, equipaux, equipauxtype, equipm, equipmuse, escwash, esdishw, esdryer, esfreeze, esfrig, eslight, eswater, eswin, foodproc, foother, fopay, fowarm, fowater, freeaudit, fuelaux, fuelh2o, fuelh2o2, fuelpool, fueltub, gallonfo, gallonfonec, gallonfosph, gallonfowth, gallonlp, gallonlpcdr, gallonlpcok, gallonlpnec, gallonlpsph, gallonlpwth, gargcool, gargheat, gndhdd65, gwt, h2oheatapt, hdd30yr, hdd50, hdd65, heathome, highceil, hotma, ice, intdata, intdataacc, intstream, inwireless, kwh, kwhahucol, kwhahuheat, kwhcdr, kwhcfan, kwhcok, kwhcol, kwhcw, kwhdhum, kwhdwh, kwhevapcol, kwhfrz, kwhhtbheat, kwhhtbpmp, kwhhum, kwhlgt, kwhmicro, kwhnec, kwhplpmp, kwhrfg, kwhrfg1, kwhrfg2, kwhsph, kwhtv1, kwhtv2, kwhtvrel, kwhwth, lgtin4, lgtincan, lgtincfl, lgtincntl, lgtinled, lgtinnum, lgtoutcntl, lgtoutnum, locrfri2, lpcook, lpgpay, lpother, lpwarm, lpwater, micro, moisture, monpool, montub, morethan1h2o, ncombath, nhafbath, noacbroke, noacdays, noacel, noachelp, noheatbroke, noheatbulk, noheatdays, noheatel, noheathelp, noheatng, notmoist, numatticfan, numberac, numcfan, numfloorfan, numfreez, nummeal, numsmphone, numwholefan, oa_lat, othrooms, outgrill, outgrillfuel, outlet, oven, ovenfuel, ovenuse, payhelp, pelletamt, pelletbtu, periodel, periodfo, periodlp, periodng, playsta, pool, prkgplc1, protherm, prothermac, rebateapp, recbath, recycapp, ricecook, rooftype, scaleb, scalee, scaleg, sepcooktuse, sepdvr, sepovenuse, sizeofgarage, sizfreez, sizrfri1, sizrfri2, smartmeter, smarttherm, solar, solother, solwater, stories, stove, stovefuel, stovenfuel, studio, swampcol, swimpool, taxcreditapp, tempgone, tempgoneac, temphome, temphomeac, tempnite, tempniteac, thermain, thermainac, toast, toastovn, topfront, totalbtu, totalbtucdr, totalbtucok, totalbtuhtb, totalbtunec, totalbtupl, totalbtusph, totalbtuwth, totaldol, totaldolcdr, totaldolcok, totaldolhtb, totaldolnec, totaldolpl, totaldolsph, totaldolwth, totcsqft, tothsqft, totsqft_en, totucsqft, totusqft, tvaudiosys, tvcolor, tvonwd1, tvonwd2, tvonwe1, tvonwe2, tvsize1, tvsize2, tvtype1, tvtype2, typeglass, typerfr1, typerfr2, ugashere, ugcook, ugoth, ugwarm, ugwater, uprtfrzr, usecenac, useel, usefo, uselp, usemoisture, useng, usenotmoist, usesolar, usewood, usewwac, vcr, walltype, washload, wdother, wdpellet, wdwarm, wdwater, wheatage, wheatsiz, windows, winframe, woodamt, woodbtu, woodlogs, wsf, wwacage 
+    Including the following fusion variables:
+     btuel, btung, cooltype 
     Applying integer scaling to spatial predictor variables...
     Merging donor spatial predictor variables...
     Merging recipient spatial predictor variables...
     Assembling output data frames...
     Performing consistency checks...
 
-The resulting `data` object is a list containing two data frames. The
-first slot contains the “fusion ready” donor microdata. The second slot
-contains the analogous ACS recipient microdata. Notice that the RECS
-microdata has more variables/columns than the ACS data. This is because
-`assemble` donor output includes – by default – *all* valid variables in
-the donor survey not used to create harmonies. The latter are potential
-candidates for fusion (and there are many in the case of RECS).
+    |=== Check for custom .R scripts ===|
+
+    None found.
+
+    |=== Check categorical harmonized variables ===|
+
+    Similarity scores for 18 categorical harmonized variables:
+    # A tibble: 18 × 2
+       `Harmonized variable`   `Similarity score`
+       <chr>                                <dbl>
+     1 numtablet__handheld                  0.676
+     2 employhh__wkhp                       0.727
+     3 occupyyrange__mv                     0.786
+     4 stoven__stov                         0.856
+     5 ngpay__gasfp                         0.868
+     6 hhsex__sex                           0.878
+     7 moneypy__hincp                       0.905
+     8 fuelheat__hfl                        0.929
+     9 householder_race__rac1p              0.933
+    10 internet__access                     0.933
+    11 education__schl                      0.945
+    12 elpay__elefp                         0.955
+    13 kownrent__ten                        0.983
+    14 numfrig__refr                        0.993
+    15 typehuq__bld                         0.993
+    16 yearmaderange__ybl                   0.996
+    17 desktop__laptop                      0.998
+    18 sdescent__hisp                       0.999
+    Retaining all categorical harmonized variables.
+
+    |=== Check location variables ===|
+
+    The representative location variable 'loc..recs_division' has 10 levels.
+    The following location variables have been flagged for possible exclusion:
+    # A tibble: 1 × 2
+      `Location variable` `Number of levels`
+      <chr>                            <int>
+    1 loc..recs_iecc_zone                 11
+    Retaining all location variables.
+
+    |=== Check fusion and predictor variables ===|
+
+    Identified 3 fusion variables (0 blocks):
+    [1] "btung"    "btuel"    "cooltype"
+
+    Identified 24 harmonized variables and 240 total predictors
+
+    Identified 6 predictors to force and use for validation:
+    [1] "moneypy__hincp"          "householder_race__rac1p"
+    [3] "education__schl"         "nhsldmem__np"           
+    [5] "kownrent__ten"           "loc..recs_division"     
+
+    |=== Run fusionModel::prepXY() ===|
+
+    fusionModel v2.2.2 | https://github.com/ummel/fusionModel
+
+    Missing values imputed for the following 'x' variable(s):
+     acs.sf..b060, acs.sf..b080, nrel.urdb..rsed 
+    Identifying 'x' that pass absolute Spearman correlation threshold
+    Fitting full models for each 'y'
+    Iteratively constructing preferred fusion order
+    Retained 176 of 240 predictor variables
+    Total processing time: 3.12 secs 
+
+    Results of prepXY() saved to: RECS_2015_2015_H_prep.rds (0.00151 MB) 
+
+    |=== Write training and prediction datasets to disk ===|
+
+    Writing training dataset...
+    Training dataset saved to: RECS_2015_2015_H_train.fst (1.05 MB) 
+
+    Writing prediction dataset...
+    Prediction dataset saved to: RECS_2015_2015_H_predict.fst (1.76 MB) 
+    Test mode: saved partial prediction data. Expected production file size is ~ 216 MB
+
+    |=== Upload /input files to Google Drive ===|
+
+
+    |=== fusionInput() is finished! ===|
+
+    fusionInput() total processing time: 33.6 secs 
+
+    fusionInput() log file saved to:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/input/RECS_2015_2015_H_inputlog.txt
+
+Both `fusionInput()` and `fusionOutput()` can be run in “test mode” – in
+fact, this is the default behavior. When in test mode, result files are
+saved within the `/fusion_` directory to prevent any conflict with (or
+overwrite) of production data in `/fusion` (no underscore).
+`fusionInput()` returns the path to the directory where files are saved.
+We can confirm that the path used `/fusion_` as expected:
 
 ``` r
-lapply(data, dim)
+input.dir
 ```
 
-    $RECS_2015
-    [1] 5686  649
+    [1] "/home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/input"
 
-    $ACS_2015
-    [1] 1226728     242
+Note that the path includes the correct directory hierarchy. The path
+ends with “RECS/2015/2015/H/input” to indicate that the directory in
+question contains fusion input files associated with the RECS donor
+survey from 2015, for fusion to ACS 2015, at household-level.
 
-A key purpose of `prepare()` is to harmonize the donor and recipient
-“shared” variables. This is done internally by the `harmonize()`
-function, using the variable harmonies created by users via the
-`harmony()` tool. In this case, `harmonize()` is using the
-[RECS_2015\_\_ACS_2015.R](https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R)
-file to harmonize the donor and recipient microdata. Let’s look at a few
-of the shared variables after harmonization.
+Now let’s see the names of the files created by `fusionInput()`:
 
 ``` r
-v <- names(data$ACS_2015)[2:6]
-head(data$RECS_2015[v])
+list.files(input.dir)
 ```
 
-      weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp
-    1  10855              3               2               2            2
-    2  13165              2               1               2            2
-    3  22095              4               2               1            2
-    4  10935              3               2               4            2
-    5  15485              3               2               2            2
-    6  24825              0               2               1            1
+    [1] "RECS_2015_2015_H_inputlog.txt" "RECS_2015_2015_H_predict.fst" 
+    [3] "RECS_2015_2015_H_prep.rds"     "RECS_2015_2015_H_train.fst"   
+
+Every call to `fusionInput()` generates the same four generic result
+files:
+
+1.  `*_inputlog.txt`: A copy of the extensive console output you saw
+    above.
+2.  `*_prep.rds`: Information about the variables to be used in the
+    eventual fusion model.
+3.  `*_train.fst`: Donor survey processed and harmonized training
+    microdata, ready for fusion.
+4.  `*_predict.fst`: Recipient ACS processed and harmonized prediction
+    microdata, ready for fusion.
+
+It is usually necessary for a user to run `fusionInput()` more than once
+for a given donor survey, since the process can flag issues with
+variable harmonization that need to be addressed before finalizing the
+fusion inputs.
+
+## Generate fusion outputs
+
+Once the necessary input files are ready-to-go, it is straightforward to
+complete the fusion process using `fusionOutput()`. The function
+arguments are fully documented in `?fusionOutput`. A minimal call simply
+indicates where to find the required input files. Everything else is
+handled automatically:
 
 ``` r
-head(data$ACS_2015[v])
+output.dir <- fusionOutput(input = input.dir)
 ```
 
-      weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp
-    1    110              5               2               4            2
-    2     91              4               2               5            2
-    3    112              4               2               2            2
-    4     80              3               2               3            2
-    5    156              3               2               3            2
-    6    100              1               2               4            2
+    2023-03-30 17:05:37 MDT 
+    R version 4.2.3 (2023-03-15) 
+    Platform: x86_64-pc-linux-gnu 
+    fusionData v1.0.0
+    fusionModel v2.2.2
 
-Notice that the harmonized variable *values* are typically integers
-(possibly factorized); that is, they contain no intelligible labels.
-This is because `harmonize()` maps each original value/level to a
-(integer) group assignment as specified in the relevant `.R` harmony
-file. The one exception is when *numeric* variables in the two surveys
-are conceptually identical and are then included “as is” or
-(automatically) converted to scaled values.
+    fusionOutput(input = input.dir, output = NULL, M = NULL, note = NULL, 
+        test_mode = TRUE, upload = FALSE, ncores = getOption("fusionData.cores"), 
+        margin = 2, ... = )
 
-Since RECS and ACS are both nationally representative surveys, the
-distribution of the harmonized variables should look pretty similar
-across the two data frames. We can confirm this for the `fuelheat__hfl`
-variable, which creates harmony between the RECS and ACS heating fuel
-variables (“fuelheat” and “hfl”, respectively). We can compare the
-proportion of cases by harmonized value.
+    fusionOutput() is running in TEST mode.
+
+    The input files directory is:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/input 
+
+    Result files will be saved to:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/output 
+
+    The local /output directory already exists.
+
+    |=== Load training data inputs ===|
+
+    Loading training microdata: RECS_2015_2015_H_train.fst 
+    Loading prepXY() results: RECS_2015_2015_H_prep.rds 
+
+    |=== Run fusionModel::train() ===|
+
+    Running in 'test' mode using fast(er) hyper-parameter settings:
+    $boosting
+    [1] "goss"
+
+    $num_leaves
+    [1] 8
+
+    $min_data_in_leaf
+    [1] 57
+
+    $num_iterations
+    [1] 50
+
+    $bagging_fraction
+    [1] 1
+
+    $feature_fraction
+    [1] 0.3
+
+    $learning_rate
+    [1] 0.2
+
+    $max_depth
+    [1] 3
+
+    $max_bin
+    [1] 16
+
+    $min_data_in_bin
+    [1] 57
+
+    $max_cat_threshold
+    [1] 8
+
+    Training fusion model
+
+    fusionModel v2.2.2 | https://github.com/ummel/fusionModel
+
+    Missing values imputed for the following 'x' variable(s):
+     acs.sf..b060, acs.sf..b080, nrel.urdb..rsed 
+    3 fusion variables
+    176 initial predictor variables
+    5686 observations
+    Using specified set of predictors for each fusion variable
+    Using OpenMP multithreading within LightGBM (3 cores)
+    Training step 1 of 3: btung
+    -- R-squared of cluster means: 0.972 
+    -- Number of neighbors in each cluster:
+       Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+       10.0    38.0   122.5   188.1   343.0   497.0 
+    Training step 2 of 3: cooltype
+    Training step 3 of 3: btuel
+    -- R-squared of cluster means: 0.963 
+    -- Number of neighbors in each cluster:
+       Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+       10.0    34.0    82.0   146.1   229.0   494.0 
+    Fusion model saved to:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/output/RECS_2015_2015_H_model.fsn 
+    Total processing time: 5.58 secs 
+
+    |=== Fuse onto training data for internal validation ===|
+
+    Running in 'test' mode, so internal validation skipped.
+
+    |=== Fuse onto prediction data ===|
+
+    Loading prediction microdata: RECS_2015_2015_H_predict.fst 
+
+    Fusing to ACS microdata (2 implicates)
+    3 fusion variables
+    176 initial predictor variables
+    10000 observations
+    Missing values imputed for the following variable(s):
+     acs.sf..b060, acs.sf..b080, nrel.urdb..rsed 
+    Generating 2 implicates 
+    Using OpenMP multithreading within LightGBM (3 cores)
+    Fusion step 1 of 3: btung
+    -- Predicting LightGBM models
+    -- Simulating fused values
+    Fusion step 2 of 3: cooltype
+    -- Predicting LightGBM models
+    -- Simulating fused values
+    Fusion step 3 of 3: btuel
+    -- Predicting LightGBM models
+    -- Simulating fused values
+    Writing fusion output to .fsd file 
+    Fusion results saved to:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/output/RECS_2015_2015_H_fused.fsd 
+    Total processing time: 0.78 secs 
+
+    |=== Upload /output files to Google Drive ===|
+
+    'upload = FALSE'; file upload skipped at request of user.
+
+    |=== fusionOutput() is finished! ===|
+
+    fusionOutput() total processing time: 6.4 secs 
+
+    fusionOutput() log file saved to:
+     /home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/output/RECS_2015_2015_H_outputlog.txt
+
+As before, let’s check the location of the result files and their names:
 
 ``` r
-round(table(data$RECS_2015$fuelheat__hfl) / nrow(data[[1]]), 3)
+output.dir
 ```
 
-
-        1     2     3     4     5     6     7 
-    0.045 0.347 0.043 0.491 0.042 0.001 0.030 
+    [1] "/home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/output"
 
 ``` r
-round(table(data$ACS_2015$fuelheat__hfl) / nrow(data[[2]]), 3)
+list.files(output.dir)
 ```
 
+    [1] "RECS_2015_2015_H_fused.fsd"     "RECS_2015_2015_H_model.fsn"    
+    [3] "RECS_2015_2015_H_outputlog.txt"
 
-        1     2     3     4     5     6     7 
-    0.012 0.364 0.055 0.469 0.064 0.008 0.028 
+Every call to `fusionOutput()` generates the same three generic result
+files:
 
-`prepare()` also calls the internal function `assignLocation()` to
-impute one or more plausible PUMA’s for each donor household. The
-`implicates` argument controls how many PUMA’s are imputed for each
-donor household. Setting `implicates` higher results in more variability
-in the spatial predictors merged to a given household, reflecting
-uncertainty about where the household is located. The use of implicates
-here mimics its usage in standard multiple imputation techniques (5
-implicates is typical).
+1.  `*_outputlog.txt`: A copy of the extensive console output above.
+2.  `*_model.fsn`: The fusionModel object used to simulate the fusion
+    variables.
+3.  `*_fused.fsd`: The recipient microdata with simulated values for the
+    fusion variables, across multiple implicates.
 
-------------------------------------------------------------------------
+In addition, if *not* running in test mode, two additional files are
+produced:
 
-The spatial imputation algorithm coded in `assignLocation()` requires
-some explanation. The location variables in the donor microdata are used
-to identify the set of possible PUMA’s assignable to each household,
-with the initial likelihood of selection being proportional to the
-number of housing units in the PUMA. However, we can also exploit the
-fact that we observe harmonized variables for donor and ACS respondents
-– and the PUMA of ACS respondents is known. That is, there is
-information in the *harmonized* variables that can be used to alter the
-likelihood of selecting a given PUMA.
+1.  `*_valid.fsd`: The *training* microdata with simulated values for
+    the fusion variables, across multiple implicates.
+2.  `*_validation.rds`: Results from internal validation exercises using
+    the simulated variables in `*_valid.fsd`.
 
-A conceptual example: Imagine, based on location variables alone, we
-know that a particular donor household is resident in one of five PUMA’s
-(001 through 005), each with an equal number of housing units. Using
-this information alone, we would assign each PUMA an equal probability
-of selection (call it *P*). However, we also observe household income
-for both donor and ACS households. The donor household is high income.
-We notice in the ACS microdata that high income households are common in
-PUMA 001 but rare in the other four. Conceptually, this information
-should increase the probability of selecting PUMA 001.
-
-In practice, we typically observe multiple harmonized variables – some
-categorical and some continuous. `assignLocation()` calculates [Gower’s
-distance](https://www.jstor.org/stable/2528823), using all of the
-harmonized variables, to derive a pairwise similarity value (*S*)
-between each donor household and a random sample of ACS households
-located within the feasible set of PUMA’s. The calculation uses the
-efficient [gower
-package](https://cran.r-project.org/web/packages/gower/index.html); even
-so, random sampling of the ACS is necessary to make it tractable. An ACS
-household (or multiple if `implicates` \> 1) is then randomly selected,
-where the probability of selection is *P* / *S* and the associated PUMA
-is imputed to the donor household. That is, the naive, population-based
-probability of selection (*P*) is modified by the observable similarity
-of the donor household and each ACS household (*S*).
-
-------------------------------------------------------------------------
-
-`assemble()` also merges spatial variables onto both the donor and
-recipient microdata. Pre-compiled spatial variables (those in
-`geo_predictors.fst`) are merged onto both the donor and recipient
-microdata at the PUMA level, using imputed PUMA’s for the donor. Spatial
-variables are indicated by the double-dot (“..”) in the variable name,
-analogous to the way that harmonized variables are indicated by the
-double-underscore (“\_\_“).
-
-Let’s look at the variables in the recipient ACS microdata.
+Just to confirm, let’s look at the final, fused microdata in
+“RECS_2015_2015_H\_fused.fsd”.
 
 ``` r
-names(data$ACS_2015)
+fsd.file <- list.files(output.dir, full.names = TRUE)[1]
+fused <- fusionModel::read_fsd(fsd.file)
 ```
 
-      [1] "acs_2015_hid"            "weight"                 
-      [3] "bedrooms__bdsp"          "desktop__laptop"        
-      [5] "education__schl"         "elpay__elefp"           
-      [7] "employhh__wkhp"          "fuelheat__hfl"          
-      [9] "hhage__agep"             "hhsex__sex"             
-     [11] "householder_race__rac1p" "internet__access"       
-     [13] "kownrent__ten"           "moneypy__hincp"         
-     [15] "ngpay__gasfp"            "nhsldmem__np"           
-     [17] "numadult__agep"          "numchild__agep"         
-     [19] "numfrig__refr"           "numtablet__handheld"    
-     [21] "occupyyrange__mv"        "sdescent__hisp"         
-     [23] "stoven__stov"            "totrooms__rmsp"         
-     [25] "typehuq__bld"            "yearmaderange__ybl"     
-     [27] "loc..ur12"               "loc..cbsatype15"        
-     [29] "loc..region"             "loc..recs_division"     
-     [31] "loc..recs_ba_zone"       "loc..recs_iecc_zone"    
-     [33] "acs.pums..npa"           "acs.pums..accssywstsb"  
-     [35] "acs.pums..accssywstsc"   "acs.pums..acrn"         
-     [37] "acs.pums..acrhl"         "acs.pums..acrht"        
-     [39] "acs.pums..anf1"          "acs.pums..agsn"         
-     [41] "acs.pums..bthy"          "acs.pums..bdsp"         
-     [43] "acs.pums..bldm"          "acs.pums..bldofhd"      
-     [45] "acs.pums..bldofhm"       "acs.pums..bld5"         
-     [47] "acs.pums..brdy"          "acs.pums..bsnf"         
-     [49] "acs.pums..bsys"          "acs.pums..cmpy"         
-     [51] "acs.pums..dlpy"          "acs.pums..dsly"         
-     [53] "acs.pums..elep"          "acs.pums..fbry"         
-     [55] "acs.pums..fsys"          "acs.pums..flpx"         
-     [57] "acs.pums..gspy"          "acs.pums..hndy"         
-     [59] "acs.pums..hflu"          "acs.pums..hfle"         
-     [61] "acs.pums..hflf"          "acs.pums..insp"         
-     [63] "acs.pums..lpty"          "acs.pums..mdmy"         
-     [65] "acs.pums..mrgnb"         "acs.pums..mrgyp"        
-     [67] "acs.pums..mrgp"          "acs.pums..mrgtn"        
-     [69] "acs.pums..mrgty"         "acs.pums..mrgxn"        
-     [71] "acs.pums..mrgm"          "acs.pums..mrgc"         
-     [73] "acs.pums..othy"          "acs.pums..rfry"         
-     [75] "acs.pums..rmsp"          "acs.pums..rntn"         
-     [77] "acs.pums..rntp"          "acs.pums..rwty"         
-     [79] "acs.pums..stly"          "acs.pums..snky"         
-     [81] "acs.pums..stvy"          "acs.pums..tlysx"        
-     [83] "acs.pums..tnow"          "acs.pums..tnof"         
-     [85] "acs.pums..tnrn"          "acs.pums..tlysb"        
-     [87] "acs.pums..vlpc"          "acs.pums..vhnv"         
-     [89] "acs.pums..vh1v"          "acs.pums..vh2v"         
-     [91] "acs.pums..vh3v"          "acs.pums..wtph"         
-     [93] "acs.pums..yb19"          "acs.pums..y194"         
-     [95] "acs.pums..y195"          "acs.pums..y196"         
-     [97] "acs.pums..y197"          "acs.pums..y198"         
-     [99] "acs.pums..y199"          "acs.pums..y202"         
-    [101] "acs.pums..fsnf"          "acs.pums..fsmcfhw"      
-    [103] "acs.pums..fsmcfhl"       "acs.pums..fsmcfn"       
-    [105] "acs.pums..fsof"          "acs.pums..fncp"         
-    [107] "acs.pums..fprn"          "acs.pums..fwr5"         
-    [109] "acs.pums..fw51"          "acs.pums..fw55"         
-    [111] "acs.pums..grnt"          "acs.pums..grpp"         
-    [113] "acs.pums..hhle"          "acs.pums..hhls"         
-    [115] "acs.pums..hhtm"          "acs.pums..hhto"         
-    [117] "acs.pums..hhtnhm"        "acs.pums..hhtnhf"       
-    [119] "acs.pums..hncp"          "acs.pums..hgch"         
-    [121] "acs.pums..hwc6"          "acs.pums..hw61"         
-    [123] "acs.pums..hw66"          "acs.pums..hpc6"         
-    [125] "acs.pums..hpc61"         "acs.pums..hpc661"       
-    [127] "acs.pums..hpr6"          "acs.pums..hpr61"        
-    [129] "acs.pums..hpr661"        "acs.pums..ktyh"         
-    [131] "acs.pums..lal1"          "acs.pums..mltn"         
-    [133] "acs.pums..mv1m"          "acs.pums..m1t2"         
-    [135] "acs.pums..m2t4"          "acs.pums..m5t9"         
-    [137] "acs.pums..m1t1"          "acs.pums..m2t2"         
-    [139] "acs.pums..nocc"          "acs.pums..npfd"         
-    [141] "acs.pums..nppn"          "acs.pums..nrnn"         
-    [143] "acs.pums..nrcg"          "acs.pums..ocpp"         
-    [145] "acs.pums..prtn"          "acs.pums..plmy"         
-    [147] "acs.pums..psfn"          "acs.pums..r18n"         
-    [149] "acs.pums..r60n"          "acs.pums..r601"         
-    [151] "acs.pums..r65n"          "acs.pums..r651"         
-    [153] "acs.pums..rsmm"          "acs.pums..rsmc"         
-    [155] "acs.pums..smcp"          "acs.pums..smxnbb"       
-    [157] "acs.pums..smxnob"        "acs.pums..ssmh"         
-    [159] "acs.pums..txpn"          "acs.pums..wfnn"         
-    [161] "acs.pums..wfnw"          "acs.pums..wf1w"         
-    [163] "acs.pums..wf2w"          "acs.pums..wkxn"         
-    [165] "acs.pums..wkxrlhs"       "acs.pums..wkxrlhwftsw"  
-    [167] "acs.pums..wkxrlhwftsd"   "acs.pums..wkxrlhd"      
-    [169] "acs.pums..wkxf"          "acs.pums..wrksttnf"     
-    [171] "acs.pums..wrkstthw"      "acs.pums..wrkstthl"     
-    [173] "acs.pums..wrksttnh"      "acs.pums..wrkf"         
-    [175] "acs.pums..elfv"          "acs.pums..flfi"         
-    [177] "acs.pums..flfn"          "acs.pums..gsfpip"       
-    [179] "acs.pums..gsfpir"        "acs.pums..gsfn"         
-    [181] "acs.pums..wtfi"          "acs.pums..wtfn"         
-    [183] "acs.sf..b010"            "acs.sf..b060"           
-    [185] "acs.sf..b080"            "acs.sf..b1900"          
-    [187] "acs.sf..b1910"           "acs.sf..b1920"          
-    [189] "acs.sf..b25010"          "acs.sf..b250350"        
-    [191] "acs.sf..b250390"         "acs.sf..b25060"         
-    [193] "acs.sf..b250710"         "acs.sf..b250770"        
-    [195] "acs.sf..b25080"          "acs.sf..b25090"         
-    [197] "acs.sf..b2510"           "climate..cddb6"         
-    [199] "climate..hddb6"          "climate..cdd12b6"       
-    [201] "climate..hdd12b6"        "climate..iccz"          
-    [203] "climate..bznf"           "eia.seds..gslp"         
-    [205] "eia.seds..elcp"          "eia.seds..ntgp"         
-    [207] "eia.seds..lpgp"          "eia.seds..fllp"         
-    [209] "eia.seds..elmh"          "eia.seds..ntth"         
-    [211] "eia.seds..lpgh"          "eia.seds..flgh"         
-    [213] "eia.seds..elce"          "eia.seds..ntge"         
-    [215] "eia.seds..lpge"          "eia.seds..flle"         
-    [217] "eia.seds..eleh"          "eia.seds..nteh"         
-    [219] "eia.seds..lpeh"          "eia.seds..fleh"         
-    [221] "irs.soi..mipr"           "irs.soi..mipp"          
-    [223] "irs.soi..mppr"           "irs.soi..mdpr"          
-    [225] "irs.soi..prsr"           "irs.soi..prjr"          
-    [227] "irs.soi..phohr"          "irs.soi..pppr"          
-    [229] "irs.soi..pvpr"           "irs.soi..prcntelr"      
-    [231] "irs.soi..prfr"           "irs.soi..prcntetr"      
-    [233] "irs.soi..prie"           "irs.soi..priu"          
-    [235] "irs.soi..eftr"           "irs.soi..palt2"         
-    [237] "irs.soi..pa2t5"          "irs.soi..pa5t7"         
-    [239] "irs.soi..pa7t1"          "irs.soi..pa1t2"         
-    [241] "irs.soi..pa2om"          "nrel.urdb..rsed"        
-
-The string to the left of the “..” identifies the spatial dataset that
-the variable comes from (e.g. “irs.soi”). The string to the right is a
-unique, syntactically-valid identifier. It’s not critical that specific
-spatial variables be identifiable in the fusion process. And because
-pre-processing of spatial datasets does not impose a stringent
-naming/documentation convention (it is flexible by design), these
-non-nonsensical-but-unique names are the safest way to identify spatial
-variables.
-
-The “loc..\*” variables refer to the location variables directly
-observed in the donor and assignable to recipient microdata on the basis
-of respondent PUMA.
-
-Now let’s explore some of the additional arguments to `assemble()`:
-
-1.  We can request certain fusion variables by passing a character
-    vector to `fusion.variables`. The input is checked internally
-    against the data and only valuid fusion candidates are returned
-    (with helpful message to console).
-
-2.  We can limit the spatial datasets merged to the microdata via the
-    `spatial.datasets` argument. Default is to include all available
-    datasets, and this is sensible in most cases.
-
-3.  The `window` argument controls how wide a timespan (+/- `window`
-    years from the data vintage) is tolerated when merging spatial
-    variables to microdata. The default (`window = 0`) means that
-    spatial variables are merged only when their vintage matches that of
-    the microdata. A larger `window` will generally mean more spatial
-    variables in the output but at some cost in terms of temporal
-    alignment.
-
-4.  The `pca` argument controls whether/how principal components
-    analysis (PCA) is used to reduce dimensionality of the spatial
-    variables. `?prepare` provides additional details concerning the
-    `pca` argument.
-
-5.  Setting `replicates = TRUE` will cause replicate observation weights
-    to be returned along with the central/primary `weight` column.
-
-The following shows a more complex (and realistic) call to `prepare()`
-and `assemble()`, making use of the optional arguments.
+    fusionModel v2.2.2 | https://github.com/ummel/fusionModel
 
 ``` r
-# Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata
-prep <- prepare(donor = "RECS_2015", 
-                recipient = "ACS_2015", 
-                respondent = "household",
-                implicates = 5)
+dim(fused)
 ```
 
-    Harmonizing RECS_2015 (donor) microdata at household level
-    Harmonizing ACS_2015 (recipient) microdata at household level
-    Identified 124 geographic intersections in the donor...
-    Imputing PUMA for donor observations...
-    Assigning location variables to recipient observations...
+    [1] 20000     4
 
 ``` r
-data <- assemble(prep,
-                 fusion.variables = c("cooltype", "agecenac", "kwhcol"),
-                 window = 3,
-                 pca = c(30, 0.9))
+table(fused$M)
 ```
 
-    Identifying donor fusion variables...
-    Adding the following fusion variables:
-     agecenac, cooltype, kwhcol 
-    Performing principal components analysis...
-    Applying integer scaling to spatial predictor variables...
-    Merging donor spatial predictor variables...
-    Merging recipient spatial predictor variables...
-    Assembling output data frames...
-    Performing consistency checks...
+
+        1     2 
+    10000 10000 
 
 ``` r
-lapply(data, dim)
+head(fused)
 ```
 
-    $RECS_2015
-    [1] 28430    67
+       M  btung                                 cooltype btuel
+    1: 1 139800          Central air conditioning system 48500
+    2: 1      0          Central air conditioning system 72300
+    3: 1  37900 Individual window/wall or portable units 45000
+    4: 1      0          Central air conditioning system 57900
+    5: 1 103600          Central air conditioning system 29900
+    6: 1  30000          Central air conditioning system  7740
 
-    $ACS_2015
-    [1] 1226728      64
-
-The number of observations in the donor microdata is now higher,
-reflecting the use of `implicates = 5`.
-
-The difference in the number of columns between the RECS and ACS
-microdata is due to the former’s inclusion of our three requested fusion
-variables. Otherwise, both data frames are entirely consistent with one
-another; `assemble()` performs formal checks to ensure this is the case.
-Each microdata set includes a unique household identifier variable and
-an identical set of harmonized survey and spatial variables that can be
-exploited by the fusion process.
-
-By specifying the `pca` argument, the *numeric* spatial variables are
-collapsed into a smaller number of components – indicated by the “pca..”
-prefix – which we can confirm by looking at the recipient column names.
-
-``` r
-names(data$ACS_2015)
-```
-
-     [1] "acs_2015_hid"            "weight"                 
-     [3] "bedrooms__bdsp"          "desktop__laptop"        
-     [5] "education__schl"         "elpay__elefp"           
-     [7] "employhh__wkhp"          "fuelheat__hfl"          
-     [9] "hhage__agep"             "hhsex__sex"             
-    [11] "householder_race__rac1p" "internet__access"       
-    [13] "kownrent__ten"           "moneypy__hincp"         
-    [15] "ngpay__gasfp"            "nhsldmem__np"           
-    [17] "numadult__agep"          "numchild__agep"         
-    [19] "numfrig__refr"           "numtablet__handheld"    
-    [21] "occupyyrange__mv"        "sdescent__hisp"         
-    [23] "stoven__stov"            "totrooms__rmsp"         
-    [25] "typehuq__bld"            "yearmaderange__ybl"     
-    [27] "loc..ur12"               "loc..cbsatype15"        
-    [29] "loc..region"             "loc..recs_division"     
-    [31] "loc..recs_ba_zone"       "loc..recs_iecc_zone"    
-    [33] "climate..iccz"           "climate..bznf"          
-    [35] "pca..PC1"                "pca..PC2"               
-    [37] "pca..PC3"                "pca..PC4"               
-    [39] "pca..PC5"                "pca..PC6"               
-    [41] "pca..PC7"                "pca..PC8"               
-    [43] "pca..PC9"                "pca..PC10"              
-    [45] "pca..PC11"               "pca..PC12"              
-    [47] "pca..PC13"               "pca..PC14"              
-    [49] "pca..PC15"               "pca..PC16"              
-    [51] "pca..PC17"               "pca..PC18"              
-    [53] "pca..PC19"               "pca..PC20"              
-    [55] "pca..PC21"               "pca..PC22"              
-    [57] "pca..PC23"               "pca..PC24"              
-    [59] "pca..PC25"               "pca..PC26"              
-    [61] "pca..PC27"               "pca..PC28"              
-    [63] "pca..PC29"               "pca..PC30"              
-
-## Make it rain
-
-At this point, we are ready to fuse. This is straightforward using the
-`train()` and `fuse()` functions from the [fusionModel
-package](https://github.com/ummel/fusionmodel).
+When running in test mode, the ACS prediction dataset is restricted to
+the first 10,000 rows and, by default, only two implicates are simulated
+(for speed and file size). This is a quick(er) way to check if there are
+any obvious issues or problems. It is a good idea to make sure both
+`fusionInput()` and `fusionOutput()` are “passing” start-to-finish in
+test mode before trying to your final (and more time-consuming) fusion.
