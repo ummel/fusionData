@@ -4,10 +4,11 @@
 .Ruserdata
 fusionData.Rproj
 /deprecated
-/R/deprecated
-/R/dev
 /survey-raw
 /geo-raw
+/fusion_
+/R/deprecated
+/R/dev
 *dictionary.rda
 *surveys.rda
 *.fst
