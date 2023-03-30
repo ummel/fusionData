@@ -1,4 +1,4 @@
-#' Upload local /fusionData files to remote Google Drive storage
+#' Upload local fusionData files to remote Google Drive storage
 #'
 #' @description
 #' Convenient and safe wrapper around \code{\link[googledrive]{googledrive}} functions to upload local file(s) in /fusionData to analogous location in /fusionData directory of "fusionACSdata" Google Drive account.
@@ -46,16 +46,16 @@ uploadFiles <- function(files, ask = TRUE) {
                              path = dirs[i],  # Remote directory
                              name = basename(files[i]))  # Remote file name
     }
-    cat("uploadFiles(): Files successfully uploaded.\n")
+    cat("uploadFiles(): File(s) successfully uploaded.\n")
   } else {
-    cat("uploadFiles(): Upload canceled; 'file' was NOT uploaded.\n")
+    cat("uploadFiles(): Upload canceled; file(s) were NOT uploaded.\n")
   }
 
 }
 
 #-----
 
-# TO DO: MOVE!
+# Function to create directory structure in Google Drive
 drive_dircreate <- function(dir) {
   googledrive::drive_auth(email = "fusionacsdata@gmail.com")
   x <- strsplit(dir, split = "/", fixed = TRUE)[[1]]

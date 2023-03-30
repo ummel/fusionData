@@ -2,7 +2,7 @@
 % Please edit documentation in R/uploadFiles.R
 \name{uploadFiles}
 \alias{uploadFiles}
-\title{Upload local /fusionData files to remote Google Drive storage}
+\title{Upload local fusionData files to remote Google Drive storage}
 \usage{
 uploadFiles(files, ask = TRUE)
 }

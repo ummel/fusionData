@@ -10,7 +10,7 @@ compileSpatial()
 Saves \code{/geo-processed/geo_predictors.fst} to disk.
 }
 \description{
-Detects and compiles all processed spatial datasets located in \code{/geo-processed} into a single .fst file to be utilized by \link{assemble}.
+Detects and compiles all processed spatial datasets located in \code{/geo-processed} into a single \code{geo_predictors.fst} file to be utilized by \link{assemble}.
 }
 \examples{
 compileSpatial()
