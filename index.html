@@ -62,8 +62,8 @@
 <li><a href="#document-variables" id="toc-document-variables">Document variables</a></li>
 <li><a href="#harmonize-variables" id="toc-harmonize-variables">Harmonize variables</a></li>
 <li><a href="#compile-spatial-data" id="toc-compile-spatial-data">Compile spatial data</a></li>
-<li><a href="#prepare-for-fusion" id="toc-prepare-for-fusion">Prepare for fusion</a></li>
-<li><a href="#make-it-rain" id="toc-make-it-rain">Make it rain</a></li>
+<li><a href="#prepare-fusion-inputs" id="toc-prepare-fusion-inputs">Prepare fusion inputs</a></li>
+<li><a href="#generate-fusion-outputs" id="toc-generate-fusion-outputs">Generate fusion outputs</a></li>
 </ul>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
@@ -79,7 +79,9 @@
 <li>
 <strong>Compile spatial data</strong>: Compile data from multiple spatial datasets for merging with survey microdata.</li>
 <li>
-<strong>Prepare for fusion</strong>: Prepare donor and ACS/recipient microdata inputs passed to the <a href="https://github.com/ummel/fusionModel" class="external-link">fusionModel package</a>.</li>
+<strong>Prepare fusion inputs</strong>: Prepare harmonized donor and ACS microdata fusion inputs.</li>
+<li>
+<strong>Generate fusion outputs</strong>: Fuse donor variables to ACS microdata using <a href="https://github.com/ummel/fusionModel" class="external-link">fusionModel</a>.</li>
 </ol>
 </div>
 <div class="section level2">
@@ -89,80 +91,86 @@
 <p>Use the following setup parameters:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Repository URL<span class="sc">:</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>ummel<span class="sc">/</span>fusionData</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Project directory name<span class="sc">:</span> fusionData</span></code></pre></div>
-<p>You will be prompted to enter your Github username and password. After the repository has been cloned to your local project directory, you can install and load the package itself. You may be prompted to install some dependencies.</p>
-<p>*Note: if you use multi-factor authentication for your Github credentials, you will need to enable an SSH key, and will need to use <code>git@github.com:ummel/fusionData.git</code> as the Repository URL in the above setup parameters.</p>
+<p>You will be prompted to enter your Github username and password. You may be prompted to install some package dependencies. If you use multi-factor authentication for your Github credentials, you will need to enable an SSH key, and will need to use <code>git@github.com:ummel/fusionData.git</code> as the Repository URL in the above setup parameters.</p>
+<p>Although fusionData is structured (and loadable) as a <em>R</em> package, it also acts as a code and data <em>repository</em> that is shared and continuously modified by authorized users. fusionData grows over time as new surveys and spatial datasets – and the code needed to process and manipulate them – are added. fusionData is <em>not public</em>.</p>
+<p>Now that the shared Github repository has been cloned to your local drive (in a <code>/fusionData</code> project directory), we can install the package locally and load it.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Install the fusionData package locally</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load fusionData package</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ummel.github.io/fusionData/">fusionData</a></span><span class="op">)</span></span></code></pre></div>
-<p>You may be prompted to enter the password for the Google Drive account storing the remote files.</p>
+<p>Whenever the <code>fusionData</code> package is loaded, it checks that the current working directory is set to your local <code>/fusionData</code> directory (it will issue an error otherwise). This is because the package works with (and expects) a particular directory structure locally that is mimicked in the Github repository.</p>
+<p>You may be redirected to a browser window to enter the password for the Google Drive account storing fusionData’s remote files.</p>
 <ul>
 <li>username: [provided]</li>
 <li>password: [provided]</li>
 </ul>
-<p>For full functionality, it is necessary to download the remotely-stored processed survey microdata and processed spatial data files. The following section (“Structure and usage”) has more detail about this and the associated reasoning. See <code><a href="reference/getSurveyProcessed.html">?getSurveyProcessed</a></code> and <code><a href="reference/getGeoProcessed.html">?getGeoProcessed</a></code> as well. To get up and running, you’ll need to call the following commands.</p>
+<p>For full functionality, it is necessary to download the remotely-stored processed survey microdata and processed spatial data files. The following section (“Usage and structure”) provides more detail about this and the associated reasoning. See <code><a href="reference/getSurveyProcessed.html">?getSurveyProcessed</a></code> and <code><a href="reference/getGeoProcessed.html">?getGeoProcessed</a></code> as well.</p>
+<p>For example, to run most of the code in this README you minimally require:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Download all remote processed survey microdata files</span></span>
-<span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Download RECS 2015 processed survey microdata file</span></span>
+<span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"RECS_2015"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Download only the essential remote spatial data files</span></span>
 <span><span class="fu"><a href="reference/getGeoProcessed.html">getGeoProcessed</a></span><span class="op">(</span>dataset <span class="op">=</span> <span class="st">"essential"</span><span class="op">)</span></span></code></pre></div>
-<p>The download will take a few minutes. The files are automatically placed in the appropriate sub-directories of <code>/fusionData</code>, with the directories created if necessary. After successful download, your fusionData “system” is ready to go.</p>
+<p>The downloads will take a few minutes. The files are automatically placed in the appropriate sub-directories of <code>/fusionData</code> on your local drive, with the directories created if necessary. After successful download, your fusionData “system” is ready to go.</p>
 </div>
 <div class="section level2">
 <h2 id="usage-and-structure">Usage and structure<a class="anchor" aria-label="anchor" href="#usage-and-structure"></a>
 </h2>
-<p>Although fusionData is structured (and loadable) as a R package, it is better to think of it as a code and data <em>repository</em> that is shared and continuously modified by authorized users. fusionData is expected to grow over time as new surveys and spatial datasets – and the code needed to process and manipulate them – are added. fusionData is <em>not public</em>.</p>
 <p>As you modify code and files in your local <code>/fusionData</code> project directory, you will need to commit and push those changes to the Github repository for them to be accessible to other users. In addition, it is good practice to pull the latest version of the repository from Github prior to making any modifications. That way, you know you are working from the latest shared version.</p>
-<p>Since Github places limits on file/repository size, I decided to store certain data files “remotely” – that is, outside of the Github repository. Specifically, the lowest-level “raw” data inputs and the associated “processed” versions of that data (details below). Over time, it is expected that these types of data files could become quite large in the aggregate.</p>
-<p>The remotely-stored “raw” and “processed” data files are integral to the overall fusionData “system”, but they are not present in the Github repository itself. Instead, the remote files (and associated directory structure) are stored in Google Drive and can be automatically and safely added to a user’s <em>local</em> fusionData folder using provided functions. Once the remote files are added, the user’s local fusionData package is fully functional.</p>
-<p>Remote data files should be rather static over time. So, it is expected that a user will need to update (re-download) the remote files to their local fusionData directory only infrequently. However, when users add or modify <em>code</em> (or smaller, ancillary data files), the changes are then pushed to the Github repository where they become subject to code reviews, versioning control, and accessible to other authorized users.</p>
-<p>In short: The Github repository stores any and all code needed to build and document the fusionData architecture. But certain, infrequently-modified data files are stored remotely. Users can add the remote files to their local installation of fusionData and only code and ancillary data files are pushed to Github when modified.</p>
-<p>Changes or additions to the remote files is likely to be rare, and will be done “by hand” to prevent any inadvertent changes.</p>
+<p>Since Github places limits on file/repository size, we store certain data files “remotely” – that is, outside of the Github repository. The remotely-stored data files are integral to the overall fusionData “system”, but they are not present in the Github repository itself. Instead, the remote files (and associated directory structure) are stored in Google Drive and can be automatically and safely added to a user’s <em>local</em> <code>/fusionData</code> folder using provided functions. Once the remote files are added, the user’s local fusionData package is fully functional. Remote data files are fairly static. So, a user typically only needs to update (re-download) remote files to their local fusionData directory if important changes have been made.</p>
+<p>You don’t generally need to keep track of which files are stored remotely and which are in the Github repository (the <a href="https://github.com/ummel/fusionData/blob/master/.gitignore" class="external-link">.gitignore</a> file handles this).</p>
+<p><strong>In summary: The Github repository stores the code needed to build and document the fusionData architecture. Large and/or infrequently-modified data files are stored remotely. Users can download/upload remote files to/from their local <code>/fusionData</code> directory as-needed. When users add or modify <em>code</em>, the changes are committed locally and then pushed to the Github repository where they become subject to code reviews, versioning control, and accessible to other users.</strong></p>
 <p>Below is an overview of the top-level directories in the fusionData repository, including both Github-based and “remote” elements.</p>
+<div class="section level3">
+<h3 id="github">
+<code>/.github</code><a class="anchor" aria-label="anchor" href="#github"></a>
+</h3>
+<p>Auto-generated files for producing fusionData’s <a href="https://ummel.github.io/fusionData/">public documentation website</a>. <em>Most users do not need to access/modify this directory.</em></p>
+</div>
 <div class="section level3">
 <h3 id="r">
 <code>/R</code><a class="anchor" aria-label="anchor" href="#r"></a>
 </h3>
-<p><code>.R</code> scripts defining functions for doing “fusionData things”. Not all are exported.</p>
-</div>
-<div class="section level3">
-<h3 id="data">
-<code>/data</code><a class="anchor" aria-label="anchor" href="#data"></a>
-</h3>
-<p>Shared, package-wide <code>.rda</code> data files. Loadable via <code><a href="https://rdrr.io/r/utils/data.html" class="external-link">data()</a></code>, as usual for R packages.</p>
-</div>
-<div class="section level3">
-<h3 id="data-raw">
-<code>/data-raw</code><a class="anchor" aria-label="anchor" href="#data-raw"></a>
-</h3>
-<p><code>.R</code> scripts needed to create any package-wide <code>.rda</code> objects in <code>/data</code>, as usual for R packages.</p>
+<p><code>.R</code> scripts defining functions for doing “fusionData things” (not all are exported). <em>Most users do not need to access/modify this directory.</em></p>
 </div>
 <div class="section level3">
 <h3 id="man">
 <code>/man</code><a class="anchor" aria-label="anchor" href="#man"></a>
 </h3>
-<p>Documentation (i.e. “manual”) of functions in <code>/R</code> and data in <code>/data</code>, as usual for R packages.</p>
+<p>Documentation (i.e. “manual”) of functions in <code>/R</code> and data in <code>/data</code>, as usual for R packages. <em>Most users do not need to access/modify this directory.</em></p>
+</div>
+<div class="section level3">
+<h3 id="data">
+<code>/data</code><a class="anchor" aria-label="anchor" href="#data"></a>
+</h3>
+<p>Package-wide <code>.rda</code> data files. Loadable via <code><a href="https://rdrr.io/r/utils/data.html" class="external-link">data()</a></code>, as usual for R packages. <em>Most users do not need to access/modify this directory.</em></p>
+</div>
+<div class="section level3">
+<h3 id="data-raw">
+<code>/data-raw</code><a class="anchor" aria-label="anchor" href="#data-raw"></a>
+</h3>
+<p><code>.R</code> scripts needed to create any package-wide <code>.rda</code> objects in <code>/data</code>, as usual for R packages. <em>Most users do not need to access/modify this directory.</em></p>
 </div>
 <div class="section level3">
 <h3 id="universe">
 <code>/universe</code><a class="anchor" aria-label="anchor" href="#universe"></a>
 </h3>
-<p>Directory for the “Universal Survey Dictionary” Shiny app. The app itself can be run by calling <code><a href="reference/universe.html">universe()</a></code>.</p>
+<p>Directory for the “Universal Survey Dictionary” Shiny app. The app itself can be run by calling <code><a href="reference/universe.html">universe()</a></code>. <em>Most users do not need to access/modify this directory.</em></p>
 </div>
 <div class="section level3">
 <h3 id="harmony">
 <code>/harmony</code><a class="anchor" aria-label="anchor" href="#harmony"></a>
 </h3>
-<p>Directory for the “Survey Harmonization Tool” Shiny app. The app itself can be run by calling <code><a href="reference/harmony.html">harmony()</a></code>.</p>
+<p>Directory for the “Survey Harmonization Tool” Shiny app. The app itself can be run by calling <code><a href="reference/harmony.html">harmony()</a></code>. <em>Most users do not need to access/modify this directory.</em></p>
 </div>
 <div class="section level3">
 <h3 id="survey-processed">
 <code>/survey-processed</code><a class="anchor" aria-label="anchor" href="#survey-processed"></a>
 </h3>
-<p>Contains processed survey data and associated code. Subdirectories refer to specific surveys and vintages.</p>
+<p>Contains processed survey data and associated code. Sub-directories refer to specific surveys and vintages. <em>Users responsible for ingesting raw survey microdata will add their custom processing code to this directory.</em></p>
 <p>Example: <code>/survey-processed/RECS/2015</code></p>
 <p>The Github repository version of <code>/survey-processed</code> contains two kinds of files:</p>
 <ol style="list-style-type: decimal">
@@ -181,7 +189,7 @@
 <h3 id="survey-raw">
 <code>/survey-raw</code><a class="anchor" aria-label="anchor" href="#survey-raw"></a>
 </h3>
-<p>A remote directory (i.e. not present in the Github repository) containing <em>raw</em> survey data files. Subdirectories refer to specific surveys and vintages.</p>
+<p>A remote directory (i.e. not present in the Github repository) containing <em>raw</em> survey data files. Sub-directories refer to specific surveys and vintages. <em>Users responsible for ingesting raw survey microdata will add the raw data files to this directory.</em></p>
 <p>Example: <code>/survey-raw/RECS/2015</code></p>
 <p><code>/survey-raw</code> can be downloaded and added to a user’s local fusionData directory by calling <code>getSurveyRaw()</code>. However, in practice, there is no reason for a user to store raw survey data locally unless it is for a survey that they are actively processing or editing. Once the <em>processed</em> version of a survey (<code>*_processed.fst</code>) is stable and uploaded to the remote Google Drive, users can access and use the processed version without ever needing to download or look at the original/raw data.</p>
 </div>
@@ -189,7 +197,7 @@
 <h3 id="geo-processed">
 <code>/geo-processed</code><a class="anchor" aria-label="anchor" href="#geo-processed"></a>
 </h3>
-<p>Contains processed spatial data and associated code. Subdirectories refer to specific spatial datasets.</p>
+<p>Contains processed spatial data and associated code. Sub-directories refer to specific spatial datasets. <em>Most users do not need to access/modify this directory.</em> For users who are not modifying or adding spatial datasets, it is sufficient to call <code>getGeoProcessed(dataset = "essential")</code> to load the essential “geo” files.</p>
 <p>Example: <code>/geo-processed/EPA-SLD</code></p>
 <p>The Github repository version of <code>/geo-processed</code> contains the following kinds of files:</p>
 <ol style="list-style-type: decimal">
@@ -198,26 +206,31 @@
 <p>Example: <code>/geo-processed/EPA-SLD/epa-sld_v3_processed.R</code></p>
 <p><code>/geo-processed</code> also includes .rds files containing the processed spatial data itself. These files are stored remotely and can be added to a user’s local fusionData directory by calling <code><a href="reference/getGeoProcessed.html">getGeoProcessed()</a></code>.</p>
 <p>For example, the .rds file <code>/geo-processed/EPA-SLD/epa-sld_v3_processed.rds</code> contains processed spatial variables from version 3 of the EPA’s <a href="https://www.epa.gov/smartgrowth/smart-location-mapping#SLD" class="external-link">Smart Location Database (SLD)</a>. The <em>code</em> that creates this file is found in <code>/geo-processed/EPA-SLD/epa-sld_v3_processed.R</code>. The .R file is part of the Github repository (<a href="https://github.com/ummel/fusionData/blob/master/geo-processed/EPA-SLD/epa-sld_v3_processed.R" class="external-link">see here</a>), but the .rds file is stored remotely.</p>
-<p>Importantly, the <code>/geo-processed</code> remote content <em>also</em> includes three “essential” spatial data files that are, in practice, all that most users will need to perform data fusion locally. These files and their roles are described in more detail later on.</p>
+<p>Importantly, the <code>/geo-processed</code> remote content <em>also</em> includes two “essential” spatial data files that are, in practice, all that most users will need to perform data fusion locally. These files and their roles are described in more detail later on.</p>
 <ol style="list-style-type: decimal">
 <li><code>geo_predictors.fst</code></li>
 <li><code>concordance/geo_concordance.fst</code></li>
 </ol>
-<p>For users who are not modifying or adding spatial datasets, it is sufficient to call <code>getGeoProcessed(dataset = "essential")</code> to load the essential “geo” files.</p>
 </div>
 <div class="section level3">
 <h3 id="geo-raw">
 <code>/geo-raw</code><a class="anchor" aria-label="anchor" href="#geo-raw"></a>
 </h3>
-<p>A remote directory (i.e. not present in the Github repository) containing <em>raw</em> spatial data files. Subdirectories refer to specific spatial datasets.</p>
+<p>A remote directory (i.e. not present in the Github repository) containing <em>raw</em> spatial data files. Sub-directories refer to specific spatial datasets. <em>Most users do not need to access/modify this directory.</em></p>
 <p>Example: <code>/geo-raw/EPA-SLD</code></p>
 <p><code>/geo-raw</code> can be downloaded and added to a user’s local fusionData directory by calling <code>getGeoRaw()</code>. However, in practice, there is no reason for a user to store raw spatial data locally unless it is for a spatial dataset that they are actively processing or editing.</p>
+</div>
+<div class="section level3">
+<h3 id="fusion">
+<code>/fusion</code><a class="anchor" aria-label="anchor" href="#fusion"></a>
+</h3>
+<p>Contains production-level fusion input and output files generated by <code><a href="reference/fusionInput.html">fusionInput()</a></code> and <code><a href="reference/fusionOutput.html">fusionOutput()</a></code>. Users will call these functions to perform fusion but typically don’t need to access/modify the directory itself. Almost all fusion input/output files are stored remotely given their size. The only files that are pushed to the Github repository are .txt log files that contain information about the <code><a href="reference/fusionInput.html">fusionInput()</a></code> and <code><a href="reference/fusionOutput.html">fusionOutput()</a></code> function calls.</p>
 </div>
 <div class="section level3">
 <h3 id="production">
 <code>/production</code><a class="anchor" aria-label="anchor" href="#production"></a>
 </h3>
-<p>Directory containing code and possibly data from “production” fusion runs. This is likely a temporary inclusion. As additional fusion results are produced, we should create a more structured way of storing and organizing production data outputs.</p>
+<p>A now-DEPRECATED directory containing code and possibly data from older “production” fusion runs. Superseded by <code>/fusion</code>.</p>
 </div>
 </div>
 <div class="section level2">
@@ -261,7 +274,7 @@
 <p>It is important that the location variables in a donor survey be precisely consistent with those defined in <code>geo_concordance.fst</code>. The latter file can be modified, if necessary, to add new location variables to allow such concordance. It is only strictly necessary that the donor survey include the variable (or set of variables) that provide maximum information about respondent location. For example, if a survey contained a “county” variable, there is no reason to include “state” – though the code shouldn’t break if it is included.</p>
 <p>Some surveys (like RECS) have a complicated combination of location variables that collectively define respondent location through their spatial intersection. fusionData’s code base automatically handles this, provided that the location variables are consistent (i.e. same name and levels) in both the donor microdata and the <code>geo_concordance.fst</code> file. There is no need to specify which variables are the location variables; this is determined automatically by looking for overlap with column names in the <code>geo_concordance.fst</code> file.</p>
 <p>You can see how, exactly, the raw survey data was transformed by viewing the associated code in <code>/survey-processed/RECS/2015/RECS_2015_H_processed.R</code>.</p>
-<p>Given the variety of survey data structures and conventions, there is no strict procedure for how the .R file should be written. However, there are common steps and tools likely to be applicable to most surveys. The <code>RECS_2015_H_processed.R</code> script is a good “template” in this regard, since it includes many common operations – including imputation of NA’s using the provided <code>imputeMissing()</code> function.</p>
+<p>Given the variety of survey data structures and conventions, there is no strict procedure for how the .R file(s) should be written. However, there are common steps and tools likely to be applicable to most surveys. The <code>RECS_2015_H_processed.R</code> script is a good “template” in this regard, since it includes many common operations – including imputation of NA’s using the provided <code>imputeMissing()</code> function.</p>
 <p>The RECS 2015 has a comparatively simple microdata and documentation structure: household-level microdata in a single .csv file with an associated .xls codebook. Other surveys require more complex steps to assemble the necessary microdata. There is no limit on the number or nature of .R files that can be used to ingest a survey. If multiple .R files are used, the file names should include a two-digit sequence at the front to indicate the order in which the scripts are employed (<code>01*.R</code>, <code>02*.R</code>, etc.).</p>
 <p><em>The .R files should include liberal use of comments to help others understand the code later. Good practice is for comments to explain <strong>why</strong> a piece of code is included, not just <strong>what</strong> it does.</em></p>
 <p>In all cases, the .R script that eventually saves the <code>_processed.fst</code> microdata file to disk must include the use of <code><a href="http://larmarange.github.io/labelled/reference/var_label.html" class="external-link">labelled::set_variable_labels</a></code> to assign variable descriptions (ideally, taken from the official codebook) for each column. The script must then call the <code><a href="reference/createDictionary.html">createDictionary()</a></code> function to create and save a standardized “dictionary.rds” file. <code><a href="reference/createDictionary.html">createDictionary()</a></code> uses the assigned variable descriptions and other information in the microdata to build the dictionary in a standardized way. You can see this at the end of <a href="https://github.com/ummel/fusionData/blob/master/survey-processed/RECS/2015/RECS_2015_H_processed.R" class="external-link">RECS_2015_H_processed.R</a>:</p>
@@ -279,7 +292,6 @@
 <span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="dv">5</span> RECS   <span class="dv">2015</span>    H          agedw     Age of dishwasher       [No d… ord    <span class="dv">5686</span></span>
 <span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="dv">6</span> RECS   <span class="dv">2015</span>    H          agefrzr   Age of most<span class="sc">-</span>used freez… [No f… ord    <span class="dv">5686</span></span></code></pre></div>
 <p>In practice, there is no reason for a typical user to ever open a survey’s dictionary file. The preferred and much more useful way to explore survey metadata and variable descriptions is via the <code><a href="reference/universe.html">universe()</a></code> function described in the next section.</p>
-<p><em>As of August 2021, American Community Survey (ACS) microdata has been ingested for 2015 and 2019.</em> It is expected that additional vintages will eventually be added to allow temporal alignment with the further vintages of donor surveys. The .R scripts used to process the 2015 and 2019 ACS microdata can serve as templates for ingesting other vintages.</p>
 </div>
 <div class="section level2">
 <h2 id="document-variables">Document variables<a class="anchor" aria-label="anchor" href="#document-variables"></a>
@@ -334,21 +346,21 @@
 <p>The Comments field is used to leave helpful information about why the harmony was constructed as it was. Any harmony that makes use of one of the “advanced” settings should probably have a comment explaining the rationale.</p>
 <hr>
 <p>A harmony file can be <code>dget</code>-d to return a list of lists, where each element defines a harmony. Like this one, defining the harmony between the “fuelheat” variable in the RECS and the “hfl” variable in the ACS.</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>fuelheat__hfl <span class="ot">=</span> <span class="fu">list</span>(</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="at">RECS =</span> <span class="fu">list</span>(</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="at">groups =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>,</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Do not use space heating"</span>, <span class="st">"Electricity"</span>, <span class="st">"Fuel oil/kerosene"</span>, <span class="st">"Natural gas from underground pipes"</span>, <span class="st">"Propane (bottled gas)"</span>, <span class="st">"Some other fuel"</span>, <span class="st">"Wood (cordwood or pellets)"</span>),</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="at">breaks =</span> <span class="st">""</span>,</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="at">adj =</span> <span class="st">""</span>),</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="at">ACS =</span> <span class="fu">list</span>(</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="at">groups =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">6</span>, <span class="dv">4</span>, <span class="dv">7</span>),</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Bottled, tank, or LP gas"</span>, <span class="st">"Coal or coke"</span>, <span class="st">"Electricity"</span>, <span class="st">"Fuel oil, kerosene, etc."</span>, <span class="st">"No fuel used"</span>, <span class="st">"Other fuel"</span>, <span class="st">"Solar energy"</span>, <span class="st">"Utility gas"</span>, <span class="st">"Wood"</span>),</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="at">breaks =</span> <span class="st">""</span>,</span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="at">adj =</span> <span class="st">""</span>),</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="at">ordered =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="at">comment =</span> <span class="st">""</span>,</span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="at">modified =</span> <span class="st">"2021-07-03 12:10:17"</span>),</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fuelheat__hfl</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>RECS <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>groups <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">7</span>,</span>
+<span>levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Do not use space heating"</span>, <span class="st">"Electricity"</span>, <span class="st">"Fuel oil/kerosene"</span>, <span class="st">"Natural gas from underground pipes"</span>, <span class="st">"Propane (bottled gas)"</span>, <span class="st">"Some other fuel"</span>, <span class="st">"Wood (cordwood or pellets)"</span><span class="op">)</span>,</span>
+<span>breaks <span class="op">=</span> <span class="st">""</span>,</span>
+<span>adj <span class="op">=</span> <span class="st">""</span><span class="op">)</span>,</span>
+<span>ACS <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">6</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">1</span>, <span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">4</span>, <span class="fl">7</span><span class="op">)</span>,</span>
+<span>levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Bottled, tank, or LP gas"</span>, <span class="st">"Coal or coke"</span>, <span class="st">"Electricity"</span>, <span class="st">"Fuel oil, kerosene, etc."</span>, <span class="st">"No fuel used"</span>, <span class="st">"Other fuel"</span>, <span class="st">"Solar energy"</span>, <span class="st">"Utility gas"</span>, <span class="st">"Wood"</span><span class="op">)</span>,</span>
+<span>breaks <span class="op">=</span> <span class="st">""</span>,</span>
+<span>adj <span class="op">=</span> <span class="st">""</span><span class="op">)</span>,</span>
+<span>ordered <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>comment <span class="op">=</span> <span class="st">""</span>,</span>
+<span>modified <span class="op">=</span> <span class="st">"2021-07-03 12:10:17"</span><span class="op">)</span></span></code></pre></div>
 <p>This list object contains all of the information necessary to construct RECS and ACS microdata containing a new variable called “fuelheat__hfl”; i.e. the harmonized version of the two associated heating fuel variables. This is precisely what the <code><a href="reference/harmonize.html">harmonize()</a></code> function does – typically when called by <code><a href="reference/prepare.html">prepare()</a></code> as explained below – using all of the harmonies available in the specified harmony file. Note that harmonized variables are always indicated by a double-underscore (“__“).</p>
 <p>Using the <code><a href="reference/harmony.html">harmony()</a></code> app to manually define harmonies and then letting <code><a href="reference/harmonize.html">harmonize()</a></code> take care of subsequent data manipulation makes the construction of harmonized microdata easier, faster, and <em>much</em> safer. It is generally advisable to use the <code><a href="reference/harmonize.html">harmonize()</a></code> app to create and edit harmonies. It is also possible to manually edit the .R harmony files, if necessary, but be careful.</p>
 <p>Most users will eventually find themselves constructing harmonies via the app and, as a result, modifying their <em>local</em> version of .R harmony files. This means you must commit and push those changes for them to show up in the Github repository – and become available for others to use. This also means it is important to pull the most recent version of the repository when you begin working with fusionData. Otherwise, you risk duplicating the efforts of someone else and/or failing to make use of the most recent version of harmony (and other) files.</p>
@@ -403,283 +415,356 @@
 <p>Consequently, unless a user is actively adding or editing processed spatial data, the only “geo files” that are strictly necessary for the fusion process are <code>geo_predictors.fst</code> and <code>geo_concordance.fst</code>, both of which can be obtained by calling <code>getGeoProcessed(dataset = "essential")</code>.</p>
 </div>
 <div class="section level2">
-<h2 id="prepare-for-fusion">Prepare for fusion<a class="anchor" aria-label="anchor" href="#prepare-for-fusion"></a>
+<h2 id="prepare-fusion-inputs">Prepare fusion inputs<a class="anchor" aria-label="anchor" href="#prepare-fusion-inputs"></a>
 </h2>
-<p>The following example shows how the fusionData <code><a href="reference/prepare.html">prepare()</a></code> and <code><a href="reference/assemble.html">assemble()</a></code> functions to generate complete, consistent, and harmonized microdata that can then be passed to the <a href="https://github.com/ummel/fusionModel" class="external-link">fusionModel package</a> to fuse donor variables to ACS microdata.</p>
-<p>The simplest usage is shown below. In this case, we are requesting microdata outputs at the household-level that will allow us to (subsequently) fuse RECS 2015 donor variables to ACS 2015 recipient microdata. <code><a href="reference/prepare.html">prepare()</a></code> and <code><a href="reference/assemble.html">assemble()</a></code> are separate functions only because <code><a href="reference/prepare.html">prepare()</a></code> tends to be more expensive. It can usually be called just once (possibly saving the output to disk), while <code><a href="reference/assemble.html">assemble()</a></code> is then invoked multiple times to debug or test different assembly options.</p>
+<p>Once a donor survey is successfully ingested and harmonized, it is possible to move on to the final step: fusion! The fusion process consists of two parts. First, the necessary “input” data files are prepared. Second, those inputs are used to generate the final fusion “output”.</p>
+<p>As of fusionData v1.0, these two steps are helpfully wrapped into the <code><a href="reference/fusionInput.html">fusionInput()</a></code> and <code><a href="reference/fusionOutput.html">fusionOutput()</a></code> functions, respectively. These functions safely execute all of the steps required for successful fusion. In practice, users need only call the two high-level functions and ensure that the resulting console output and log files look good.</p>
+<p>For a worked example, let’s prepare the required inputs for fusion of the RECS 2015 to the ACS 2015 (in test mode, of course!). This requires the processed microdata for both surveys to be present in your local <code>/fusionData</code> installation. If you haven’t already, you can download these files using:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata</span></span>
-<span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/prepare.html">prepare</a></span><span class="op">(</span>donor <span class="op">=</span> <span class="st">"RECS_2015"</span>, recipient <span class="op">=</span> <span class="st">"ACS_2015"</span>, respondent <span class="op">=</span> <span class="st">"household"</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb21"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>Harmonizing <span class="fu">RECS_2015</span> (donor) microdata at household level</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>Harmonizing <span class="fu">ACS_2015</span> (recipient) microdata at household level</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>Identified <span class="dv">124</span> geographic intersections <span class="cf">in</span> the donor...</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>Imputing PUMA <span class="cf">for</span> donor observations...</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>Assigning location variables to recipient observations...</span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"RECS_2015"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACS_2015"</span><span class="op">)</span></span></code></pre></div>
+<p>You will also need to install the <a href="https://github.com/ummel/fusionModel" class="external-link">fusionModel package</a>:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"ummel/fusionModel"</span><span class="op">)</span></span></code></pre></div>
+<p>Now let’s make a call to <code><a href="reference/fusionInput.html">fusionInput()</a></code>. The function arguments are fully documented in <code><a href="reference/fusionInput.html">?fusionInput</a></code>. If you run this code in an interactive session, you will be prompted at the console to approve certain steps before proceeding (again, this is all documented). The console output is designed to be very informative and describe what is being done behind the scenes.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Assemble using default options</span></span>
-<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/assemble.html">assemble</a></span><span class="op">(</span><span class="va">prep</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb23"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>Identifying donor fusion variables...</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>Adding the following fusion variables<span class="sc">:</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a> adqinsul, agecdryer, agecenac, agecwash, agedw, agefrzr, agerfri1, agerfri2, aircond, altfuelpev, amtmicro, appother, athome, attccool, attcheat, attic, atticfin, audit, auditchg, backup, basecool, basefin, baseheat, benother, blender, btuel, btuelahucol, btuelahuheat, btuelcdr, btuelcfan, btuelcok, btuelcol, btuelcw, btueldhum, btueldwh, btuelevapcol, btuelfrz, btuelhtbheat, btuelhtbpmp, btuelhum, btuellgt, btuelmicro, btuelnec, btuelplpmp, btuelrfg, btuelrfg1, btuelrfg2, btuelsph, btueltv1, btueltv2, btueltvrel, btuelwth, btufo, btufonec, btufosph, btufowth, btulp, btulpcdr, btulpcok, btulpnec, btulpsph, btulpwth, btung, btungcdr, btungcok, btunghtbheat, btungnec, btungplheat, btungsph, btungwth, cablesat, cdd30yr, cdd65, cdd80, cellar, cellphone, cenachp, coffee, coldma, combodvr, cooktuse, cooltype, crockpot, cufeetng, cufeetngcdr, cufeetngcok, cufeetnghtbheat, cufeetngnec, cufeetngplheat, cufeetngsph, cufeetngwth, cwasher, dbt1, dbt99, dishwash, dntheat, dolelahucol, dolelahuheat, dolelcdr, dolelcfan, dolelcok, dolelcol, dolelcw, doleldhum, doleldwh, dolelevapcol, dolelfrz, dolelhtbheat, dolelhtbpmp, dolelhum, dolellgt, dolelmicro, dolelnec, dolelplpmp, dolelrfg, dolelrfg1, dolelrfg2, dolelsph, doleltv1, doleltv2, doleltvrel, dolelwth, dolfonec, dolfosph, dolfowth, dollarel, dollarfo, dollarlp, dollarng, dollpcdr, dollpcok, dollpnec, dollpsph, dollpwth, dolngcdr, dolngcok, dolnghtbheat, dolngnec, dolngplheat, dolngsph, dolngwth, door1sum, drafty, dryer, dryrfuel, dryruse, dualcooktfuel, dualovenfuel, dvd, dwashuse, dwcycle, eelights, elcool, elfood, elother, elperiph, elwarm, elwater, energyasst, energyasst11, energyasst12, energyasst13, energyasst14, energyasst15, energyasstoth, equipage, equipaux, equipauxtype, equipm, equipmuse, escwash, esdishw, esdryer, esfreeze, esfrig, eslight, eswater, eswin, foodproc, foother, fopay, fowarm, fowater, freeaudit, fuelaux, fuelh2o, fuelh2o2, fuelpool, fueltub, gallonfo, gallonfonec, gallonfosph, gallonfowth, gallonlp, gallonlpcdr, gallonlpcok, gallonlpnec, gallonlpsph, gallonlpwth, gargcool, gargheat, gndhdd65, gwt, h2oheatapt, hdd30yr, hdd50, hdd65, heathome, highceil, hotma, ice, intdata, intdataacc, intstream, inwireless, kwh, kwhahucol, kwhahuheat, kwhcdr, kwhcfan, kwhcok, kwhcol, kwhcw, kwhdhum, kwhdwh, kwhevapcol, kwhfrz, kwhhtbheat, kwhhtbpmp, kwhhum, kwhlgt, kwhmicro, kwhnec, kwhplpmp, kwhrfg, kwhrfg1, kwhrfg2, kwhsph, kwhtv1, kwhtv2, kwhtvrel, kwhwth, lgtin4, lgtincan, lgtincfl, lgtincntl, lgtinled, lgtinnum, lgtoutcntl, lgtoutnum, locrfri2, lpcook, lpgpay, lpother, lpwarm, lpwater, micro, moisture, monpool, montub, morethan1h2o, ncombath, nhafbath, noacbroke, noacdays, noacel, noachelp, noheatbroke, noheatbulk, noheatdays, noheatel, noheathelp, noheatng, notmoist, numatticfan, numberac, numcfan, numfloorfan, numfreez, nummeal, numsmphone, numwholefan, oa_lat, othrooms, outgrill, outgrillfuel, outlet, oven, ovenfuel, ovenuse, payhelp, pelletamt, pelletbtu, periodel, periodfo, periodlp, periodng, playsta, pool, prkgplc1, protherm, prothermac, rebateapp, recbath, recycapp, ricecook, rooftype, scaleb, scalee, scaleg, sepcooktuse, sepdvr, sepovenuse, sizeofgarage, sizfreez, sizrfri1, sizrfri2, smartmeter, smarttherm, solar, solother, solwater, stories, stove, stovefuel, stovenfuel, studio, swampcol, swimpool, taxcreditapp, tempgone, tempgoneac, temphome, temphomeac, tempnite, tempniteac, thermain, thermainac, toast, toastovn, topfront, totalbtu, totalbtucdr, totalbtucok, totalbtuhtb, totalbtunec, totalbtupl, totalbtusph, totalbtuwth, totaldol, totaldolcdr, totaldolcok, totaldolhtb, totaldolnec, totaldolpl, totaldolsph, totaldolwth, totcsqft, tothsqft, totsqft_en, totucsqft, totusqft, tvaudiosys, tvcolor, tvonwd1, tvonwd2, tvonwe1, tvonwe2, tvsize1, tvsize2, tvtype1, tvtype2, typeglass, typerfr1, typerfr2, ugashere, ugcook, ugoth, ugwarm, ugwater, uprtfrzr, usecenac, useel, usefo, uselp, usemoisture, useng, usenotmoist, usesolar, usewood, usewwac, vcr, walltype, washload, wdother, wdpellet, wdwarm, wdwater, wheatage, wheatsiz, windows, winframe, woodamt, woodbtu, woodlogs, wsf, wwacage </span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>Applying integer scaling to spatial predictor variables...</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>Merging donor spatial predictor variables...</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>Merging recipient spatial predictor variables...</span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>Assembling output data frames...</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>Performing consistency checks...</span></code></pre></div>
-<p>The resulting <code>data</code> object is a list containing two data frames. The first slot contains the “fusion ready” donor microdata. The second slot contains the analogous ACS recipient microdata. Notice that the RECS microdata has more variables/columns than the ACS data. This is because <code>assemble</code> donor output includes – by default – <em>all</em> valid variables in the donor survey not used to create harmonies. The latter are potential candidates for fusion (and there are many in the case of RECS).</p>
+<code class="sourceCode R"><span><span class="va">input.dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fusionInput.html">fusionInput</a></span><span class="op">(</span>donor <span class="op">=</span> <span class="st">"RECS_2015"</span>,</span>
+<span>                         recipient <span class="op">=</span> <span class="st">"ACS_2015"</span>,</span>
+<span>                         respondent <span class="op">=</span> <span class="st">"household"</span>,</span>
+<span>                         fuse <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"btung"</span>, <span class="st">"btuel"</span>, <span class="st">"cooltype"</span><span class="op">)</span>,</span>
+<span>                         force <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"moneypy"</span>, <span class="st">"householder_race"</span>, <span class="st">"education"</span>, <span class="st">"nhsldmem"</span>, <span class="st">"kownrent"</span>, <span class="st">"recs_division"</span><span class="op">)</span>,</span>
+<span>                         note <span class="op">=</span> <span class="st">"Hello world. This is a worked example for the package README!"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb23"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="dv">2023-03-30</span> <span class="dv">16</span><span class="sc">:</span><span class="dv">39</span><span class="sc">:</span><span class="dv">06</span> MDT </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>R version <span class="dv">4</span>.<span class="fl">2.3</span> (<span class="dv">2023-03-15</span>) </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>Platform<span class="sc">:</span> x86_64<span class="sc">-</span>pc<span class="sc">-</span>linux<span class="sc">-</span>gnu </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>fusionData v1.<span class="fl">0.0</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>fusionModel v2.<span class="fl">2.2</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionInput</span>(<span class="at">donor =</span> <span class="st">"RECS_2015"</span>, <span class="at">recipient =</span> <span class="st">"ACS_2015"</span>, <span class="at">respondent =</span> <span class="st">"household"</span>, </span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">fuse =</span> <span class="fu">c</span>(<span class="st">"btung"</span>, <span class="st">"btuel"</span>, <span class="st">"cooltype"</span>), <span class="at">force =</span> <span class="fu">c</span>(<span class="st">"moneypy"</span>, </span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">"householder_race"</span>, <span class="st">"education"</span>, <span class="st">"nhsldmem"</span>, <span class="st">"kownrent"</span>, </span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"recs_division"</span>), <span class="at">note =</span> <span class="st">"Hello world. This is a worked example for the package README!"</span>, </span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">test_mode =</span> <span class="cn">TRUE</span>, <span class="at">ncores =</span> <span class="fu">getOption</span>(<span class="st">"fusionData.cores"</span>))</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionInput</span>() is running <span class="cf">in</span> TEST mode.</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>User<span class="sc">-</span>supplied note<span class="sc">:</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a> Hello world. This is a worked example <span class="cf">for</span> the package README<span class="sc">!</span> </span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>Result files will be saved to<span class="sc">:</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>input </span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>The local <span class="sc">/</span>input directory already exists.</span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Check <span class="cf">for</span> custom pre<span class="sc">-</span>processing script <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>None found.</span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> <span class="fu">prepare</span>() microdata <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>Harmonizing <span class="fu">RECS_2015</span> (donor) microdata at household level</span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>Harmonizing <span class="fu">ACS_2015</span> (recipient) microdata at household level</span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>Identified <span class="dv">124</span> geographic intersections <span class="cf">in</span> the donor...</span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>Imputing PUMA <span class="cf">for</span> donor observations...</span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>Assigning location variables to recipient observations...</span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> <span class="fu">assemble</span>() microdata <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a>Identifying donor fusion variables...</span>
+<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>Including the following fusion variables<span class="sc">:</span></span>
+<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a> btuel, btung, cooltype </span>
+<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a>Applying integer scaling to spatial predictor variables...</span>
+<span id="cb23-41"><a href="#cb23-41" aria-hidden="true" tabindex="-1"></a>Merging donor spatial predictor variables...</span>
+<span id="cb23-42"><a href="#cb23-42" aria-hidden="true" tabindex="-1"></a>Merging recipient spatial predictor variables...</span>
+<span id="cb23-43"><a href="#cb23-43" aria-hidden="true" tabindex="-1"></a>Assembling output data frames...</span>
+<span id="cb23-44"><a href="#cb23-44" aria-hidden="true" tabindex="-1"></a>Performing consistency checks...</span>
+<span id="cb23-45"><a href="#cb23-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-46"><a href="#cb23-46" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Check <span class="cf">for</span> custom .R scripts <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-47"><a href="#cb23-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-48"><a href="#cb23-48" aria-hidden="true" tabindex="-1"></a>None found.</span>
+<span id="cb23-49"><a href="#cb23-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-50"><a href="#cb23-50" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Check categorical harmonized variables <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-51"><a href="#cb23-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-52"><a href="#cb23-52" aria-hidden="true" tabindex="-1"></a>Similarity scores <span class="cf">for</span> <span class="dv">18</span> categorical harmonized variables<span class="sc">:</span></span>
+<span id="cb23-53"><a href="#cb23-53" aria-hidden="true" tabindex="-1"></a><span class="co"># A tibble: 18 × 2</span></span>
+<span id="cb23-54"><a href="#cb23-54" aria-hidden="true" tabindex="-1"></a>   <span class="st">`</span><span class="at">Harmonized variable</span><span class="st">`</span>   <span class="st">`</span><span class="at">Similarity score</span><span class="st">`</span></span>
+<span id="cb23-55"><a href="#cb23-55" aria-hidden="true" tabindex="-1"></a>   <span class="sc">&lt;</span>chr<span class="sc">&gt;</span>                                <span class="er">&lt;</span>dbl<span class="sc">&gt;</span></span>
+<span id="cb23-56"><a href="#cb23-56" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span> numtablet__handheld                  <span class="fl">0.676</span></span>
+<span id="cb23-57"><a href="#cb23-57" aria-hidden="true" tabindex="-1"></a> <span class="dv">2</span> employhh__wkhp                       <span class="fl">0.727</span></span>
+<span id="cb23-58"><a href="#cb23-58" aria-hidden="true" tabindex="-1"></a> <span class="dv">3</span> occupyyrange__mv                     <span class="fl">0.786</span></span>
+<span id="cb23-59"><a href="#cb23-59" aria-hidden="true" tabindex="-1"></a> <span class="dv">4</span> stoven__stov                         <span class="fl">0.856</span></span>
+<span id="cb23-60"><a href="#cb23-60" aria-hidden="true" tabindex="-1"></a> <span class="dv">5</span> ngpay__gasfp                         <span class="fl">0.868</span></span>
+<span id="cb23-61"><a href="#cb23-61" aria-hidden="true" tabindex="-1"></a> <span class="dv">6</span> hhsex__sex                           <span class="fl">0.878</span></span>
+<span id="cb23-62"><a href="#cb23-62" aria-hidden="true" tabindex="-1"></a> <span class="dv">7</span> moneypy__hincp                       <span class="fl">0.905</span></span>
+<span id="cb23-63"><a href="#cb23-63" aria-hidden="true" tabindex="-1"></a> <span class="dv">8</span> fuelheat__hfl                        <span class="fl">0.929</span></span>
+<span id="cb23-64"><a href="#cb23-64" aria-hidden="true" tabindex="-1"></a> <span class="dv">9</span> householder_race__rac1p              <span class="fl">0.933</span></span>
+<span id="cb23-65"><a href="#cb23-65" aria-hidden="true" tabindex="-1"></a><span class="dv">10</span> internet__access                     <span class="fl">0.933</span></span>
+<span id="cb23-66"><a href="#cb23-66" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span> education__schl                      <span class="fl">0.945</span></span>
+<span id="cb23-67"><a href="#cb23-67" aria-hidden="true" tabindex="-1"></a><span class="dv">12</span> elpay__elefp                         <span class="fl">0.955</span></span>
+<span id="cb23-68"><a href="#cb23-68" aria-hidden="true" tabindex="-1"></a><span class="dv">13</span> kownrent__ten                        <span class="fl">0.983</span></span>
+<span id="cb23-69"><a href="#cb23-69" aria-hidden="true" tabindex="-1"></a><span class="dv">14</span> numfrig__refr                        <span class="fl">0.993</span></span>
+<span id="cb23-70"><a href="#cb23-70" aria-hidden="true" tabindex="-1"></a><span class="dv">15</span> typehuq__bld                         <span class="fl">0.993</span></span>
+<span id="cb23-71"><a href="#cb23-71" aria-hidden="true" tabindex="-1"></a><span class="dv">16</span> yearmaderange__ybl                   <span class="fl">0.996</span></span>
+<span id="cb23-72"><a href="#cb23-72" aria-hidden="true" tabindex="-1"></a><span class="dv">17</span> desktop__laptop                      <span class="fl">0.998</span></span>
+<span id="cb23-73"><a href="#cb23-73" aria-hidden="true" tabindex="-1"></a><span class="dv">18</span> sdescent__hisp                       <span class="fl">0.999</span></span>
+<span id="cb23-74"><a href="#cb23-74" aria-hidden="true" tabindex="-1"></a>Retaining all categorical harmonized variables.</span>
+<span id="cb23-75"><a href="#cb23-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-76"><a href="#cb23-76" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Check location variables <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-77"><a href="#cb23-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-78"><a href="#cb23-78" aria-hidden="true" tabindex="-1"></a>The representative location variable <span class="st">'loc..recs_division'</span> has <span class="dv">10</span> levels.</span>
+<span id="cb23-79"><a href="#cb23-79" aria-hidden="true" tabindex="-1"></a>The following location variables have been flagged <span class="cf">for</span> possible exclusion<span class="sc">:</span></span>
+<span id="cb23-80"><a href="#cb23-80" aria-hidden="true" tabindex="-1"></a><span class="co"># A tibble: 1 × 2</span></span>
+<span id="cb23-81"><a href="#cb23-81" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Location variable</span><span class="st">`</span> <span class="st">`</span><span class="at">Number of levels</span><span class="st">`</span></span>
+<span id="cb23-82"><a href="#cb23-82" aria-hidden="true" tabindex="-1"></a>  <span class="sc">&lt;</span>chr<span class="sc">&gt;</span>                            <span class="er">&lt;</span>int<span class="sc">&gt;</span></span>
+<span id="cb23-83"><a href="#cb23-83" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> loc..recs_iecc_zone                 <span class="dv">11</span></span>
+<span id="cb23-84"><a href="#cb23-84" aria-hidden="true" tabindex="-1"></a>Retaining all location variables.</span>
+<span id="cb23-85"><a href="#cb23-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-86"><a href="#cb23-86" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Check fusion and predictor variables <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-87"><a href="#cb23-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-88"><a href="#cb23-88" aria-hidden="true" tabindex="-1"></a>Identified <span class="dv">3</span> fusion <span class="fu">variables</span> (<span class="dv">0</span> blocks)<span class="sc">:</span></span>
+<span id="cb23-89"><a href="#cb23-89" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"btung"</span>    <span class="st">"btuel"</span>    <span class="st">"cooltype"</span></span>
+<span id="cb23-90"><a href="#cb23-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-91"><a href="#cb23-91" aria-hidden="true" tabindex="-1"></a>Identified <span class="dv">24</span> harmonized variables and <span class="dv">240</span> total predictors</span>
+<span id="cb23-92"><a href="#cb23-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-93"><a href="#cb23-93" aria-hidden="true" tabindex="-1"></a>Identified <span class="dv">6</span> predictors to force and use <span class="cf">for</span> validation<span class="sc">:</span></span>
+<span id="cb23-94"><a href="#cb23-94" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"moneypy__hincp"</span>          <span class="st">"householder_race__rac1p"</span></span>
+<span id="cb23-95"><a href="#cb23-95" aria-hidden="true" tabindex="-1"></a>[<span class="dv">3</span>] <span class="st">"education__schl"</span>         <span class="st">"nhsldmem__np"</span>           </span>
+<span id="cb23-96"><a href="#cb23-96" aria-hidden="true" tabindex="-1"></a>[<span class="dv">5</span>] <span class="st">"kownrent__ten"</span>           <span class="st">"loc..recs_division"</span>     </span>
+<span id="cb23-97"><a href="#cb23-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-98"><a href="#cb23-98" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Run fusionModel<span class="sc">::</span><span class="fu">prepXY</span>() <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-99"><a href="#cb23-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-100"><a href="#cb23-100" aria-hidden="true" tabindex="-1"></a>fusionModel v2.<span class="fl">2.2</span> <span class="sc">|</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>ummel<span class="sc">/</span>fusionModel</span>
+<span id="cb23-101"><a href="#cb23-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-102"><a href="#cb23-102" aria-hidden="true" tabindex="-1"></a>Missing values imputed <span class="cf">for</span> the following <span class="st">'x'</span> <span class="fu">variable</span>(s)<span class="sc">:</span></span>
+<span id="cb23-103"><a href="#cb23-103" aria-hidden="true" tabindex="-1"></a> acs.sf..b060, acs.sf..b080, nrel.urdb..rsed </span>
+<span id="cb23-104"><a href="#cb23-104" aria-hidden="true" tabindex="-1"></a>Identifying <span class="st">'x'</span> that pass absolute Spearman correlation threshold</span>
+<span id="cb23-105"><a href="#cb23-105" aria-hidden="true" tabindex="-1"></a>Fitting full models <span class="cf">for</span> each <span class="st">'y'</span></span>
+<span id="cb23-106"><a href="#cb23-106" aria-hidden="true" tabindex="-1"></a>Iteratively constructing preferred fusion order</span>
+<span id="cb23-107"><a href="#cb23-107" aria-hidden="true" tabindex="-1"></a>Retained <span class="dv">176</span> of <span class="dv">240</span> predictor variables</span>
+<span id="cb23-108"><a href="#cb23-108" aria-hidden="true" tabindex="-1"></a>Total processing time<span class="sc">:</span> <span class="fl">3.12</span> secs </span>
+<span id="cb23-109"><a href="#cb23-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-110"><a href="#cb23-110" aria-hidden="true" tabindex="-1"></a>Results of <span class="fu">prepXY</span>() saved to<span class="sc">:</span> <span class="fu">RECS_2015_2015_H_prep.rds</span> (<span class="fl">0.00151</span> MB) </span>
+<span id="cb23-111"><a href="#cb23-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-112"><a href="#cb23-112" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Write training and prediction datasets to disk <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-113"><a href="#cb23-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-114"><a href="#cb23-114" aria-hidden="true" tabindex="-1"></a>Writing training dataset...</span>
+<span id="cb23-115"><a href="#cb23-115" aria-hidden="true" tabindex="-1"></a>Training dataset saved to<span class="sc">:</span> <span class="fu">RECS_2015_2015_H_train.fst</span> (<span class="fl">1.05</span> MB) </span>
+<span id="cb23-116"><a href="#cb23-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-117"><a href="#cb23-117" aria-hidden="true" tabindex="-1"></a>Writing prediction dataset...</span>
+<span id="cb23-118"><a href="#cb23-118" aria-hidden="true" tabindex="-1"></a>Prediction dataset saved to<span class="sc">:</span> <span class="fu">RECS_2015_2015_H_predict.fst</span> (<span class="fl">1.76</span> MB) </span>
+<span id="cb23-119"><a href="#cb23-119" aria-hidden="true" tabindex="-1"></a>Test mode<span class="sc">:</span> saved partial prediction data. Expected production file size is <span class="sc">~</span> <span class="dv">216</span> MB</span>
+<span id="cb23-120"><a href="#cb23-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-121"><a href="#cb23-121" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Upload <span class="sc">/</span>input files to Google Drive <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb23-122"><a href="#cb23-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-123"><a href="#cb23-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-124"><a href="#cb23-124" aria-hidden="true" tabindex="-1"></a><span class="er">|===</span> <span class="fu">fusionInput</span>() is finished<span class="sc">!</span> <span class="er">===|</span></span>
+<span id="cb23-125"><a href="#cb23-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-126"><a href="#cb23-126" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionInput</span>() total processing time<span class="sc">:</span> <span class="fl">33.6</span> secs </span>
+<span id="cb23-127"><a href="#cb23-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-128"><a href="#cb23-128" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionInput</span>() log file saved to<span class="sc">:</span></span>
+<span id="cb23-129"><a href="#cb23-129" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>input<span class="sc">/</span>RECS_2015_2015_H_inputlog.txt</span></code></pre></div>
+<p>Both <code><a href="reference/fusionInput.html">fusionInput()</a></code> and <code><a href="reference/fusionOutput.html">fusionOutput()</a></code> can be run in “test mode” – in fact, this is the default behavior. When in test mode, result files are saved within the <code>/fusion_</code> directory to prevent any conflict with (or overwrite) of production data in <code>/fusion</code> (no underscore). <code><a href="reference/fusionInput.html">fusionInput()</a></code> returns the path to the directory where files are saved. We can confirm that the path used <code>/fusion_</code> as expected:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">dim</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb25"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>RECS_2015</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">5686</span>  <span class="dv">649</span></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>ACS_2015</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">1226728</span>     <span class="dv">242</span></span></code></pre></div>
-<p>A key purpose of <code><a href="reference/prepare.html">prepare()</a></code> is to harmonize the donor and recipient “shared” variables. This is done internally by the <code><a href="reference/harmonize.html">harmonize()</a></code> function, using the variable harmonies created by users via the <code><a href="reference/harmony.html">harmony()</a></code> tool. In this case, <code><a href="reference/harmonize.html">harmonize()</a></code> is using the <a href="https://github.com/ummel/fusionData/blob/master/harmony/harmonies/RECS_2015__ACS_2015.R" class="external-link">RECS_2015__ACS_2015.R</a> file to harmonize the donor and recipient microdata. Let’s look at a few of the shared variables after harmonization.</p>
+<code class="sourceCode R"><span><span class="va">input.dir</span></span></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"/home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/input"</span></span></code></pre></div>
+<p>Note that the path includes the correct directory hierarchy. The path ends with “RECS/2015/2015/H/input” to indicate that the directory in question contains fusion input files associated with the RECS donor survey from 2015, for fusion to ACS 2015, at household-level.</p>
+<p>Now let’s see the names of the files created by <code><a href="reference/fusionInput.html">fusionInput()</a></code>:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ACS_2015</span><span class="op">)</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">RECS_2015</span><span class="op">[</span><span class="va">v</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb27"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>  weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span>  <span class="dv">10855</span>              <span class="dv">3</span>               <span class="dv">2</span>               <span class="dv">2</span>            <span class="dv">2</span></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="dv">2</span>  <span class="dv">13165</span>              <span class="dv">2</span>               <span class="dv">1</span>               <span class="dv">2</span>            <span class="dv">2</span></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="dv">3</span>  <span class="dv">22095</span>              <span class="dv">4</span>               <span class="dv">2</span>               <span class="dv">1</span>            <span class="dv">2</span></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="dv">4</span>  <span class="dv">10935</span>              <span class="dv">3</span>               <span class="dv">2</span>               <span class="dv">4</span>            <span class="dv">2</span></span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="dv">5</span>  <span class="dv">15485</span>              <span class="dv">3</span>               <span class="dv">2</span>               <span class="dv">2</span>            <span class="dv">2</span></span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="dv">6</span>  <span class="dv">24825</span>              <span class="dv">0</span>               <span class="dv">2</span>               <span class="dv">1</span>            <span class="dv">1</span></span></code></pre></div>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ACS_2015</span><span class="op">[</span><span class="va">v</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb29"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>  weight bedrooms__bdsp desktop__laptop education__schl elpay__elefp</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span>    <span class="dv">110</span>              <span class="dv">5</span>               <span class="dv">2</span>               <span class="dv">4</span>            <span class="dv">2</span></span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="dv">2</span>     <span class="dv">91</span>              <span class="dv">4</span>               <span class="dv">2</span>               <span class="dv">5</span>            <span class="dv">2</span></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="dv">3</span>    <span class="dv">112</span>              <span class="dv">4</span>               <span class="dv">2</span>               <span class="dv">2</span>            <span class="dv">2</span></span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="dv">4</span>     <span class="dv">80</span>              <span class="dv">3</span>               <span class="dv">2</span>               <span class="dv">3</span>            <span class="dv">2</span></span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="dv">5</span>    <span class="dv">156</span>              <span class="dv">3</span>               <span class="dv">2</span>               <span class="dv">3</span>            <span class="dv">2</span></span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="dv">6</span>    <span class="dv">100</span>              <span class="dv">1</span>               <span class="dv">2</span>               <span class="dv">4</span>            <span class="dv">2</span></span></code></pre></div>
-<p>Notice that the harmonized variable <em>values</em> are typically integers (possibly factorized); that is, they contain no intelligible labels. This is because <code><a href="reference/harmonize.html">harmonize()</a></code> maps each original value/level to a (integer) group assignment as specified in the relevant <code>.R</code> harmony file. The one exception is when <em>numeric</em> variables in the two surveys are conceptually identical and are then included “as is” or (automatically) converted to scaled values.</p>
-<p>Since RECS and ACS are both nationally representative surveys, the distribution of the harmonized variables should look pretty similar across the two data frames. We can confirm this for the <code>fuelheat__hfl</code> variable, which creates harmony between the RECS and ACS heating fuel variables (“fuelheat” and “hfl”, respectively). We can compare the proportion of cases by harmonized value.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">RECS_2015</span><span class="op">$</span><span class="va">fuelheat__hfl</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb31"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span>     <span class="dv">2</span>     <span class="dv">3</span>     <span class="dv">4</span>     <span class="dv">5</span>     <span class="dv">6</span>     <span class="dv">7</span> </span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fl">0.045</span> <span class="fl">0.347</span> <span class="fl">0.043</span> <span class="fl">0.491</span> <span class="fl">0.042</span> <span class="fl">0.001</span> <span class="fl">0.030</span> </span></code></pre></div>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ACS_2015</span><span class="op">$</span><span class="va">fuelheat__hfl</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb33"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span>     <span class="dv">2</span>     <span class="dv">3</span>     <span class="dv">4</span>     <span class="dv">5</span>     <span class="dv">6</span>     <span class="dv">7</span> </span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fl">0.012</span> <span class="fl">0.364</span> <span class="fl">0.055</span> <span class="fl">0.469</span> <span class="fl">0.064</span> <span class="fl">0.008</span> <span class="fl">0.028</span> </span></code></pre></div>
-<p><code><a href="reference/prepare.html">prepare()</a></code> also calls the internal function <code>assignLocation()</code> to impute one or more plausible PUMA’s for each donor household. The <code>implicates</code> argument controls how many PUMA’s are imputed for each donor household. Setting <code>implicates</code> higher results in more variability in the spatial predictors merged to a given household, reflecting uncertainty about where the household is located. The use of implicates here mimics its usage in standard multiple imputation techniques (5 implicates is typical).</p>
-<hr>
-<p>The spatial imputation algorithm coded in <code>assignLocation()</code> requires some explanation. The location variables in the donor microdata are used to identify the set of possible PUMA’s assignable to each household, with the initial likelihood of selection being proportional to the number of housing units in the PUMA. However, we can also exploit the fact that we observe harmonized variables for donor and ACS respondents – and the PUMA of ACS respondents is known. That is, there is information in the <em>harmonized</em> variables that can be used to alter the likelihood of selecting a given PUMA.</p>
-<p>A conceptual example: Imagine, based on location variables alone, we know that a particular donor household is resident in one of five PUMA’s (001 through 005), each with an equal number of housing units. Using this information alone, we would assign each PUMA an equal probability of selection (call it <em>P</em>). However, we also observe household income for both donor and ACS households. The donor household is high income. We notice in the ACS microdata that high income households are common in PUMA 001 but rare in the other four. Conceptually, this information should increase the probability of selecting PUMA 001.</p>
-<p>In practice, we typically observe multiple harmonized variables – some categorical and some continuous. <code>assignLocation()</code> calculates <a href="https://www.jstor.org/stable/2528823" class="external-link">Gower’s distance</a>, using all of the harmonized variables, to derive a pairwise similarity value (<em>S</em>) between each donor household and a random sample of ACS households located within the feasible set of PUMA’s. The calculation uses the efficient <a href="https://cran.r-project.org/web/packages/gower/index.html" class="external-link">gower package</a>; even so, random sampling of the ACS is necessary to make it tractable. An ACS household (or multiple if <code>implicates</code> &gt; 1) is then randomly selected, where the probability of selection is <em>P</em> / <em>S</em> and the associated PUMA is imputed to the donor household. That is, the naive, population-based probability of selection (<em>P</em>) is modified by the observable similarity of the donor household and each ACS household (<em>S</em>).</p>
-<hr>
-<p><code><a href="reference/assemble.html">assemble()</a></code> also merges spatial variables onto both the donor and recipient microdata. Pre-compiled spatial variables (those in <code>geo_predictors.fst</code>) are merged onto both the donor and recipient microdata at the PUMA level, using imputed PUMA’s for the donor. Spatial variables are indicated by the double-dot (“..”) in the variable name, analogous to the way that harmonized variables are indicated by the double-underscore (“__“).</p>
-<p>Let’s look at the variables in the recipient ACS microdata.</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ACS_2015</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb35"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">1</span>] <span class="st">"acs_2015_hid"</span>            <span class="st">"weight"</span>                 </span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">3</span>] <span class="st">"bedrooms__bdsp"</span>          <span class="st">"desktop__laptop"</span>        </span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">5</span>] <span class="st">"education__schl"</span>         <span class="st">"elpay__elefp"</span>           </span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">7</span>] <span class="st">"employhh__wkhp"</span>          <span class="st">"fuelheat__hfl"</span>          </span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">9</span>] <span class="st">"hhage__agep"</span>             <span class="st">"hhsex__sex"</span>             </span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a> [<span class="dv">11</span>] <span class="st">"householder_race__rac1p"</span> <span class="st">"internet__access"</span>       </span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a> [<span class="dv">13</span>] <span class="st">"kownrent__ten"</span>           <span class="st">"moneypy__hincp"</span>         </span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a> [<span class="dv">15</span>] <span class="st">"ngpay__gasfp"</span>            <span class="st">"nhsldmem__np"</span>           </span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a> [<span class="dv">17</span>] <span class="st">"numadult__agep"</span>          <span class="st">"numchild__agep"</span>         </span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a> [<span class="dv">19</span>] <span class="st">"numfrig__refr"</span>           <span class="st">"numtablet__handheld"</span>    </span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a> [<span class="dv">21</span>] <span class="st">"occupyyrange__mv"</span>        <span class="st">"sdescent__hisp"</span>         </span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a> [<span class="dv">23</span>] <span class="st">"stoven__stov"</span>            <span class="st">"totrooms__rmsp"</span>         </span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a> [<span class="dv">25</span>] <span class="st">"typehuq__bld"</span>            <span class="st">"yearmaderange__ybl"</span>     </span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a> [<span class="dv">27</span>] <span class="st">"loc..ur12"</span>               <span class="st">"loc..cbsatype15"</span>        </span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a> [<span class="dv">29</span>] <span class="st">"loc..region"</span>             <span class="st">"loc..recs_division"</span>     </span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a> [<span class="dv">31</span>] <span class="st">"loc..recs_ba_zone"</span>       <span class="st">"loc..recs_iecc_zone"</span>    </span>
-<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a> [<span class="dv">33</span>] <span class="st">"acs.pums..npa"</span>           <span class="st">"acs.pums..accssywstsb"</span>  </span>
-<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a> [<span class="dv">35</span>] <span class="st">"acs.pums..accssywstsc"</span>   <span class="st">"acs.pums..acrn"</span>         </span>
-<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a> [<span class="dv">37</span>] <span class="st">"acs.pums..acrhl"</span>         <span class="st">"acs.pums..acrht"</span>        </span>
-<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a> [<span class="dv">39</span>] <span class="st">"acs.pums..anf1"</span>          <span class="st">"acs.pums..agsn"</span>         </span>
-<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a> [<span class="dv">41</span>] <span class="st">"acs.pums..bthy"</span>          <span class="st">"acs.pums..bdsp"</span>         </span>
-<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a> [<span class="dv">43</span>] <span class="st">"acs.pums..bldm"</span>          <span class="st">"acs.pums..bldofhd"</span>      </span>
-<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a> [<span class="dv">45</span>] <span class="st">"acs.pums..bldofhm"</span>       <span class="st">"acs.pums..bld5"</span>         </span>
-<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a> [<span class="dv">47</span>] <span class="st">"acs.pums..brdy"</span>          <span class="st">"acs.pums..bsnf"</span>         </span>
-<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a> [<span class="dv">49</span>] <span class="st">"acs.pums..bsys"</span>          <span class="st">"acs.pums..cmpy"</span>         </span>
-<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a> [<span class="dv">51</span>] <span class="st">"acs.pums..dlpy"</span>          <span class="st">"acs.pums..dsly"</span>         </span>
-<span id="cb35-27"><a href="#cb35-27" aria-hidden="true" tabindex="-1"></a> [<span class="dv">53</span>] <span class="st">"acs.pums..elep"</span>          <span class="st">"acs.pums..fbry"</span>         </span>
-<span id="cb35-28"><a href="#cb35-28" aria-hidden="true" tabindex="-1"></a> [<span class="dv">55</span>] <span class="st">"acs.pums..fsys"</span>          <span class="st">"acs.pums..flpx"</span>         </span>
-<span id="cb35-29"><a href="#cb35-29" aria-hidden="true" tabindex="-1"></a> [<span class="dv">57</span>] <span class="st">"acs.pums..gspy"</span>          <span class="st">"acs.pums..hndy"</span>         </span>
-<span id="cb35-30"><a href="#cb35-30" aria-hidden="true" tabindex="-1"></a> [<span class="dv">59</span>] <span class="st">"acs.pums..hflu"</span>          <span class="st">"acs.pums..hfle"</span>         </span>
-<span id="cb35-31"><a href="#cb35-31" aria-hidden="true" tabindex="-1"></a> [<span class="dv">61</span>] <span class="st">"acs.pums..hflf"</span>          <span class="st">"acs.pums..insp"</span>         </span>
-<span id="cb35-32"><a href="#cb35-32" aria-hidden="true" tabindex="-1"></a> [<span class="dv">63</span>] <span class="st">"acs.pums..lpty"</span>          <span class="st">"acs.pums..mdmy"</span>         </span>
-<span id="cb35-33"><a href="#cb35-33" aria-hidden="true" tabindex="-1"></a> [<span class="dv">65</span>] <span class="st">"acs.pums..mrgnb"</span>         <span class="st">"acs.pums..mrgyp"</span>        </span>
-<span id="cb35-34"><a href="#cb35-34" aria-hidden="true" tabindex="-1"></a> [<span class="dv">67</span>] <span class="st">"acs.pums..mrgp"</span>          <span class="st">"acs.pums..mrgtn"</span>        </span>
-<span id="cb35-35"><a href="#cb35-35" aria-hidden="true" tabindex="-1"></a> [<span class="dv">69</span>] <span class="st">"acs.pums..mrgty"</span>         <span class="st">"acs.pums..mrgxn"</span>        </span>
-<span id="cb35-36"><a href="#cb35-36" aria-hidden="true" tabindex="-1"></a> [<span class="dv">71</span>] <span class="st">"acs.pums..mrgm"</span>          <span class="st">"acs.pums..mrgc"</span>         </span>
-<span id="cb35-37"><a href="#cb35-37" aria-hidden="true" tabindex="-1"></a> [<span class="dv">73</span>] <span class="st">"acs.pums..othy"</span>          <span class="st">"acs.pums..rfry"</span>         </span>
-<span id="cb35-38"><a href="#cb35-38" aria-hidden="true" tabindex="-1"></a> [<span class="dv">75</span>] <span class="st">"acs.pums..rmsp"</span>          <span class="st">"acs.pums..rntn"</span>         </span>
-<span id="cb35-39"><a href="#cb35-39" aria-hidden="true" tabindex="-1"></a> [<span class="dv">77</span>] <span class="st">"acs.pums..rntp"</span>          <span class="st">"acs.pums..rwty"</span>         </span>
-<span id="cb35-40"><a href="#cb35-40" aria-hidden="true" tabindex="-1"></a> [<span class="dv">79</span>] <span class="st">"acs.pums..stly"</span>          <span class="st">"acs.pums..snky"</span>         </span>
-<span id="cb35-41"><a href="#cb35-41" aria-hidden="true" tabindex="-1"></a> [<span class="dv">81</span>] <span class="st">"acs.pums..stvy"</span>          <span class="st">"acs.pums..tlysx"</span>        </span>
-<span id="cb35-42"><a href="#cb35-42" aria-hidden="true" tabindex="-1"></a> [<span class="dv">83</span>] <span class="st">"acs.pums..tnow"</span>          <span class="st">"acs.pums..tnof"</span>         </span>
-<span id="cb35-43"><a href="#cb35-43" aria-hidden="true" tabindex="-1"></a> [<span class="dv">85</span>] <span class="st">"acs.pums..tnrn"</span>          <span class="st">"acs.pums..tlysb"</span>        </span>
-<span id="cb35-44"><a href="#cb35-44" aria-hidden="true" tabindex="-1"></a> [<span class="dv">87</span>] <span class="st">"acs.pums..vlpc"</span>          <span class="st">"acs.pums..vhnv"</span>         </span>
-<span id="cb35-45"><a href="#cb35-45" aria-hidden="true" tabindex="-1"></a> [<span class="dv">89</span>] <span class="st">"acs.pums..vh1v"</span>          <span class="st">"acs.pums..vh2v"</span>         </span>
-<span id="cb35-46"><a href="#cb35-46" aria-hidden="true" tabindex="-1"></a> [<span class="dv">91</span>] <span class="st">"acs.pums..vh3v"</span>          <span class="st">"acs.pums..wtph"</span>         </span>
-<span id="cb35-47"><a href="#cb35-47" aria-hidden="true" tabindex="-1"></a> [<span class="dv">93</span>] <span class="st">"acs.pums..yb19"</span>          <span class="st">"acs.pums..y194"</span>         </span>
-<span id="cb35-48"><a href="#cb35-48" aria-hidden="true" tabindex="-1"></a> [<span class="dv">95</span>] <span class="st">"acs.pums..y195"</span>          <span class="st">"acs.pums..y196"</span>         </span>
-<span id="cb35-49"><a href="#cb35-49" aria-hidden="true" tabindex="-1"></a> [<span class="dv">97</span>] <span class="st">"acs.pums..y197"</span>          <span class="st">"acs.pums..y198"</span>         </span>
-<span id="cb35-50"><a href="#cb35-50" aria-hidden="true" tabindex="-1"></a> [<span class="dv">99</span>] <span class="st">"acs.pums..y199"</span>          <span class="st">"acs.pums..y202"</span>         </span>
-<span id="cb35-51"><a href="#cb35-51" aria-hidden="true" tabindex="-1"></a>[<span class="dv">101</span>] <span class="st">"acs.pums..fsnf"</span>          <span class="st">"acs.pums..fsmcfhw"</span>      </span>
-<span id="cb35-52"><a href="#cb35-52" aria-hidden="true" tabindex="-1"></a>[<span class="dv">103</span>] <span class="st">"acs.pums..fsmcfhl"</span>       <span class="st">"acs.pums..fsmcfn"</span>       </span>
-<span id="cb35-53"><a href="#cb35-53" aria-hidden="true" tabindex="-1"></a>[<span class="dv">105</span>] <span class="st">"acs.pums..fsof"</span>          <span class="st">"acs.pums..fncp"</span>         </span>
-<span id="cb35-54"><a href="#cb35-54" aria-hidden="true" tabindex="-1"></a>[<span class="dv">107</span>] <span class="st">"acs.pums..fprn"</span>          <span class="st">"acs.pums..fwr5"</span>         </span>
-<span id="cb35-55"><a href="#cb35-55" aria-hidden="true" tabindex="-1"></a>[<span class="dv">109</span>] <span class="st">"acs.pums..fw51"</span>          <span class="st">"acs.pums..fw55"</span>         </span>
-<span id="cb35-56"><a href="#cb35-56" aria-hidden="true" tabindex="-1"></a>[<span class="dv">111</span>] <span class="st">"acs.pums..grnt"</span>          <span class="st">"acs.pums..grpp"</span>         </span>
-<span id="cb35-57"><a href="#cb35-57" aria-hidden="true" tabindex="-1"></a>[<span class="dv">113</span>] <span class="st">"acs.pums..hhle"</span>          <span class="st">"acs.pums..hhls"</span>         </span>
-<span id="cb35-58"><a href="#cb35-58" aria-hidden="true" tabindex="-1"></a>[<span class="dv">115</span>] <span class="st">"acs.pums..hhtm"</span>          <span class="st">"acs.pums..hhto"</span>         </span>
-<span id="cb35-59"><a href="#cb35-59" aria-hidden="true" tabindex="-1"></a>[<span class="dv">117</span>] <span class="st">"acs.pums..hhtnhm"</span>        <span class="st">"acs.pums..hhtnhf"</span>       </span>
-<span id="cb35-60"><a href="#cb35-60" aria-hidden="true" tabindex="-1"></a>[<span class="dv">119</span>] <span class="st">"acs.pums..hncp"</span>          <span class="st">"acs.pums..hgch"</span>         </span>
-<span id="cb35-61"><a href="#cb35-61" aria-hidden="true" tabindex="-1"></a>[<span class="dv">121</span>] <span class="st">"acs.pums..hwc6"</span>          <span class="st">"acs.pums..hw61"</span>         </span>
-<span id="cb35-62"><a href="#cb35-62" aria-hidden="true" tabindex="-1"></a>[<span class="dv">123</span>] <span class="st">"acs.pums..hw66"</span>          <span class="st">"acs.pums..hpc6"</span>         </span>
-<span id="cb35-63"><a href="#cb35-63" aria-hidden="true" tabindex="-1"></a>[<span class="dv">125</span>] <span class="st">"acs.pums..hpc61"</span>         <span class="st">"acs.pums..hpc661"</span>       </span>
-<span id="cb35-64"><a href="#cb35-64" aria-hidden="true" tabindex="-1"></a>[<span class="dv">127</span>] <span class="st">"acs.pums..hpr6"</span>          <span class="st">"acs.pums..hpr61"</span>        </span>
-<span id="cb35-65"><a href="#cb35-65" aria-hidden="true" tabindex="-1"></a>[<span class="dv">129</span>] <span class="st">"acs.pums..hpr661"</span>        <span class="st">"acs.pums..ktyh"</span>         </span>
-<span id="cb35-66"><a href="#cb35-66" aria-hidden="true" tabindex="-1"></a>[<span class="dv">131</span>] <span class="st">"acs.pums..lal1"</span>          <span class="st">"acs.pums..mltn"</span>         </span>
-<span id="cb35-67"><a href="#cb35-67" aria-hidden="true" tabindex="-1"></a>[<span class="dv">133</span>] <span class="st">"acs.pums..mv1m"</span>          <span class="st">"acs.pums..m1t2"</span>         </span>
-<span id="cb35-68"><a href="#cb35-68" aria-hidden="true" tabindex="-1"></a>[<span class="dv">135</span>] <span class="st">"acs.pums..m2t4"</span>          <span class="st">"acs.pums..m5t9"</span>         </span>
-<span id="cb35-69"><a href="#cb35-69" aria-hidden="true" tabindex="-1"></a>[<span class="dv">137</span>] <span class="st">"acs.pums..m1t1"</span>          <span class="st">"acs.pums..m2t2"</span>         </span>
-<span id="cb35-70"><a href="#cb35-70" aria-hidden="true" tabindex="-1"></a>[<span class="dv">139</span>] <span class="st">"acs.pums..nocc"</span>          <span class="st">"acs.pums..npfd"</span>         </span>
-<span id="cb35-71"><a href="#cb35-71" aria-hidden="true" tabindex="-1"></a>[<span class="dv">141</span>] <span class="st">"acs.pums..nppn"</span>          <span class="st">"acs.pums..nrnn"</span>         </span>
-<span id="cb35-72"><a href="#cb35-72" aria-hidden="true" tabindex="-1"></a>[<span class="dv">143</span>] <span class="st">"acs.pums..nrcg"</span>          <span class="st">"acs.pums..ocpp"</span>         </span>
-<span id="cb35-73"><a href="#cb35-73" aria-hidden="true" tabindex="-1"></a>[<span class="dv">145</span>] <span class="st">"acs.pums..prtn"</span>          <span class="st">"acs.pums..plmy"</span>         </span>
-<span id="cb35-74"><a href="#cb35-74" aria-hidden="true" tabindex="-1"></a>[<span class="dv">147</span>] <span class="st">"acs.pums..psfn"</span>          <span class="st">"acs.pums..r18n"</span>         </span>
-<span id="cb35-75"><a href="#cb35-75" aria-hidden="true" tabindex="-1"></a>[<span class="dv">149</span>] <span class="st">"acs.pums..r60n"</span>          <span class="st">"acs.pums..r601"</span>         </span>
-<span id="cb35-76"><a href="#cb35-76" aria-hidden="true" tabindex="-1"></a>[<span class="dv">151</span>] <span class="st">"acs.pums..r65n"</span>          <span class="st">"acs.pums..r651"</span>         </span>
-<span id="cb35-77"><a href="#cb35-77" aria-hidden="true" tabindex="-1"></a>[<span class="dv">153</span>] <span class="st">"acs.pums..rsmm"</span>          <span class="st">"acs.pums..rsmc"</span>         </span>
-<span id="cb35-78"><a href="#cb35-78" aria-hidden="true" tabindex="-1"></a>[<span class="dv">155</span>] <span class="st">"acs.pums..smcp"</span>          <span class="st">"acs.pums..smxnbb"</span>       </span>
-<span id="cb35-79"><a href="#cb35-79" aria-hidden="true" tabindex="-1"></a>[<span class="dv">157</span>] <span class="st">"acs.pums..smxnob"</span>        <span class="st">"acs.pums..ssmh"</span>         </span>
-<span id="cb35-80"><a href="#cb35-80" aria-hidden="true" tabindex="-1"></a>[<span class="dv">159</span>] <span class="st">"acs.pums..txpn"</span>          <span class="st">"acs.pums..wfnn"</span>         </span>
-<span id="cb35-81"><a href="#cb35-81" aria-hidden="true" tabindex="-1"></a>[<span class="dv">161</span>] <span class="st">"acs.pums..wfnw"</span>          <span class="st">"acs.pums..wf1w"</span>         </span>
-<span id="cb35-82"><a href="#cb35-82" aria-hidden="true" tabindex="-1"></a>[<span class="dv">163</span>] <span class="st">"acs.pums..wf2w"</span>          <span class="st">"acs.pums..wkxn"</span>         </span>
-<span id="cb35-83"><a href="#cb35-83" aria-hidden="true" tabindex="-1"></a>[<span class="dv">165</span>] <span class="st">"acs.pums..wkxrlhs"</span>       <span class="st">"acs.pums..wkxrlhwftsw"</span>  </span>
-<span id="cb35-84"><a href="#cb35-84" aria-hidden="true" tabindex="-1"></a>[<span class="dv">167</span>] <span class="st">"acs.pums..wkxrlhwftsd"</span>   <span class="st">"acs.pums..wkxrlhd"</span>      </span>
-<span id="cb35-85"><a href="#cb35-85" aria-hidden="true" tabindex="-1"></a>[<span class="dv">169</span>] <span class="st">"acs.pums..wkxf"</span>          <span class="st">"acs.pums..wrksttnf"</span>     </span>
-<span id="cb35-86"><a href="#cb35-86" aria-hidden="true" tabindex="-1"></a>[<span class="dv">171</span>] <span class="st">"acs.pums..wrkstthw"</span>      <span class="st">"acs.pums..wrkstthl"</span>     </span>
-<span id="cb35-87"><a href="#cb35-87" aria-hidden="true" tabindex="-1"></a>[<span class="dv">173</span>] <span class="st">"acs.pums..wrksttnh"</span>      <span class="st">"acs.pums..wrkf"</span>         </span>
-<span id="cb35-88"><a href="#cb35-88" aria-hidden="true" tabindex="-1"></a>[<span class="dv">175</span>] <span class="st">"acs.pums..elfv"</span>          <span class="st">"acs.pums..flfi"</span>         </span>
-<span id="cb35-89"><a href="#cb35-89" aria-hidden="true" tabindex="-1"></a>[<span class="dv">177</span>] <span class="st">"acs.pums..flfn"</span>          <span class="st">"acs.pums..gsfpip"</span>       </span>
-<span id="cb35-90"><a href="#cb35-90" aria-hidden="true" tabindex="-1"></a>[<span class="dv">179</span>] <span class="st">"acs.pums..gsfpir"</span>        <span class="st">"acs.pums..gsfn"</span>         </span>
-<span id="cb35-91"><a href="#cb35-91" aria-hidden="true" tabindex="-1"></a>[<span class="dv">181</span>] <span class="st">"acs.pums..wtfi"</span>          <span class="st">"acs.pums..wtfn"</span>         </span>
-<span id="cb35-92"><a href="#cb35-92" aria-hidden="true" tabindex="-1"></a>[<span class="dv">183</span>] <span class="st">"acs.sf..b010"</span>            <span class="st">"acs.sf..b060"</span>           </span>
-<span id="cb35-93"><a href="#cb35-93" aria-hidden="true" tabindex="-1"></a>[<span class="dv">185</span>] <span class="st">"acs.sf..b080"</span>            <span class="st">"acs.sf..b1900"</span>          </span>
-<span id="cb35-94"><a href="#cb35-94" aria-hidden="true" tabindex="-1"></a>[<span class="dv">187</span>] <span class="st">"acs.sf..b1910"</span>           <span class="st">"acs.sf..b1920"</span>          </span>
-<span id="cb35-95"><a href="#cb35-95" aria-hidden="true" tabindex="-1"></a>[<span class="dv">189</span>] <span class="st">"acs.sf..b25010"</span>          <span class="st">"acs.sf..b250350"</span>        </span>
-<span id="cb35-96"><a href="#cb35-96" aria-hidden="true" tabindex="-1"></a>[<span class="dv">191</span>] <span class="st">"acs.sf..b250390"</span>         <span class="st">"acs.sf..b25060"</span>         </span>
-<span id="cb35-97"><a href="#cb35-97" aria-hidden="true" tabindex="-1"></a>[<span class="dv">193</span>] <span class="st">"acs.sf..b250710"</span>         <span class="st">"acs.sf..b250770"</span>        </span>
-<span id="cb35-98"><a href="#cb35-98" aria-hidden="true" tabindex="-1"></a>[<span class="dv">195</span>] <span class="st">"acs.sf..b25080"</span>          <span class="st">"acs.sf..b25090"</span>         </span>
-<span id="cb35-99"><a href="#cb35-99" aria-hidden="true" tabindex="-1"></a>[<span class="dv">197</span>] <span class="st">"acs.sf..b2510"</span>           <span class="st">"climate..cddb6"</span>         </span>
-<span id="cb35-100"><a href="#cb35-100" aria-hidden="true" tabindex="-1"></a>[<span class="dv">199</span>] <span class="st">"climate..hddb6"</span>          <span class="st">"climate..cdd12b6"</span>       </span>
-<span id="cb35-101"><a href="#cb35-101" aria-hidden="true" tabindex="-1"></a>[<span class="dv">201</span>] <span class="st">"climate..hdd12b6"</span>        <span class="st">"climate..iccz"</span>          </span>
-<span id="cb35-102"><a href="#cb35-102" aria-hidden="true" tabindex="-1"></a>[<span class="dv">203</span>] <span class="st">"climate..bznf"</span>           <span class="st">"eia.seds..gslp"</span>         </span>
-<span id="cb35-103"><a href="#cb35-103" aria-hidden="true" tabindex="-1"></a>[<span class="dv">205</span>] <span class="st">"eia.seds..elcp"</span>          <span class="st">"eia.seds..ntgp"</span>         </span>
-<span id="cb35-104"><a href="#cb35-104" aria-hidden="true" tabindex="-1"></a>[<span class="dv">207</span>] <span class="st">"eia.seds..lpgp"</span>          <span class="st">"eia.seds..fllp"</span>         </span>
-<span id="cb35-105"><a href="#cb35-105" aria-hidden="true" tabindex="-1"></a>[<span class="dv">209</span>] <span class="st">"eia.seds..elmh"</span>          <span class="st">"eia.seds..ntth"</span>         </span>
-<span id="cb35-106"><a href="#cb35-106" aria-hidden="true" tabindex="-1"></a>[<span class="dv">211</span>] <span class="st">"eia.seds..lpgh"</span>          <span class="st">"eia.seds..flgh"</span>         </span>
-<span id="cb35-107"><a href="#cb35-107" aria-hidden="true" tabindex="-1"></a>[<span class="dv">213</span>] <span class="st">"eia.seds..elce"</span>          <span class="st">"eia.seds..ntge"</span>         </span>
-<span id="cb35-108"><a href="#cb35-108" aria-hidden="true" tabindex="-1"></a>[<span class="dv">215</span>] <span class="st">"eia.seds..lpge"</span>          <span class="st">"eia.seds..flle"</span>         </span>
-<span id="cb35-109"><a href="#cb35-109" aria-hidden="true" tabindex="-1"></a>[<span class="dv">217</span>] <span class="st">"eia.seds..eleh"</span>          <span class="st">"eia.seds..nteh"</span>         </span>
-<span id="cb35-110"><a href="#cb35-110" aria-hidden="true" tabindex="-1"></a>[<span class="dv">219</span>] <span class="st">"eia.seds..lpeh"</span>          <span class="st">"eia.seds..fleh"</span>         </span>
-<span id="cb35-111"><a href="#cb35-111" aria-hidden="true" tabindex="-1"></a>[<span class="dv">221</span>] <span class="st">"irs.soi..mipr"</span>           <span class="st">"irs.soi..mipp"</span>          </span>
-<span id="cb35-112"><a href="#cb35-112" aria-hidden="true" tabindex="-1"></a>[<span class="dv">223</span>] <span class="st">"irs.soi..mppr"</span>           <span class="st">"irs.soi..mdpr"</span>          </span>
-<span id="cb35-113"><a href="#cb35-113" aria-hidden="true" tabindex="-1"></a>[<span class="dv">225</span>] <span class="st">"irs.soi..prsr"</span>           <span class="st">"irs.soi..prjr"</span>          </span>
-<span id="cb35-114"><a href="#cb35-114" aria-hidden="true" tabindex="-1"></a>[<span class="dv">227</span>] <span class="st">"irs.soi..phohr"</span>          <span class="st">"irs.soi..pppr"</span>          </span>
-<span id="cb35-115"><a href="#cb35-115" aria-hidden="true" tabindex="-1"></a>[<span class="dv">229</span>] <span class="st">"irs.soi..pvpr"</span>           <span class="st">"irs.soi..prcntelr"</span>      </span>
-<span id="cb35-116"><a href="#cb35-116" aria-hidden="true" tabindex="-1"></a>[<span class="dv">231</span>] <span class="st">"irs.soi..prfr"</span>           <span class="st">"irs.soi..prcntetr"</span>      </span>
-<span id="cb35-117"><a href="#cb35-117" aria-hidden="true" tabindex="-1"></a>[<span class="dv">233</span>] <span class="st">"irs.soi..prie"</span>           <span class="st">"irs.soi..priu"</span>          </span>
-<span id="cb35-118"><a href="#cb35-118" aria-hidden="true" tabindex="-1"></a>[<span class="dv">235</span>] <span class="st">"irs.soi..eftr"</span>           <span class="st">"irs.soi..palt2"</span>         </span>
-<span id="cb35-119"><a href="#cb35-119" aria-hidden="true" tabindex="-1"></a>[<span class="dv">237</span>] <span class="st">"irs.soi..pa2t5"</span>          <span class="st">"irs.soi..pa5t7"</span>         </span>
-<span id="cb35-120"><a href="#cb35-120" aria-hidden="true" tabindex="-1"></a>[<span class="dv">239</span>] <span class="st">"irs.soi..pa7t1"</span>          <span class="st">"irs.soi..pa1t2"</span>         </span>
-<span id="cb35-121"><a href="#cb35-121" aria-hidden="true" tabindex="-1"></a>[<span class="dv">241</span>] <span class="st">"irs.soi..pa2om"</span>          <span class="st">"nrel.urdb..rsed"</span>        </span></code></pre></div>
-<p>The string to the left of the “..” identifies the spatial dataset that the variable comes from (e.g. “irs.soi”). The string to the right is a unique, syntactically-valid identifier. It’s not critical that specific spatial variables be identifiable in the fusion process. And because pre-processing of spatial datasets does not impose a stringent naming/documentation convention (it is flexible by design), these non-nonsensical-but-unique names are the safest way to identify spatial variables.</p>
-<p>The “loc..*” variables refer to the location variables directly observed in the donor and assignable to recipient microdata on the basis of respondent PUMA.</p>
-<p>Now let’s explore some of the additional arguments to <code><a href="reference/assemble.html">assemble()</a></code>:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">input.dir</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"RECS_2015_2015_H_inputlog.txt"</span> <span class="st">"RECS_2015_2015_H_predict.fst"</span> </span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>[<span class="dv">3</span>] <span class="st">"RECS_2015_2015_H_prep.rds"</span>     <span class="st">"RECS_2015_2015_H_train.fst"</span>   </span></code></pre></div>
+<p>Every call to <code><a href="reference/fusionInput.html">fusionInput()</a></code> generates the same four generic result files:</p>
 <ol style="list-style-type: decimal">
-<li><p>We can request certain fusion variables by passing a character vector to <code>fusion.variables</code>. The input is checked internally against the data and only valuid fusion candidates are returned (with helpful message to console).</p></li>
-<li><p>We can limit the spatial datasets merged to the microdata via the <code>spatial.datasets</code> argument. Default is to include all available datasets, and this is sensible in most cases.</p></li>
-<li><p>The <code>window</code> argument controls how wide a timespan (+/- <code>window</code> years from the data vintage) is tolerated when merging spatial variables to microdata. The default (<code>window = 0</code>) means that spatial variables are merged only when their vintage matches that of the microdata. A larger <code>window</code> will generally mean more spatial variables in the output but at some cost in terms of temporal alignment.</p></li>
-<li><p>The <code>pca</code> argument controls whether/how principal components analysis (PCA) is used to reduce dimensionality of the spatial variables. <code><a href="reference/prepare.html">?prepare</a></code> provides additional details concerning the <code>pca</code> argument.</p></li>
-<li><p>Setting <code>replicates = TRUE</code> will cause replicate observation weights to be returned along with the central/primary <code>weight</code> column.</p></li>
+<li>
+<code>*_inputlog.txt</code>: A copy of the extensive console output you saw above.</li>
+<li>
+<code>*_prep.rds</code>: Information about the variables to be used in the eventual fusion model.</li>
+<li>
+<code>*_train.fst</code>: Donor survey processed and harmonized training microdata, ready for fusion.</li>
+<li>
+<code>*_predict.fst</code>: Recipient ACS processed and harmonized prediction microdata, ready for fusion.</li>
 </ol>
-<p>The following shows a more complex (and realistic) call to <code><a href="reference/prepare.html">prepare()</a></code> and <code><a href="reference/assemble.html">assemble()</a></code>, making use of the optional arguments.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Prepare RECS 2015 household microdata for fusion with ACS 2015 microdata</span></span>
-<span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/prepare.html">prepare</a></span><span class="op">(</span>donor <span class="op">=</span> <span class="st">"RECS_2015"</span>, </span>
-<span>                recipient <span class="op">=</span> <span class="st">"ACS_2015"</span>, </span>
-<span>                respondent <span class="op">=</span> <span class="st">"household"</span>,</span>
-<span>                implicates <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb37"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>Harmonizing <span class="fu">RECS_2015</span> (donor) microdata at household level</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>Harmonizing <span class="fu">ACS_2015</span> (recipient) microdata at household level</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>Identified <span class="dv">124</span> geographic intersections <span class="cf">in</span> the donor...</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>Imputing PUMA <span class="cf">for</span> donor observations...</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>Assigning location variables to recipient observations...</span></code></pre></div>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/assemble.html">assemble</a></span><span class="op">(</span><span class="va">prep</span>,</span>
-<span>                 fusion.variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cooltype"</span>, <span class="st">"agecenac"</span>, <span class="st">"kwhcol"</span><span class="op">)</span>,</span>
-<span>                 window <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>                 pca <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">30</span>, <span class="fl">0.9</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb39"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>Identifying donor fusion variables...</span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>Adding the following fusion variables<span class="sc">:</span></span>
-<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a> agecenac, cooltype, kwhcol </span>
-<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>Performing principal components analysis...</span>
-<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>Applying integer scaling to spatial predictor variables...</span>
-<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>Merging donor spatial predictor variables...</span>
-<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>Merging recipient spatial predictor variables...</span>
-<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>Assembling output data frames...</span>
-<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>Performing consistency checks...</span></code></pre></div>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">dim</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb41"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>RECS_2015</span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">28430</span>    <span class="dv">67</span></span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>ACS_2015</span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">1226728</span>      <span class="dv">64</span></span></code></pre></div>
-<p>The number of observations in the donor microdata is now higher, reflecting the use of <code>implicates = 5</code>.</p>
-<p>The difference in the number of columns between the RECS and ACS microdata is due to the former’s inclusion of our three requested fusion variables. Otherwise, both data frames are entirely consistent with one another; <code><a href="reference/assemble.html">assemble()</a></code> performs formal checks to ensure this is the case. Each microdata set includes a unique household identifier variable and an identical set of harmonized survey and spatial variables that can be exploited by the fusion process.</p>
-<p>By specifying the <code>pca</code> argument, the <em>numeric</em> spatial variables are collapsed into a smaller number of components – indicated by the “pca..” prefix – which we can confirm by looking at the recipient column names.</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ACS_2015</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb43"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a> [<span class="dv">1</span>] <span class="st">"acs_2015_hid"</span>            <span class="st">"weight"</span>                 </span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a> [<span class="dv">3</span>] <span class="st">"bedrooms__bdsp"</span>          <span class="st">"desktop__laptop"</span>        </span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a> [<span class="dv">5</span>] <span class="st">"education__schl"</span>         <span class="st">"elpay__elefp"</span>           </span>
-<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a> [<span class="dv">7</span>] <span class="st">"employhh__wkhp"</span>          <span class="st">"fuelheat__hfl"</span>          </span>
-<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a> [<span class="dv">9</span>] <span class="st">"hhage__agep"</span>             <span class="st">"hhsex__sex"</span>             </span>
-<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>[<span class="dv">11</span>] <span class="st">"householder_race__rac1p"</span> <span class="st">"internet__access"</span>       </span>
-<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>[<span class="dv">13</span>] <span class="st">"kownrent__ten"</span>           <span class="st">"moneypy__hincp"</span>         </span>
-<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>[<span class="dv">15</span>] <span class="st">"ngpay__gasfp"</span>            <span class="st">"nhsldmem__np"</span>           </span>
-<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>[<span class="dv">17</span>] <span class="st">"numadult__agep"</span>          <span class="st">"numchild__agep"</span>         </span>
-<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>[<span class="dv">19</span>] <span class="st">"numfrig__refr"</span>           <span class="st">"numtablet__handheld"</span>    </span>
-<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>[<span class="dv">21</span>] <span class="st">"occupyyrange__mv"</span>        <span class="st">"sdescent__hisp"</span>         </span>
-<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>[<span class="dv">23</span>] <span class="st">"stoven__stov"</span>            <span class="st">"totrooms__rmsp"</span>         </span>
-<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>[<span class="dv">25</span>] <span class="st">"typehuq__bld"</span>            <span class="st">"yearmaderange__ybl"</span>     </span>
-<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>[<span class="dv">27</span>] <span class="st">"loc..ur12"</span>               <span class="st">"loc..cbsatype15"</span>        </span>
-<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a>[<span class="dv">29</span>] <span class="st">"loc..region"</span>             <span class="st">"loc..recs_division"</span>     </span>
-<span id="cb43-16"><a href="#cb43-16" aria-hidden="true" tabindex="-1"></a>[<span class="dv">31</span>] <span class="st">"loc..recs_ba_zone"</span>       <span class="st">"loc..recs_iecc_zone"</span>    </span>
-<span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>[<span class="dv">33</span>] <span class="st">"climate..iccz"</span>           <span class="st">"climate..bznf"</span>          </span>
-<span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a>[<span class="dv">35</span>] <span class="st">"pca..PC1"</span>                <span class="st">"pca..PC2"</span>               </span>
-<span id="cb43-19"><a href="#cb43-19" aria-hidden="true" tabindex="-1"></a>[<span class="dv">37</span>] <span class="st">"pca..PC3"</span>                <span class="st">"pca..PC4"</span>               </span>
-<span id="cb43-20"><a href="#cb43-20" aria-hidden="true" tabindex="-1"></a>[<span class="dv">39</span>] <span class="st">"pca..PC5"</span>                <span class="st">"pca..PC6"</span>               </span>
-<span id="cb43-21"><a href="#cb43-21" aria-hidden="true" tabindex="-1"></a>[<span class="dv">41</span>] <span class="st">"pca..PC7"</span>                <span class="st">"pca..PC8"</span>               </span>
-<span id="cb43-22"><a href="#cb43-22" aria-hidden="true" tabindex="-1"></a>[<span class="dv">43</span>] <span class="st">"pca..PC9"</span>                <span class="st">"pca..PC10"</span>              </span>
-<span id="cb43-23"><a href="#cb43-23" aria-hidden="true" tabindex="-1"></a>[<span class="dv">45</span>] <span class="st">"pca..PC11"</span>               <span class="st">"pca..PC12"</span>              </span>
-<span id="cb43-24"><a href="#cb43-24" aria-hidden="true" tabindex="-1"></a>[<span class="dv">47</span>] <span class="st">"pca..PC13"</span>               <span class="st">"pca..PC14"</span>              </span>
-<span id="cb43-25"><a href="#cb43-25" aria-hidden="true" tabindex="-1"></a>[<span class="dv">49</span>] <span class="st">"pca..PC15"</span>               <span class="st">"pca..PC16"</span>              </span>
-<span id="cb43-26"><a href="#cb43-26" aria-hidden="true" tabindex="-1"></a>[<span class="dv">51</span>] <span class="st">"pca..PC17"</span>               <span class="st">"pca..PC18"</span>              </span>
-<span id="cb43-27"><a href="#cb43-27" aria-hidden="true" tabindex="-1"></a>[<span class="dv">53</span>] <span class="st">"pca..PC19"</span>               <span class="st">"pca..PC20"</span>              </span>
-<span id="cb43-28"><a href="#cb43-28" aria-hidden="true" tabindex="-1"></a>[<span class="dv">55</span>] <span class="st">"pca..PC21"</span>               <span class="st">"pca..PC22"</span>              </span>
-<span id="cb43-29"><a href="#cb43-29" aria-hidden="true" tabindex="-1"></a>[<span class="dv">57</span>] <span class="st">"pca..PC23"</span>               <span class="st">"pca..PC24"</span>              </span>
-<span id="cb43-30"><a href="#cb43-30" aria-hidden="true" tabindex="-1"></a>[<span class="dv">59</span>] <span class="st">"pca..PC25"</span>               <span class="st">"pca..PC26"</span>              </span>
-<span id="cb43-31"><a href="#cb43-31" aria-hidden="true" tabindex="-1"></a>[<span class="dv">61</span>] <span class="st">"pca..PC27"</span>               <span class="st">"pca..PC28"</span>              </span>
-<span id="cb43-32"><a href="#cb43-32" aria-hidden="true" tabindex="-1"></a>[<span class="dv">63</span>] <span class="st">"pca..PC29"</span>               <span class="st">"pca..PC30"</span>              </span></code></pre></div>
+<p>It is usually necessary for a user to run <code><a href="reference/fusionInput.html">fusionInput()</a></code> more than once for a given donor survey, since the process can flag issues with variable harmonization that need to be addressed before finalizing the fusion inputs.</p>
 </div>
 <div class="section level2">
-<h2 id="make-it-rain">Make it rain<a class="anchor" aria-label="anchor" href="#make-it-rain"></a>
+<h2 id="generate-fusion-outputs">Generate fusion outputs<a class="anchor" aria-label="anchor" href="#generate-fusion-outputs"></a>
 </h2>
-<p>At this point, we are ready to fuse. This is straightforward using the <code>train()</code> and <code>fuse()</code> functions from the <a href="https://github.com/ummel/fusionmodel" class="external-link">fusionModel package</a>.</p>
+<p>Once the necessary input files are ready-to-go, it is straightforward to complete the fusion process using <code><a href="reference/fusionOutput.html">fusionOutput()</a></code>. The function arguments are fully documented in <code><a href="reference/fusionOutput.html">?fusionOutput</a></code>. A minimal call simply indicates where to find the required input files. Everything else is handled automatically:</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">output.dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fusionOutput.html">fusionOutput</a></span><span class="op">(</span>input <span class="op">=</span> <span class="va">input.dir</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="dv">2023-03-30</span> <span class="dv">17</span><span class="sc">:</span><span class="dv">05</span><span class="sc">:</span><span class="dv">37</span> MDT </span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>R version <span class="dv">4</span>.<span class="fl">2.3</span> (<span class="dv">2023-03-15</span>) </span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>Platform<span class="sc">:</span> x86_64<span class="sc">-</span>pc<span class="sc">-</span>linux<span class="sc">-</span>gnu </span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>fusionData v1.<span class="fl">0.0</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>fusionModel v2.<span class="fl">2.2</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionOutput</span>(<span class="at">input =</span> input.dir, <span class="at">output =</span> <span class="cn">NULL</span>, <span class="at">M =</span> <span class="cn">NULL</span>, <span class="at">note =</span> <span class="cn">NULL</span>, </span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">test_mode =</span> <span class="cn">TRUE</span>, <span class="at">upload =</span> <span class="cn">FALSE</span>, <span class="at">ncores =</span> <span class="fu">getOption</span>(<span class="st">"fusionData.cores"</span>), </span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">margin =</span> <span class="dv">2</span>, <span class="at">... =</span> )</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionOutput</span>() is running <span class="cf">in</span> TEST mode.</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>The input files directory is<span class="sc">:</span></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>input </span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a>Result files will be saved to<span class="sc">:</span></span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>output </span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a>The local <span class="sc">/</span>output directory already exists.</span>
+<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Load training data inputs <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a>Loading training microdata<span class="sc">:</span> RECS_2015_2015_H_train.fst </span>
+<span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a>Loading <span class="fu">prepXY</span>() results<span class="sc">:</span> RECS_2015_2015_H_prep.rds </span>
+<span id="cb29-25"><a href="#cb29-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-26"><a href="#cb29-26" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Run fusionModel<span class="sc">::</span><span class="fu">train</span>() <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb29-27"><a href="#cb29-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-28"><a href="#cb29-28" aria-hidden="true" tabindex="-1"></a>Running <span class="cf">in</span> <span class="st">'test'</span> mode using <span class="fu">fast</span>(er) hyper<span class="sc">-</span>parameter settings<span class="sc">:</span></span>
+<span id="cb29-29"><a href="#cb29-29" aria-hidden="true" tabindex="-1"></a><span class="er">$</span>boosting</span>
+<span id="cb29-30"><a href="#cb29-30" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"goss"</span></span>
+<span id="cb29-31"><a href="#cb29-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-32"><a href="#cb29-32" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>num_leaves</span>
+<span id="cb29-33"><a href="#cb29-33" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">8</span></span>
+<span id="cb29-34"><a href="#cb29-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-35"><a href="#cb29-35" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>min_data_in_leaf</span>
+<span id="cb29-36"><a href="#cb29-36" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">57</span></span>
+<span id="cb29-37"><a href="#cb29-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-38"><a href="#cb29-38" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>num_iterations</span>
+<span id="cb29-39"><a href="#cb29-39" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">50</span></span>
+<span id="cb29-40"><a href="#cb29-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-41"><a href="#cb29-41" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>bagging_fraction</span>
+<span id="cb29-42"><a href="#cb29-42" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">1</span></span>
+<span id="cb29-43"><a href="#cb29-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-44"><a href="#cb29-44" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>feature_fraction</span>
+<span id="cb29-45"><a href="#cb29-45" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.3</span></span>
+<span id="cb29-46"><a href="#cb29-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-47"><a href="#cb29-47" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>learning_rate</span>
+<span id="cb29-48"><a href="#cb29-48" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.2</span></span>
+<span id="cb29-49"><a href="#cb29-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-50"><a href="#cb29-50" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>max_depth</span>
+<span id="cb29-51"><a href="#cb29-51" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">3</span></span>
+<span id="cb29-52"><a href="#cb29-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-53"><a href="#cb29-53" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>max_bin</span>
+<span id="cb29-54"><a href="#cb29-54" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">16</span></span>
+<span id="cb29-55"><a href="#cb29-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-56"><a href="#cb29-56" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>min_data_in_bin</span>
+<span id="cb29-57"><a href="#cb29-57" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">57</span></span>
+<span id="cb29-58"><a href="#cb29-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-59"><a href="#cb29-59" aria-hidden="true" tabindex="-1"></a><span class="sc">$</span>max_cat_threshold</span>
+<span id="cb29-60"><a href="#cb29-60" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">8</span></span>
+<span id="cb29-61"><a href="#cb29-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-62"><a href="#cb29-62" aria-hidden="true" tabindex="-1"></a>Training fusion model</span>
+<span id="cb29-63"><a href="#cb29-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-64"><a href="#cb29-64" aria-hidden="true" tabindex="-1"></a>fusionModel v2.<span class="fl">2.2</span> <span class="sc">|</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>ummel<span class="sc">/</span>fusionModel</span>
+<span id="cb29-65"><a href="#cb29-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-66"><a href="#cb29-66" aria-hidden="true" tabindex="-1"></a>Missing values imputed <span class="cf">for</span> the following <span class="st">'x'</span> <span class="fu">variable</span>(s)<span class="sc">:</span></span>
+<span id="cb29-67"><a href="#cb29-67" aria-hidden="true" tabindex="-1"></a> acs.sf..b060, acs.sf..b080, nrel.urdb..rsed </span>
+<span id="cb29-68"><a href="#cb29-68" aria-hidden="true" tabindex="-1"></a><span class="dv">3</span> fusion variables</span>
+<span id="cb29-69"><a href="#cb29-69" aria-hidden="true" tabindex="-1"></a><span class="dv">176</span> initial predictor variables</span>
+<span id="cb29-70"><a href="#cb29-70" aria-hidden="true" tabindex="-1"></a><span class="dv">5686</span> observations</span>
+<span id="cb29-71"><a href="#cb29-71" aria-hidden="true" tabindex="-1"></a>Using specified set of predictors <span class="cf">for</span> each fusion variable</span>
+<span id="cb29-72"><a href="#cb29-72" aria-hidden="true" tabindex="-1"></a>Using OpenMP multithreading within <span class="fu">LightGBM</span> (<span class="dv">3</span> cores)</span>
+<span id="cb29-73"><a href="#cb29-73" aria-hidden="true" tabindex="-1"></a>Training step <span class="dv">1</span> of <span class="dv">3</span><span class="sc">:</span> btung</span>
+<span id="cb29-74"><a href="#cb29-74" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> R<span class="sc">-</span>squared of cluster means<span class="sc">:</span> <span class="fl">0.972</span> </span>
+<span id="cb29-75"><a href="#cb29-75" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Number of neighbors <span class="cf">in</span> each cluster<span class="sc">:</span></span>
+<span id="cb29-76"><a href="#cb29-76" aria-hidden="true" tabindex="-1"></a>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span>
+<span id="cb29-77"><a href="#cb29-77" aria-hidden="true" tabindex="-1"></a>   <span class="fl">10.0</span>    <span class="fl">38.0</span>   <span class="fl">122.5</span>   <span class="fl">188.1</span>   <span class="fl">343.0</span>   <span class="fl">497.0</span> </span>
+<span id="cb29-78"><a href="#cb29-78" aria-hidden="true" tabindex="-1"></a>Training step <span class="dv">2</span> of <span class="dv">3</span><span class="sc">:</span> cooltype</span>
+<span id="cb29-79"><a href="#cb29-79" aria-hidden="true" tabindex="-1"></a>Training step <span class="dv">3</span> of <span class="dv">3</span><span class="sc">:</span> btuel</span>
+<span id="cb29-80"><a href="#cb29-80" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> R<span class="sc">-</span>squared of cluster means<span class="sc">:</span> <span class="fl">0.963</span> </span>
+<span id="cb29-81"><a href="#cb29-81" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Number of neighbors <span class="cf">in</span> each cluster<span class="sc">:</span></span>
+<span id="cb29-82"><a href="#cb29-82" aria-hidden="true" tabindex="-1"></a>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span>
+<span id="cb29-83"><a href="#cb29-83" aria-hidden="true" tabindex="-1"></a>   <span class="fl">10.0</span>    <span class="fl">34.0</span>    <span class="fl">82.0</span>   <span class="fl">146.1</span>   <span class="fl">229.0</span>   <span class="fl">494.0</span> </span>
+<span id="cb29-84"><a href="#cb29-84" aria-hidden="true" tabindex="-1"></a>Fusion model saved to<span class="sc">:</span></span>
+<span id="cb29-85"><a href="#cb29-85" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>output<span class="sc">/</span>RECS_2015_2015_H_model.fsn </span>
+<span id="cb29-86"><a href="#cb29-86" aria-hidden="true" tabindex="-1"></a>Total processing time<span class="sc">:</span> <span class="fl">5.58</span> secs </span>
+<span id="cb29-87"><a href="#cb29-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-88"><a href="#cb29-88" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Fuse onto training data <span class="cf">for</span> internal validation <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb29-89"><a href="#cb29-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-90"><a href="#cb29-90" aria-hidden="true" tabindex="-1"></a>Running <span class="cf">in</span> <span class="st">'test'</span> mode, so internal validation skipped.</span>
+<span id="cb29-91"><a href="#cb29-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-92"><a href="#cb29-92" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Fuse onto prediction data <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb29-93"><a href="#cb29-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-94"><a href="#cb29-94" aria-hidden="true" tabindex="-1"></a>Loading prediction microdata<span class="sc">:</span> RECS_2015_2015_H_predict.fst </span>
+<span id="cb29-95"><a href="#cb29-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-96"><a href="#cb29-96" aria-hidden="true" tabindex="-1"></a>Fusing to ACS <span class="fu">microdata</span> (<span class="dv">2</span> implicates)</span>
+<span id="cb29-97"><a href="#cb29-97" aria-hidden="true" tabindex="-1"></a><span class="dv">3</span> fusion variables</span>
+<span id="cb29-98"><a href="#cb29-98" aria-hidden="true" tabindex="-1"></a><span class="dv">176</span> initial predictor variables</span>
+<span id="cb29-99"><a href="#cb29-99" aria-hidden="true" tabindex="-1"></a><span class="dv">10000</span> observations</span>
+<span id="cb29-100"><a href="#cb29-100" aria-hidden="true" tabindex="-1"></a>Missing values imputed <span class="cf">for</span> the following <span class="fu">variable</span>(s)<span class="sc">:</span></span>
+<span id="cb29-101"><a href="#cb29-101" aria-hidden="true" tabindex="-1"></a> acs.sf..b060, acs.sf..b080, nrel.urdb..rsed </span>
+<span id="cb29-102"><a href="#cb29-102" aria-hidden="true" tabindex="-1"></a>Generating <span class="dv">2</span> implicates </span>
+<span id="cb29-103"><a href="#cb29-103" aria-hidden="true" tabindex="-1"></a>Using OpenMP multithreading within <span class="fu">LightGBM</span> (<span class="dv">3</span> cores)</span>
+<span id="cb29-104"><a href="#cb29-104" aria-hidden="true" tabindex="-1"></a>Fusion step <span class="dv">1</span> of <span class="dv">3</span><span class="sc">:</span> btung</span>
+<span id="cb29-105"><a href="#cb29-105" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Predicting LightGBM models</span>
+<span id="cb29-106"><a href="#cb29-106" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Simulating fused values</span>
+<span id="cb29-107"><a href="#cb29-107" aria-hidden="true" tabindex="-1"></a>Fusion step <span class="dv">2</span> of <span class="dv">3</span><span class="sc">:</span> cooltype</span>
+<span id="cb29-108"><a href="#cb29-108" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Predicting LightGBM models</span>
+<span id="cb29-109"><a href="#cb29-109" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Simulating fused values</span>
+<span id="cb29-110"><a href="#cb29-110" aria-hidden="true" tabindex="-1"></a>Fusion step <span class="dv">3</span> of <span class="dv">3</span><span class="sc">:</span> btuel</span>
+<span id="cb29-111"><a href="#cb29-111" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Predicting LightGBM models</span>
+<span id="cb29-112"><a href="#cb29-112" aria-hidden="true" tabindex="-1"></a><span class="sc">--</span> Simulating fused values</span>
+<span id="cb29-113"><a href="#cb29-113" aria-hidden="true" tabindex="-1"></a>Writing fusion output to .fsd file </span>
+<span id="cb29-114"><a href="#cb29-114" aria-hidden="true" tabindex="-1"></a>Fusion results saved to<span class="sc">:</span></span>
+<span id="cb29-115"><a href="#cb29-115" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>output<span class="sc">/</span>RECS_2015_2015_H_fused.fsd </span>
+<span id="cb29-116"><a href="#cb29-116" aria-hidden="true" tabindex="-1"></a>Total processing time<span class="sc">:</span> <span class="fl">0.78</span> secs </span>
+<span id="cb29-117"><a href="#cb29-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-118"><a href="#cb29-118" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> Upload <span class="sc">/</span>output files to Google Drive <span class="sc">==</span><span class="er">=|</span></span>
+<span id="cb29-119"><a href="#cb29-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-120"><a href="#cb29-120" aria-hidden="true" tabindex="-1"></a><span class="st">'upload = FALSE'</span>; file upload skipped at request of user.</span>
+<span id="cb29-121"><a href="#cb29-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-122"><a href="#cb29-122" aria-hidden="true" tabindex="-1"></a><span class="sc">|</span><span class="er">===</span> <span class="fu">fusionOutput</span>() is finished<span class="sc">!</span> <span class="er">===|</span></span>
+<span id="cb29-123"><a href="#cb29-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-124"><a href="#cb29-124" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionOutput</span>() total processing time<span class="sc">:</span> <span class="fl">6.4</span> secs </span>
+<span id="cb29-125"><a href="#cb29-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-126"><a href="#cb29-126" aria-hidden="true" tabindex="-1"></a><span class="fu">fusionOutput</span>() log file saved to<span class="sc">:</span></span>
+<span id="cb29-127"><a href="#cb29-127" aria-hidden="true" tabindex="-1"></a> <span class="er">/</span>home<span class="sc">/</span>kevin<span class="sc">/</span>Documents<span class="sc">/</span>Projects<span class="sc">/</span>fusionData<span class="sc">/</span>fusion_<span class="sc">/</span>RECS<span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span><span class="dv">2015</span><span class="sc">/</span>H<span class="sc">/</span>output<span class="sc">/</span>RECS_2015_2015_H_outputlog.txt</span></code></pre></div>
+<p>As before, let’s check the location of the result files and their names:</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">output.dir</span></span></code></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"/home/kevin/Documents/Projects/fusionData/fusion_/RECS/2015/2015/H/output"</span></span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">output.dir</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"RECS_2015_2015_H_fused.fsd"</span>     <span class="st">"RECS_2015_2015_H_model.fsn"</span>    </span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>[<span class="dv">3</span>] <span class="st">"RECS_2015_2015_H_outputlog.txt"</span></span></code></pre></div>
+<p>Every call to <code><a href="reference/fusionOutput.html">fusionOutput()</a></code> generates the same three generic result files:</p>
+<ol style="list-style-type: decimal">
+<li>
+<code>*_outputlog.txt</code>: A copy of the extensive console output above.</li>
+<li>
+<code>*_model.fsn</code>: The fusionModel object used to simulate the fusion variables.</li>
+<li>
+<code>*_fused.fsd</code>: The recipient microdata with simulated values for the fusion variables, across multiple implicates.</li>
+</ol>
+<p>In addition, if <em>not</em> running in test mode, two additional files are produced:</p>
+<ol style="list-style-type: decimal">
+<li>
+<code>*_valid.fsd</code>: The <em>training</em> microdata with simulated values for the fusion variables, across multiple implicates.</li>
+<li>
+<code>*_validation.rds</code>: Results from internal validation exercises using the simulated variables in <code>*_valid.fsd</code>.</li>
+</ol>
+<p>Just to confirm, let’s look at the final, fused microdata in “RECS_2015_2015_H_fused.fsd”.</p>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fsd.file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">output.dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">fused</span> <span class="op">&lt;-</span> <span class="fu">fusionModel</span><span class="fu">::</span><span class="fu">read_fsd</span><span class="op">(</span><span class="va">fsd.file</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>fusionModel v2.<span class="fl">2.2</span> <span class="sc">|</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>ummel<span class="sc">/</span>fusionModel</span></code></pre></div>
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">fused</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb37"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="dv">20000</span>     <span class="dv">4</span></span></code></pre></div>
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">fused</span><span class="op">$</span><span class="va">M</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb39"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span>     <span class="dv">2</span> </span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="dv">10000</span> <span class="dv">10000</span> </span></code></pre></div>
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">fused</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb41"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>   M  btung                                 cooltype btuel</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span><span class="sc">:</span> <span class="dv">1</span> <span class="dv">139800</span>          Central air conditioning system <span class="dv">48500</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="dv">2</span><span class="sc">:</span> <span class="dv">1</span>      <span class="dv">0</span>          Central air conditioning system <span class="dv">72300</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="dv">3</span><span class="sc">:</span> <span class="dv">1</span>  <span class="dv">37900</span> Individual window<span class="sc">/</span>wall or portable units <span class="dv">45000</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="dv">4</span><span class="sc">:</span> <span class="dv">1</span>      <span class="dv">0</span>          Central air conditioning system <span class="dv">57900</span></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="dv">5</span><span class="sc">:</span> <span class="dv">1</span> <span class="dv">103600</span>          Central air conditioning system <span class="dv">29900</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a><span class="dv">6</span><span class="sc">:</span> <span class="dv">1</span>  <span class="dv">30000</span>          Central air conditioning system  <span class="dv">7740</span></span></code></pre></div>
+<p>When running in test mode, the ACS prediction dataset is restricted to the first 10,000 rows and, by default, only two implicates are simulated (for speed and file size). This is a quick(er) way to check if there are any obvious issues or problems. It is a good idea to make sure both <code><a href="reference/fusionInput.html">fusionInput()</a></code> and <code><a href="reference/fusionOutput.html">fusionOutput()</a></code> are “passing” start-to-finish in test mode before trying to your final (and more time-consuming) fusion.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">
