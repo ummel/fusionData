@@ -67,36 +67,47 @@ manipulate them – are added. fusionData is *not public*.
 
 Now that the shared Github repository has been cloned to your local
 drive (in a `/fusionData` project directory), we can install the package
-locally and load it.
+locally and load it. This step will install any required package
+dependencies and may take awhile. You will be redirected to a browser
+window to enter credentials for the Google Drive account storing
+fusionData’s remote files. The username and password are provided
+separately.
 
 ``` r
-# Install the fusionData package locally
-devtools::install()
+# Do initial local install of the fusionData package
+devtools::install(quick = TRUE)
 
-# Load fusionData package
+# Load the fusionData package
 library(fusionData)
 ```
 
-Whenever the `fusionData` package is loaded, it checks that the current
+Whenever the fusionData package is loaded, it checks that the current
 working directory is set to your local `/fusionData` directory (it will
 issue an error otherwise). This is because the package works with (and
 expects) a particular directory structure locally that is mimicked in
 the Github repository.
 
-You may be redirected to a browser window to enter the password for the
-Google Drive account storing fusionData’s remote files.
+fusionData includes a convenience function called `installPackage()` to
+safely update (re-install) your local installation of the fusionData
+package. If you modify important code yourself or pull changes from the
+Github repository, it is necessary to re-install the fusionData
+*package* locally to get all of the functionality. For example, if a
+function is added or modified on Github, your local installation won’t
+reflect the changes until you pull and re-install. `installPackage()`
+does a number of operations that our initial `devtools::install()`
+didn’t, so let’s go ahead and run it now:
 
-- username: \[provided\]
-- password: \[provided\]
+``` r
+installPackage()
+```
 
-For full functionality, it is necessary to download the remotely-stored
-processed survey microdata and processed spatial data files. The
-following section (“Usage and structure”) provides more detail about
-this and the associated reasoning. See `?getSurveyProcessed` and
-`?getGeoProcessed` as well.
-
-For example, to run most of the code in this README you minimally
-require:
+For full functionality, it is also necessary to download at least some
+of the remotely-stored survey microdata and processed spatial data
+files. The following section (“Usage and structure”) provides more
+detail about this and the associated reasoning. The functions
+`getSurveyProcessed()` and `getGeoProcessed()` offer an easy way to do
+this. For example, to run most of the code in this README you will
+minimally need:
 
 ``` r
 # Download RECS 2015 processed survey microdata file
@@ -106,19 +117,20 @@ getSurveyProcessed(survey = "RECS_2015")
 getGeoProcessed(dataset = "essential")
 ```
 
-The downloads will take a few minutes. The files are automatically
-placed in the appropriate sub-directories of `/fusionData` on your local
-drive, with the directories created if necessary. After successful
-download, your fusionData “system” is ready to go.
+The downloads may take a few minutes. The files are automatically placed
+in the appropriate sub-directories of `/fusionData` on your local drive,
+with the directories created if necessary. After successful download,
+your fusionData “system” is ready to go.
 
 ## Usage and structure
 
 As you modify code and files in your local `/fusionData` project
-directory, you will need to commit and push those changes to the Github
-repository for them to be accessible to other users. In addition, it is
-good practice to pull the latest version of the repository from Github
-prior to making any modifications. That way, you know you are working
-from the latest shared version.
+directory, you will need to commit and *push* those changes to the
+Github repository for them to be accessible to other users. In addition,
+it is good practice to *pull* the latest version of the repository from
+Github prior to making any modifications. That way, you know you are
+working from the latest shared version. This is most easily done using
+the “Git” panel in the RStudio IDE.
 
 Since Github places limits on file/repository size, we store certain
 data files “remotely” – that is, outside of the Github repository. The
@@ -1270,3 +1282,11 @@ the first 10,000 rows and, by default, only two implicates are simulated
 any obvious issues or problems. It is a good idea to make sure both
 `fusionInput()` and `fusionOutput()` are “passing” start-to-finish in
 test mode before trying to your final (and more time-consuming) fusion.
+
+In practice, we sometimes need to “do fusion” in a secure server
+environment. Since installing the complete fusionData package just to
+access `fusionOutput()` is overkill (and a pain), a copy of
+`fusionOutput()` is silently exported in the fusion*Model* package. This
+allows someone to install and load only the fusionModel package in a
+server environment and then use `fusionOutput()` to do the fusion step –
+assuming the server has access to the necessary input files.
