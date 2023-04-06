@@ -43,4 +43,7 @@ NULL
   # Print package information to console
   packageStartupMessage("fusionData v", utils::packageVersion("fusionData"), " | https://github.com/ummel/fusionData")
 
+  # Reminder about pulling latest updates from Github
+  packageStartupMessage("Reminder: You might want to 'git pull' and installPackage() before using fusionData.")
+
 }

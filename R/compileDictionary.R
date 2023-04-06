@@ -44,7 +44,7 @@ compileDictionary <- function() {
   save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 
   # Print summary of data outputs
-  message("dictionary.rds dimensions: ", paste(dim(dictionary), collapse = " x "))
-  message("surveys.rds dimensions: ", paste(dim(surveys), collapse = " x "))
+  # message("dictionary.rda dimensions: ", paste(dim(dictionary), collapse = " x "))
+  # message("surveys.rda dimensions: ", paste(dim(surveys), collapse = " x "))
 
 }

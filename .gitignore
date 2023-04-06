@@ -9,8 +9,8 @@ fusionData.Rproj
 /fusion_
 /R/deprecated
 /R/dev
-*dictionary.rda
-*surveys.rda
+dictionary.rda
+surveys.rda
 *.fst
 *.rds
 *.fsn
