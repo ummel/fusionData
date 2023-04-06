@@ -20,10 +20,14 @@ installPackage <- function() {
   fusionData::compileDictionary()
 
   cat("Updating package documentation and namespace...\n")
-  roxygen2::roxygenise()
+  suppressPackageStartupMessages({
+    roxygen2::roxygenise()
+  })
 
   cat("Building local fusionData package...\n")
-  devtools::install(quick = TRUE, dependencies = TRUE, upgrade = "ask")
+  suppressPackageStartupMessages({
+    devtools::install(quick = TRUE, dependencies = TRUE, upgrade = "ask")
+  })
 
   cat("fusionData local package installation complete!\n")
 
