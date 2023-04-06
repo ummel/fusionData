@@ -29,26 +29,19 @@ compileDictionary <- function() {
   # Remove variable 'N'
   dictionary$N <- NULL
 
-  # Save data outputs to disk: TWO locations
-  # saveRDS(dictionary, "dictionary/dictionary.rds", compress = TRUE)
-  # saveRDS(surveys, "dictionary/surveys.rds", compress = TRUE)
-  #
-  # saveRDS(dictionary, "harmony/dictionary.rds", compress = TRUE)
-  # saveRDS(surveys, "harmony/surveys.rds", compress = TRUE)
-
   # Save compiled dictionary files to /data
   usethis::use_data(dictionary, overwrite = TRUE)
   usethis::use_data(surveys, overwrite = TRUE)
-
-  # ALSO save copies to /universe Shiny app
-  cat("Saving 'dictionary' and 'surveys' to /universe/www\n")
-  save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
-  save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 
   # ALSO save copies to /harmony Shiny app
   cat("Saving 'dictionary' and 'surveys' to /harmony/www\n")
   save(dictionary, file = "harmony/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "harmony/www/surveys.rda", compress = TRUE)
+
+  # ALSO save copies to /universe Shiny app
+  cat("Saving 'dictionary' and 'surveys' to /universe/www\n")
+  save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
+  save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 
   # Print summary of data outputs
   message("dictionary.rds dimensions: ", paste(dim(dictionary), collapse = " x "))
