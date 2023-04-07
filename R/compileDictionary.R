@@ -35,11 +35,13 @@ compileDictionary <- function() {
 
   # ALSO save copies to /harmony Shiny app
   cat("Saving 'dictionary' and 'surveys' to /harmony/www\n")
+  if (!dir.exists("harmony/www")) dir.create("harmony/www")
   save(dictionary, file = "harmony/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "harmony/www/surveys.rda", compress = TRUE)
 
   # ALSO save copies to /universe Shiny app
   cat("Saving 'dictionary' and 'surveys' to /universe/www\n")
+  if (!dir.exists("universe/www")) dir.create("universe/www")
   save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 
