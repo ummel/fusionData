@@ -32,6 +32,22 @@ list(
     comment = "",
     modified = "2022-08-30 15:52:59"),
 
+  asec_division__region = list(
+    ASEC = list(
+      groups = c(2, 3, 1, 4, 1, 4, 3, 2, 3),
+      levels = c("East North Central", "East South Central", "Middle Atlantic", "Mountain", "New England", "Pacific", "South Atlantic", "West North Central", "West South Central"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1:4,
+      levels = c("Northeast", "Midwest", "South", "West"),
+      breaks = "",
+      adj = "",
+      agg = "reference"),
+    ordered = FALSE,
+    comment = "",
+    modified = "2023-01-06 16:26:19"),
+
   asian__rac2p = list(
     ASEC = list(
       groups = 1:8,
@@ -117,7 +133,9 @@ list(
       groups = c(1, 2, 3, 4, 5, 5, 6, 7, 8),
       levels = c("NIU: Less than 15 or never worked", "Self-employed, not incorporated", "Self-employed, incorporated", "Wage/salary, private", "Federal government employee", "Armed forces", "State government employee", "Local government employee", "Unpaid family worker"),
       breaks = "",
-      adj = "if_else(age != \"15\", classwkr, factor(\"NIU: Less than 15 or never worked\",\nordered = T)\n)"),
+      adj = "if_else(age != \"15\", classwkr, factor(\"NIU: Less than 15 or never worked\",\nordered = T,
+levels = levels(classwkr)
+)\n)"),
     ACS = list(
       groups = c(1, 4, 4, 7, 6, 5, 2, 3, 8, 1),
       levels = c("Less than 16 years old / Not in labor force who last worked more than 5 years ago or never worked", "Employee of a private for-profit company or business, or of an individual, for wages, salary, or commissions", "Employee of a private not-for-profit, tax-exempt, or charitable organization", "Local government employee (city, county, etc.)", "State government employee", "Federal government employee", "Self-employed in own not incorporated business, professional practice, or farm", "Self-employed in own incorporated business, professional practice or farm", "Working without pay in family business or farm", "Unemployed and last worked 5 years ago or earlier or never worked"),
@@ -220,7 +238,12 @@ list(
       groups = c(1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 13, 14, 15, 16),
       levels = c("NIU: Less than 15", "No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
       breaks = "",
-      adj = "if_else(agep < 15, factor(\"NIU: Less than 15\", levels = c(\"NIU: Less than 15\", levels(schl)), ordered=T\n), factor(schl, levels = c(\"NIU: Less than 15\", levels(schl)))\n)",
+      adj = "if_else(agep < 15, factor(\"NIU: Less than 15\",
+levels = c(\"NIU: Less than 15\", levels(schl)
+), ordered=T\n), factor(schl,
+levels = c(\"NIU: Less than 15\", levels(schl)
+)
+)\n)",
       agg = ""),
     ordered = TRUE,
     comment = "Limit ACS to under 15",
@@ -231,7 +254,9 @@ list(
       groups = c(1, 2, 3, 4, 5, 5, 6, 6, 6),
       levels = c("NIU: Less than 15", "Armed Forces", "At work", "Has job, not at work last week", "Unemployed, experienced worker", "Unemployed, new worker", "NILF, unable to work", "NILF, other", "NILF, retired"),
       breaks = "",
-      adj = "if_else(age != '15', empstat, factor('NIU: Less than 15',\nordered = T)\n)"),
+      adj = "if_else(age != '15', empstat, factor('NIU: Less than 15',\nordered = T,
+levels = levels(empstat)
+)\n)"),
     ACS = list(
       groups = c(1, 3, 4, 5, 2, 2, 6),
       levels = c("Less than 16 years old", "Civilian employed, at work", "Civilian employed, with a job but not at work", "Unemployed", "Armed forces, at work", "Armed forces, with a job but not at work", "Not in labor force"),
@@ -241,22 +266,6 @@ list(
     ordered = TRUE,
     comment = "Changes ASEC 15 yr olds to be in NIU category to match ACS NIU category. Assumed that ASEC 'armed forces' includes armed forces at work and not at work. ",
     modified = "2022-08-31 17:46:23"),
-
-  faminc__fincp = list(
-    ASEC = list(
-      groups = 1:16,
-      levels = c("Under $5,000", "$5,000 - 7,499", "$7,500 - 9,999", "$10,000 - 12,499", "$12,500 - 14,999", "$15,000 - 19,999", "$20,000 - 24,999", "$25,000 - 29,999", "$30,000 - 34,999", "$35,000 - 39,999", "$40,000 - 49,999", "$50,000 - 59,999", "$60,000 - 74,999", "$75,000 - 99,999", "$100,000 - 149,999", "$150,000 and over"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = 1:16,
-      levels = c("Less than 5000", "[5000 to 7500)", "[7500 to 10000)", "[10000 to 12500)", "[12500 to 15000)", "[15000 to 20000)", "[20000 to 25000)", "[25000 to 30000)", "[30000 to 35000)", "[35000 to 40000)", "[40000 to 50000)", "[50000 to 60000)", "[60000 to 75000)", "[75000 to 1e+05)", "[1e+05 to 150000)", "150000 or more"),
-      breaks = c(5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 1e+05, 150000),
-      adj = "",
-      agg = ""),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-01-11 08:37:08"),
 
   famkind__hht = list(
     ASEC = list(
@@ -311,7 +320,9 @@ list(
       groups = 1:3,
       levels = c("NIU: Less than 15 or did not work last year", "Full-time", "Part-time"),
       breaks = "",
-      adj = "if_else(age != '15', fullpart, factor('NIU: Less than 15 or did not work last year',\nordered = T)\n)"),
+      adj = "if_else(age != '15', fullpart, factor('NIU: Less than 15 or did not work last year',\nordered = T,
+levels = levels(fullpart)
+)\n)"),
     ACS = list(
       groups = c(1, 3, 2),
       levels = c("Less than 1", "[1 to 35)", "35 or more"),
@@ -349,10 +360,11 @@ list(
       levels = "Min: -15350, Median: 65700, Mean: 92400, Max: 2940000",
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = "",
     comment = "",
-    modified = "2023-01-06 15:58:44"),
+    modified = "2023-04-09 15:48:27"),
 
   hhtenure__ten = list(
     ASEC = list(
@@ -601,7 +613,9 @@ list(
       groups = 1:3,
       levels = c("NIU: Less than 15", "No, not in the labor force", "Yes, in the labor force"),
       breaks = "",
-      adj = "if_else(age != '15', labforce, factor('NIU: Less than 15',\nordered = T)\n)"),
+      adj = "if_else(age != '15', labforce, factor('NIU: Less than 15',\nordered = T,
+levels = levels(labforce)
+)\n)"),
     ACS = list(
       groups = c(1, 3, 3, 3, 3, 3, 2),
       levels = c("Less than 16 years old", "Civilian employed, at work", "Civilian employed, with a job but not at work", "Unemployed", "Armed forces, at work", "Armed forces, with a job but not at work", "Not in labor force"),
@@ -789,22 +803,6 @@ list(
     comment = "",
     modified = "2022-09-02 13:49:01"),
 
-  asec_division__region = list(
-    ASEC = list(
-      groups = c(2, 3, 1, 4, 1, 4, 3, 2, 3),
-      levels = c("East North Central", "East South Central", "Middle Atlantic", "Mountain", "New England", "Pacific", "South Atlantic", "West North Central", "West South Central"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = 1:4,
-      levels = c("Northeast", "Midwest", "South", "West"),
-      breaks = "",
-      adj = "",
-      agg = "reference"),
-    ordered = FALSE,
-    comment = "",
-    modified = "2023-01-06 16:26:19"),
-
   relate__relshipp = list(
     ASEC = list(
       groups = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 12),
@@ -831,7 +829,12 @@ list(
       groups = c(1, 3, 2, 2),
       levels = c("NIU: Less than 16 or older than 55", "No, has not attended in the last 3 months", "Yes, public school or public college", "Yes, private school or college or home school"),
       breaks = "",
-      adj = "if_else(agep < 16 | agep > 55, factor(\"NIU: Less than 16 or older than 55\", levels = c(\"NIU: Less than 16 or older than 55\", levels(sch))\n), factor(sch, levels = c(\"NIU: Less than 16 or older than 55\", levels(sch)))\n)",
+      adj = "if_else(agep < 16 | agep > 55, factor(\"NIU: Less than 16 or older than 55\",
+levels = c(\"NIU: Less than 16 or older than 55\", levels(sch)
+)\n), factor(sch,
+levels = c(\"NIU: Less than 16 or older than 55\", levels(sch)
+)
+)\n)",
       agg = ""),
     ordered = TRUE,
     comment = "",
@@ -970,12 +973,17 @@ list(
       groups = 1:4,
       levels = c("NIU: Less than 15 or older than 49 or in the labor force last week", "Within past 12 months", "More than 12 months ago", "Never worked"),
       breaks = "",
-      adj = "if_else(age != '15', wnlwnilf, factor('NIU: Less than 15 or older than 49 or in the labor force last week',\nordered = T)\n)"),
+      adj = "if_else(age != '15', wnlwnilf, factor('NIU: Less than 15 or older than 49 or in the labor force last week',\nordered = T,
+levels = levels(wnlwnilf)
+)\n)"),
     ACS = list(
       groups = 1:4,
       levels = c("Less than 16 years old", "Within the past 12 months", "1-5 years ago", "Over 5 years ago or never worked"),
       breaks = "",
-      adj = "if_else(agep <= 49, wkl, factor(\"Less than 16 years old\", \nordered = T))",
+      adj = "if_else(agep <= 49, wkl, factor(\"Less than 16 years old\", \nordered = T,
+levels = levels(wkl)
+)
+)",
       agg = ""),
     ordered = TRUE,
     comment = "Adjust NIU to the smallest overlapping age range: 16-49",
