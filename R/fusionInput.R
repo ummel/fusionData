@@ -138,7 +138,7 @@ fusionInput <- function(donor,
 
   # Check validity of the working directory path
   # Also check if "/fusionData" is part of the path, as this is required
-  input <- normalizePath(getwd())
+  input <- full.path(getwd())
   b <- strsplit(input, .Platform$file.sep, fixed = TRUE)[[1]]
   i <- which(b == "fusionData")
   if (length(i) == 0) stop("'/fusionData' is not part of the working directory's normalized path; this is required.")

@@ -14,7 +14,7 @@
 
 uploadFiles <- function(files, ask = TRUE) {
 
-  files <- normalizePath(path.expand(files))
+  files <- full.path(files)
   files <- unique(files)
   stopifnot({
     basename(getwd()) == "fusionData"
