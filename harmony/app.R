@@ -756,7 +756,7 @@ server <- function(input, output, session) {
     out[[2]]$levels = y[[rvar()]]
     out[[2]]$breaks <- parseNumbers(input$rbin)
     out[[2]]$adj <- input$radj
-    out[[2]]$agg <- ifelse(input$ragg == "none" | length(input$ragg) == 0, "", input$ragg)  # Set too blank if none specified
+    out[[2]]$agg <- ifelse(input$ragg == "none" | length(input$ragg) == 0, "", input$ragg)  # Set to blank if none specified
 
     names(out) <- c(input$dsvy, "ACS")
 

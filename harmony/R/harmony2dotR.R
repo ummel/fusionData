@@ -14,7 +14,8 @@ harmony2dotR <- function(X, file.out) {
   # Legacy code to ensure older harmony file are updated with single quote instead of apostrophe
   d <- gsub("’", "'", d, fixed = TRUE)
 
-  level.names <- lapply(0:3, function(i) {
+  #level.names <- lapply(0:3, function(i) {  # April 9, 2023: This line giving error;
+  level.names <- lapply(0:2, function(i) {
     map_depth(X, .depth = i, names) %>%
       unlist(use.names = FALSE) %>%
       unique()
@@ -32,7 +33,7 @@ harmony2dotR <- function(X, file.out) {
   d <- gsub(")))", ")\n))", d, fixed = TRUE)
   d <- gsub("))", ")\n)", d, fixed = TRUE)
 
-  # This insert an additional line break between top-level list elements (for better readability)
+  # This inserts an additional line break between top-level list elements (for better readability)
   for (n in level.names[[1]][-1L]) d <- gsub(paste0("\\n", n), paste0("\n\n", n), d)
 
   write(d, file = file.out)

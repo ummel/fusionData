@@ -1,5 +1,6 @@
 # Example input
 #hfile <- dget("harmony/harmonies/RECS_2015__ACS_2019.R")
+#hfile <- dget("harmony/harmonies/ASEC_2019__ACS_2019.R")
 
 hfileList <- function(hfile) {
 
@@ -34,7 +35,8 @@ hfileList <- function(hfile) {
     df <- tibble(Donor = map_chr(v1, paste, collapse = ", "),
                  ACS = map_chr(v2, paste, collapse = ", "),
                  `No. of groups` = na_if(map2_dbl(g1, g2, ~ max(.x, .y)), 1),  # Set numeric-numeric pairs to NA for "No. of groups"
-                 Ordered = ifelse(is.na(`No. of groups`), NA, map_chr(hfile, "ordered")),
+                 #Ordered = ifelse(is.na(`No. of groups`), NA, map_chr(hfile, "ordered")),
+                 Ordered = ifelse(is.na(`No. of groups`), NA, map_chr(hfile, ~as.character(.x[["ordered"]]))),
                  `Last modified` = map_chr(hfile, "modified")) %>%
       mutate(n = 1:n()) %>%
       select(n, everything())
