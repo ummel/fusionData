@@ -9,6 +9,7 @@
 #' @import tibble
 #' @import fst
 #' @import devtools
+#' @import styler
 #' @rawNamespace import(shinyjs, except = c(html, runExample, alert))
 #' @rawNamespace import(matrixStats, except = c(count))
 #' @rawNamespace import(shiny, except = c(dataTableOutput, renderDataTable, validate))
@@ -21,11 +22,14 @@ NULL
 
 .onLoad <- function (libname, pkgname) {
 
-  # Check that the current working directory is /fusionData
-  if (basename(getwd()) != "fusionData") stop("The fusionData package requires the working directory to be /fusionData")
+  # Prevent styler cahce message; See ?styler::caching
+  options(styler.cache_root = "styler")
 
   # Create default option value for number of cores
   options(fusionData.cores = max(1L, parallel::detectCores() - 1L))
+
+  # Check that the current working directory is /fusionData
+  if (basename(getwd()) != "fusionData") stop("The fusionData package requires the working directory to be /fusionData")
 
   # If in interactive mode, ask user to authenticate in browser
   if (interactive()) googledrive::drive_auth(email = "fusionacsdata@gmail.com")
