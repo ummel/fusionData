@@ -38,7 +38,7 @@ harmonize <- function(harmony.file,
     output %in% c("both", "donor", "recipient")
   })
 
-  HH <- tolower(respondent) == "household"
+  HH <- toupper(substring(respondent, 1, 1)) == "H"
 
   # Internal helper function
   splitNames <- function(x) strsplit(x, "__", fixed = TRUE)
@@ -57,10 +57,12 @@ harmonize <- function(harmony.file,
   load("data/dictionary.rda")
   dict.vars <- paste(paste(dictionary$Survey, dictionary$Vintage, sep = "_"), dictionary$Variable)
 
+  # Details about the donor variables used in harmonies
   dnames <- map_chr(splitNames(hnames), 1)
   dind <- match(paste(survey[1], dnames), dict.vars)
   dres <- dictionary$Respondent[dind]
 
+  # Details about the respondent variables used in harmonies
   rnames <- map_chr(splitNames(hnames), 2)
   rind <- match(paste(survey[2], rnames), dict.vars)
   rres <- dictionary$Respondent[rind]
@@ -105,22 +107,15 @@ harmonize <- function(harmony.file,
 
     # Variables (and potential matching strings) to load from disk
     # This includes standard household and person identifier variables
-    #m <- paste(str_squish(c(vnames, adj, hid, "pid", "weight")), collapse = " ")
     m <- c(vnames, adj, hid, "pid", "weight")
 
     # Load household data (NULL if unavailable or unnecessary)
     # Note that 'k' should ALWAYS return at least 1 column (hid), but > 1 needed to pull any data from disk
-    # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dh'
-    #k <- sapply(names(dh), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
-    #dh <- if (length(k) > 1) dh[names(which(k))] else NULL
     k <- intersect(names(dh), m)
     dh <- if (length(k) > 1) dh[k] else NULL
 
     # Load person data (NULL if unavailable or unnecessary)
     # Note that 'k' should ALWAYS return at least 2 columns (hid and pid), but > 2 needed to pull any data from disk
-    # NOTE: The grepl() call below is safe, but it can lead to unnecessary variables being loaded into 'dp'
-    # k <- sapply(names(dp), function(n) grepl(n, m, fixed = TRUE)) # Variables to load from disk
-    # dp <- if (length(k) > 2) dp[names(which(k))] else NULL
     k <- intersect(names(dp), m)
     dp <- if (length(k) > 1) dp[k] else NULL
 
@@ -158,12 +153,12 @@ harmonize <- function(harmony.file,
 
     #-----
 
-    # Function to peform harmonization of actual data for harmony 'i' in H
+    # Function to perform harmonization of actual data for harmony 'i' in H
     makeHarmony <- function(i) {
 
       v <- vnames[i]
       hh <- vres[i] == "Household"  # Is the variable being processed household-level?
-      h <- H[[i]][[j]]
+      h <- H[[i]][[j]]  # 'h' contains information about the transformation
 
       # Assign "" value for 'agg' slot if none exists
       if (length(h$agg) == 0) h$agg <- ""
@@ -177,18 +172,24 @@ harmonize <- function(harmony.file,
 
       # Create 'x' vector to be modified below and then assigned to output
       if (h$adj == "") {
+
         x <- if (hh) dh[[v]] else dp[[v]]
+
       } else {
+
         # Apply 'adj' custom function, if necessary
         # See here: https://stackoverflow.com/questions/49469982/r-using-a-string-as-an-argument-to-mutate-verb-in-dplyr
         x <- if (hh) dh else dp
-        x <- mutate(x, !!v := !!rlang::parse_quo(h$adj, env = rlang::caller_env()))[[v]]
+        x <- mutate(x, !!v := !!rlang::parse_quo(h$adj, env = rlang::current_env()))[[v]]
+        #x <- mutate(x, !!v := !!rlang::parse_quo(h$adj, env = rlang::caller_env(n = 2)))[[v]]
+
       }
 
       #---
 
       # Process/harmonize 'x' using information in 'h'
-      # If h$groups = 1, it is a numeric match and no modification is needed except to apply convertPercentile()
+      # If h$groups = 1, it is a numeric match and no modification is needed here
+      # However, numeric harmony variables are converted to a common scale within assemble()
       if (length(h$groups) > 1) {
 
         if (h$breaks[1] == "") {
@@ -204,7 +205,7 @@ harmonize <- function(harmony.file,
 
         # Class 'x' as a factor variable, if specified
         if (h$agg %in% c("", "reference", "min", "max")) {
-          x <- factor(x, levels = sort(unique(h$groups)), ordered = H[[i]]$ordered == TRUE)
+          x <- factor(x, levels = sort(unique(h$groups)), ordered = H[[i]]$ordered)
         }
 
       }
@@ -230,14 +231,20 @@ harmonize <- function(harmony.file,
         } else {
 
           # Aggregate 'x' for each household using h$agg as the aggregator function
-          y <- as.vector(tapply(X = x, INDEX = dp[[hid]], FUN = get(h$agg)))
+          #y <- as.vector(tapply(X = x, INDEX = dp[[hid]], FUN = get(h$agg)))
+
+          # data.table implementation?
+          dt <- data.table(x, hid = dp[[hid]])
+          fcall <- paste0(h$agg, "(x)")
+          x <- dt[, eval(parse(text = fcall)), by = hid][[2]]
 
           # If 'x' is a factor, preserve levels and ordering of the output
-          if (is.factor(x)) {
-            x <- factor(levels(x)[y], levels = levels(x), ordered = is.ordered(x))
-          } else {
-            x <- y
-          }
+          # April 9, 2023: Don't believe this is necessary using data.table implementation (class of 'x' is preserved)
+          # if (is.factor(x)) {
+          #   x <- factor(levels(x)[y], levels = levels(x), ordered = is.ordered(x))
+          # } else {
+          #   x <- y
+          # }
         }
 
         # Set 'hh' to TRUE, since 'x' is now aggregated to household level
@@ -261,11 +268,16 @@ harmonize <- function(harmony.file,
 
     # Make harmonies, in parallel
 
-    # Troubleshooting
-    #for (i in 1:length(H)) test <- makeHarmony(i)
+    # Manual troubleshooting
+    # for (i in 1:length(H)) {
+    #   out <- system.time({test <- makeHarmony(i)})
+    #   print(hnames[i])
+    #   print(out)
+    # }
 
     # Process in parallel and combine results into data frame
-    out <- pbapply::pblapply(X = 1:length(H), FUN = makeHarmony, cl = ncores) %>%
+    #out <- lapply(X = 1:length(H), FUN = makeHarmony) %>%  # Serial for de-bugging
+    out <- pbapply::pblapply(X = 1:length(H), FUN = makeHarmony, cl = ncores) %>%  # Parallel
       setNames(names(H)) %>%
       as.data.frame()
 
@@ -295,7 +307,7 @@ harmonize <- function(harmony.file,
     # Assign data frame to final 'result' list
     result[[type]] <- out
     rm(out)
-    gc()
+    gc(verbose = FALSE)
 
   }
 

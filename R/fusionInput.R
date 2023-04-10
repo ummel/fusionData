@@ -232,8 +232,8 @@ fusionInput <- function(donor,
 
   cat("\n|=== Check for custom .R scripts ===|\n\n")
 
-  # Check if there are any "(0X)" custom .R scripts that needs to be run
-  cus <- list.files(dir, pattern = "(\\d{2}).*\\.R$", full.names = TRUE)
+  # Check if there are any "(XX)" custom .R scripts that needs to be run
+  cus <- list.files(dir, pattern = "^\\(\\d{2}\\).*\\.R$", full.names = TRUE)
   cus <- setdiff(cus, cus0)
   if (length(cus) > 0) {
     cat("Detected custom .R processing script(s):\n")
@@ -302,7 +302,7 @@ fusionInput <- function(donor,
       arrange(`Similarity score`)
 
     cat("Similarity scores for", length(fxvars), "categorical harmonized variables:\n")
-    print(check)
+    print(check, n = Inf)
 
     if (ask) {
       cat("\nShould any of the categorical harmonized variables be excluded?\n")
@@ -352,7 +352,7 @@ fusionInput <- function(donor,
     if (nrow(loc.drop) > 0) {
       cat("The representative location variable '", rvar, "' has ", loc.levels[rvar], " levels.\n", sep = "")
       cat("The following location variables have been flagged for possible exclusion:\n")
-      print(loc.drop)
+      print(loc.drop, n = Inf)
       if (ask) {
         cat("\nShould any of these location variables be excluded?\n")
         answer <- readline(prompt = "Enter vector of row numbers to exclude or leave blank to retain all: ")

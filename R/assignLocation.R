@@ -63,7 +63,7 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   # Which geographic intersection variables should be returned as "loc.." variables in output results?
   # This is restricted to 'gdonor' variables with no missing values in the donor microdata
   gkeep <- names(which(!sapply(D[, ..gdonor], anyNA)))
-  gkeep <- setdiff(gkeep, gtarget)  # This simply excludes "state" in the event it is present in donor data (to avoid conflict with "state" used for PUMA identification in 'gtarget')
+  #gkeep <- setdiff(gkeep, gtarget)  # This simply excludes "state" in the event it is present in donor data (to avoid conflict with "state" used for PUMA identification in 'gtarget')
 
   #---
 
@@ -142,7 +142,7 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
     as.data.table() %>%
     merge(D, by = did)
 
-  # Recipient output from harmonize() with 'id' merged
+  # Recipient output from harmonize()
   R <- harmonized[[2]] %>%
     as.data.table()
 
@@ -208,9 +208,17 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
                          FUN = sampleIntersection,
                          cl = 1L,  # This defaults to lapply() execution but gives a nice progress bar/timer
                          N = 1000,
-                         ncores = ncores) %>%
-    rbindlist() %>%
-    setcolorder(c(did, rid, gtarget, gkeep))
+                         ncores = ncores) %>%  # 'ncores' are used for the gower_topn() call
+    rbindlist()
+
+  # If there are any duplicated column names in 'D'; remove one of them
+  # This can occur for geographic variables common to both donor and recipient (e.g. "state")
+  # Using 'fromLast = TRUE' removes the first occurrence (i.e. the donor entry), though any duplicate variables *should* be identical
+  #keep <- !duplicated(names(D), fromLast = TRUE)
+  #D <- D[, ..keep]
+
+  # Set the column order
+  #D <- setcolorder(D, unique(c(did, rid, gtarget, gkeep)))
 
   # Calculate 'weight_adjustment' column
   # When 'D' is merged with microdata, the household "weight" is multiplied by "weight_adjustment" to arrive at correct total sample weight
@@ -265,8 +273,8 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   # Rename the 'gkeep' variables to include the "loc.." prefix
   # This identifies them as spatial variables, but "loc" is reserved for variables that are actually known and not imputed
   lvars <- paste0("loc..", gkeep)
-  setnames(D, old = gkeep, new = lvars)
-  setnames(R, old = gkeep, new = lvars)
+  setnames(D, old = match(gkeep, names(D)), new = lvars)
+  setnames(R, old = match(gkeep, names(R)), new = lvars)
 
   # Assemble into final results list
   # Assign attribute indicating the geographic intersection (i.e. "location") variables

@@ -56,7 +56,7 @@ assemble <- function(x,
   respondent <- ifelse("pid" %in% did, "person", "household")
 
   # Names of harmonized variables
-  hvars <- attr(x$harmonized, "harmonized.vars")
+  #hvars <- attr(x$harmonized, "harmonized.vars")
 
   # Names of the location variables ("loc..*")
   lvars <- attr(x$location, "location.vars")
@@ -101,22 +101,37 @@ assemble <- function(x,
 
   # Identify the fusion variables
   disallowed <- unique(c(did, rvars, "weight", "state", "puma10", attr(x$location, "intersection.vars")))  # Variables that are not feasible fusion candidates
-  employed <- attr(x$harmonized[[donor]], "employed.vars")
-  fvars <- if (is.null(fusion.variables)) {
-    setdiff(names(d), c(disallowed, employed))  # Exclude variables known to be used for harmonization
-  } else {
-    invalid1 <- setdiff(fusion.variables, names(d))
-    if (length(invalid1) > 0) cat("Some requested fusion variables are not in the donor microdata:\n", paste(invalid1, collapse = ", "), "\n")
-    invalid2 <- intersect(fusion.variables, disallowed)
-    if (length(invalid2) > 0) cat("Some requested fusion variables are not feasible candidates:\n", paste(invalid2, collapse = ", "), "\n")
-    invalid3 <- intersect(fusion.variables, employed)
-    if (length(invalid3) > 0) cat("Some requested fusion variables were used to create harmonies:\n", paste(invalid3, collapse = ", "), "\n")
-    setdiff(fusion.variables, c(invalid1, invalid2, invalid3))
-  }
+  employed <- attr(x$harmonized[[donor]], "employed.vars")  # Donor variables used in harmonization
+
+  # If no fusion variables specified, return a plausible set
+  # Exclude disallowed variables and those used for harmonization
+  if (is.null(fusion.variables)) fusion.variables <- setdiff(names(d), c(disallowed, employed))
+
+  # Check for invalid/problematic fusion variables and report to console
+  invalid1 <- setdiff(fusion.variables, names(d))
+  if (length(invalid1) > 0) cat("WARNING: Omitted fusion variables; some are not in the donor microdata:\n", paste(invalid1, collapse = ", "), "\n")
+  invalid2 <- intersect(fusion.variables, disallowed)
+  if (length(invalid2) > 0) cat("WARNING: Removed fusion variables; some are not feasible candidates:\n", paste(invalid2, collapse = ", "), "\n")
+
+  # Detect case where a variable used in harmonization is requested for fusion
+  # In this case, remove the associated
+  invalid3 <- intersect(fusion.variables, employed)
+  if (length(invalid3) > 0) cat("WARNING: Some fusion variables were used to construct harmonized predictors:\n", paste(invalid3, collapse = ", "), "\n")
+
+  # Identify harmonized variables to 'drop' from microdata
+  # This occurs if there is a conflict with a fusion variable; the fusion variables is retained and affected harmonized predictor removed (below)
+  hvars <- attr(x$harmonized, "harmonized.vars")
+  drop <- lapply(invalid3, function(x) grep(paste0("^", x, "__"), hvars, value = TRUE))
+  drop <- unique(unlist(drop))
+  if (length(drop) > 0) cat("WARNING: Removed harmonized predictors that conflict with fusion variables:\n", paste(drop, collapse = ", "), "\n")
+  hvars <- setdiff(hvars, drop)  # Updated names of harmonized variables
+
+  # Remove 'invalid1' and 'invalid2' from fusion variables but keep variables involved in harmonies (with Warning above)
+  fvars <- setdiff(fusion.variables, c(invalid1, invalid2))
 
   # Report which variables are being added as fusion variables
   fvars <- sort(fvars)
-  cat("Adding the following fusion variables:\n", paste(fvars, collapse = ", "), "\n")
+  cat("Including the following fusion variables:\n", paste(fvars, collapse = ", "), "\n")
 
   # Load necessary donor variables from disk
   rvars <- if (replicates) rvars else NULL
@@ -128,6 +143,7 @@ assemble <- function(x,
   # Merge donor microdata components: harmonized variables, fusion variables, and location variables
   # Note that the weights are 'integerized' after applying the imputation adjustment factor (weight_adjustment)
   dout <- x$harmonized[[donor]] %>%
+    select(-any_of(drop)) %>%  # Remove harmonized predictors to be dropped
     left_join(fusion.data, by = did) %>%
     left_join(x$location[[donor]], by = did[1]) %>%
     mutate(weight = weight * weight_adjustment,
@@ -141,6 +157,7 @@ assemble <- function(x,
 
   # Merge recipient microdata components: harmonized variables and location variables
   rout <- x$harmonized[[recipient]] %>%
+    select(-any_of(drop)) %>%  # Remove harmonized predictors to be dropped
     left_join(x$location[[recipient]], by = rid[1])
 
   rm(x)
@@ -290,11 +307,11 @@ assemble <- function(x,
     #-----
 
     # Merge spatial data at PUMA level to DONOR
-    cat("Merging donor spatial predictor variables...\n")
+    cat("Merging spatial predictor variables to the donor...\n")
     dout <- left_join(dout, dgeo, by = mvars)
 
     # Merge spatial data at PUMA level to RECIPIENT
-    cat("Merging recipient spatial predictor variables...\n")
+    cat("Merging spatial predictor variables to the recipient...\n")
     rout <- left_join(rout, rgeo, by = mvars)
 
   } else {
