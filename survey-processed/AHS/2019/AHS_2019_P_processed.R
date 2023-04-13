@@ -1,4 +1,5 @@
 library(tidyverse)
+library(fusionData)
 source("R/utils.R")
 source("R/createDictionary.R")
 source("R/imputeMissing.R")
@@ -113,7 +114,7 @@ codebook <- codebook %>%
     topic = Subtopic,
     resp_codes = `Response Codes`
   ) %>%
-  select(var, national, metro, topic, desc, resp_codes)
+  dplyr::select(var, national, metro, topic, desc, resp_codes)
 
 # Add the new Sample variable
 codebook <- rbind(codebook,
@@ -124,17 +125,29 @@ codebook <- rbind(codebook,
                              "topic" = "",
                              "resp_codes" = "1: National||2: Metro"))
 
+#Fixing some Not applicable labels
+# Variables with "Not applicable" values
+na.vars <- codebook %>%
+  filter(grepl("Not applicable",resp_codes)) %>%
+  pull(var) %>%
+  unique()
+
+
+# These are the variables for which suitable replacement values must be specified below
+
+#drop variables from codebook
+#these variables have a lot of NA values (>100k) and are also not required for harmony()
+codebook <- codebook %>% filter(!var %in% c('PSCATTEND', 'PSCDEGREE','PSCLIVE','PSCPUBPR',
+                                           'PDTHSP', 'PSCENROLL', 'PSCSTATUS'))
+
 # Here I will remove variables that are too specific
 # and not needed for almost any analysis
 # such as edit flag variables and split-sample
-# replicate weights
+# no weights to replicate
 to_remove <- names(d)[!names(d)%in%codebook$var]
 
 d <- d[!names(d)%in%to_remove]
-
 labeled_vars <- names(d)[names(d)%in%codebook$var]
-# Remove OMB13CBSA to keep it as in the geographic concordance
-labeled_vars <- labeled_vars[-grep("OMB13CBSA",labeled_vars)]
 
 
 # Add labels
@@ -142,7 +155,7 @@ pb <- pbapply::timerProgressBar(min = 0, max = dim(d)[2],
                                 char = "+", width = 50, style = 3)
 
 for (var in names(d)) {
-  
+
   d[[var]] <- str_remove_all(d[[var]],"'")
   
   # Check if variable has labels
@@ -209,34 +222,122 @@ for (var in names(d)) {
 
 pbapply::closepb(pb)
 
-# NOTE: CHECKS NEEDED, ALISA WILL HELP
+
+# Manual edits of variables done directly to processed data rather than codebook
+# get_labels function would overwrite the changes otherwise
+
+d <- d %>%
+  mutate(MIL = gsub("\\<Not applicable\\>","Never served in military", MIL)) %>%
+  mutate(MIL = gsub("\\<Not reported\\>","Never served in military", MIL)) %>%
+  mutate(MAR = gsub("\\<Not applicable\\>","Never married",MAR)) %>%
+  mutate(MAR = gsub("\\<Not reported\\>","Never married",MAR)) %>%
+  mutate(ENROLL = gsub("\\<Not applicable\\>","No",ENROLL)) %>%
+  mutate(ENROLL = gsub("\\<Not reported\\>","No",ENROLL)) %>%
+  mutate(MLPA = gsub("\\<Not applicable\\>","No",MLPA)) %>%
+  mutate(MLPB = gsub("\\<Not applicable\\>","No",MLPB)) %>%
+  mutate(MLPCD = gsub("\\<Not applicable\\>","No",MLPCD)) %>%
+  mutate(MLPE = gsub("\\<Not applicable\\>","No",MLPE)) %>%
+  mutate(MLPFG = gsub("\\<Not applicable\\>","No",MLPFG)) %>%
+  mutate(MLPH = gsub("\\<Not applicable\\>","No",MLPH)) %>%
+  mutate(MLPI = gsub("\\<Not applicable\\>","No",MLPI)) %>%
+  mutate(MLPJ = gsub("\\<Not applicable\\>","No",MLPJ)) %>%
+  mutate(MLPK = gsub("\\<Not applicable\\>","No",MLPK)) %>%
+  mutate(MOVERGRP = gsub("\\<Not applicable\\>","Other",MOVERGRP)) %>%
+  mutate(MOVERGRP = gsub("\\<Not reported\\>","Other",MOVERGRP)) %>%
+  mutate(RACEAS = gsub("\\<Not applicable\\>","Not Asian",RACEAS)) %>%
+  mutate(RACEPI = gsub("\\<Not applicable\\>","Not Native American or Pacific Islander",RACEPI)) %>%
+  mutate(PCARE = gsub("\\<Not applicable\\>","No",PCARE)) %>%
+  mutate(PCARE = gsub("\\<Not reported\\>","No",PCARE)) %>%
+  mutate(PERRND = gsub("\\<Not applicable\\>","No",PERRND)) %>%
+  mutate(PERRND = gsub("\\<Not reported\\>","No",PERRND)) %>%
+  mutate(PHEAR = gsub("\\<Not applicable\\>","No",PHEAR)) %>%
+  mutate(PHEAR = gsub("\\<Not reported\\>","No",PHEAR)) %>%
+  mutate(PMEMRY = gsub("\\<Not applicable\\>","No",PMEMRY)) %>%
+  mutate(PMEMRY = gsub("\\<Not reported\\>","No",PMEMRY)) %>%
+  mutate(PSEE = gsub("\\<Not applicable\\>","No",PSEE)) %>%
+  mutate(PSEE = gsub("\\<Not reported\\>","No",PSEE)) %>%
+  mutate(PWALK = gsub("\\<Not applicable\\>","No",PWALK)) %>%
+  mutate(PWALK = gsub("\\<Not reported\\>","No",PWALK)) %>%
+  mutate(INUSYR = gsub("\\<Not applicable\\>","Born in U.S.",INUSYR)) %>%
+  mutate(FIRPARENT = gsub("\\<Not applicable\\>","No parent number one",FIRPARENT)) %>%
+  mutate(SECPARENT = gsub("\\<Not applicable\\>","No parent number two",SECPARENT)) %>%
+  mutate(SPOUSE = gsub("\\<Not applicable\\>","No Spouse",SPOUSE)) %>% 
+  mutate(GRAD = gsub("\\<Not applicable\\>", NA,GRAD))
+
+
+#test check
+#result <- apply(d, 2, function(x) any(grepl("Not applicable", x)))
+#names(d)[result]
+#d1 <- d
+
+#exp_vars<-c()
+# selected_vars<-intersect(intersect(labeled_vars,names(d)),
+#                          codebook$var[!codebook$topic%in%
+#                                         c("Interview Status","Geography",
+#                                           "Weighting", "Edit Variables")])
+
+
+
+# Which variables have missing values and how frequent are they?
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count  # See which variables have NA's
+
+imp <- imputeMissing(data = d,
+                     N = 1,
+                     max_ncats = 10,
+                  #   weight = "WEIGHT",
+                     #                     x_exclude = setdiff(selected_vars,exp_vars)
+)
+
+# Replace NA's in 'd' with the imputed values
+d[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])] <-
+  imp[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])]
+rm(imp)
+gc()
+anyNA(d)
+
+# convert all character columns to factors so createDictionary() works
+d <- d %>% mutate_if(is.character, as.factor)
+
+# check for no rewrite of original variables (all = TRUE)
+#d1[!is.na(d1$PSCSTATUS),]$PSCSTATUS == d[!is.na(d1$PSCSTATUS),]$PSCSTATUS
 
 #----------------
 
 # Assemble final output
-# NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
+# NOTE: var_label assignment is done AFTER any manipulation of values/classes,
+# because labels can be lost when classes are changed
 
-p.final <- d %>%
+d$PERSONID <- as.factor(d$PERSONID) # treat person id as a factor to prevent it from being mutated
+
+p.final <- d  %>% 
   mutate_if(is.factor, safeCharacters) %>%
+  mutate_if(is.factor, droplevels) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   mutate(
-    PLINE = factor(PLINE)
-  ) %>%
+    PLINE = factor(PLINE)) %>%
   addPID(hid = "CONTROL", refvar = "PLINE") %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
   rename(
     ahs_2019_hid = CONTROL,  # Rename ID and weight variables to standardized names
   ) %>%
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(ahs_2019_hid, sample, pid, everything()) %>%   # Reorder columns with replicate weights at the end
+  dplyr::select(ahs_2019_hid, sample, pid, everything()) %>%   # Reorder columns with replicate weights at the end
   arrange(ahs_2019_hid,pid)
 
+
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = p.final, survey = "AHS", vintage = 2019, respondent = "P")
-saveRDS(object = dictionary, file = "survey-processed/AHS/2019/AHS_2019_P_dictionary.rds")
+ dictionary <- createDictionary(data = p.final, survey = "AHS", vintage = 2019, respondent = "P")
+ saveRDS(object = dictionary, file = "survey-processed/AHS/2019/AHS_2019_P_dictionary.rds")
 
-#----------------
-
-# Save data to disk (.fst)
+# #----------------
+# 
+# # Save data to disk (.fst)
 fst::write_fst(x = p.final, path = "survey-processed/AHS/2019/AHS_2019_P_processed.fst", compress = 100)
+# check <-  fst::read_fst("survey-processed/AHS/2019/AHS_2019_P_processed_2.fst")
+compileDictionary()
+
+#test <- p.final %>% filter(mil == "Not applicable")
+ 

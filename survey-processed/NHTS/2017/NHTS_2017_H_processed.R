@@ -267,7 +267,7 @@ na.count
 imp <- imputeMissing(data = d,
                     N = 1,
                    weight = "WTHHFIN",
-                   x_exclude = c("HOUSEID",'SMPLSRCE','SCRESP'))
+                   x_exclude = c("HOUSEID",'SMPLSRCE','SCRESP',"WTHHFIN\\d"))
 
 # Replace NA's in 'd' with the imputed values
 d[names(imp)] <- imp
