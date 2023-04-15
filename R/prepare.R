@@ -42,6 +42,15 @@
 #                         cdd30yr = "climate..cdd12b6",
 #                         hdd30yr = "climate..hdd12b6")
 
+# TEST
+# donor = "ASEC_2019"
+# recipient = "ACS_2019"
+# respondent = "household"
+# fuse = c("heatsub", "heatval", "incchild", "kidcneed", "hipval", "spmwic", "adjginc")
+# implicates = 1
+# collapse = FALSE
+# ncores = getOption("fusionData.cores")
+
 #-----
 
 prepare <- function(donor,

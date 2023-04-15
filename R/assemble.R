@@ -9,6 +9,8 @@
 #' @param window Integer. Size of allowable temporal window, in years, when merging spatial variables. `window = 0` (default) means that a spatial variable is only included if it has the same vintage as the survey. See Details.
 #' @param pca Numeric. Controls whether/how PCA is used to reduce dimensionality of spatial variables. Default (NULL) is no PCA. If non-NULL, should be a numeric vector of length two; e.g. \code{pca = c(50, 0.95)}. First number is the maximum number of components to return; second number is target proportion of variance explained. See Details.
 #' @param replicates Logical. Should replicate observation weights be included, if available? Defaults to FALSE.
+#' @param agg_fun List. See \code{\link{fusionInput}}.
+#' @param agg_adj List. See \code{\link{fusionInput}}.
 #'
 #' @details Spatial variables are included if the associated vintage is within +/- `window` years of the survey vintage. In cases where the spatial variable has multiple vintages equidistant from the survey vintage, the older vintage is selected. Variables with `vintage = "always"` are, of course, always included.
 #'
@@ -28,21 +30,28 @@
 
 #-----
 
-# x: list produced by prepare()
-# fusion.variables = NULL
-# replicates = FALSE
+# library(tidyverse)
+# library(data.table)
+# x <- readRDS("asec_prepare_out.rds")
+# fusion.variables = c("heatsub", "heatval", "incchild", "kidcneed", "hipval", "spmwic", "adjginc")
 # spatial.datasets = "all"
-# window = 3
-# pca = c(100, 0.95)
+# window = 2
+# pca = NULL
+# replicates = FALSE
+# agg_adj <- list(spmwic = ~if_else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic))
+# agg_fun <- list(spmwic = "mean")
 
 #-----
 
+# NOTE: See custom aggregation functions at bottom of script.
 assemble <- function(x,
                      fusion.variables = NULL,
                      spatial.datasets = "all",
                      window = 2,
                      pca = NULL,
-                     replicates = FALSE) {
+                     replicates = FALSE,
+                     agg_fun = NULL,
+                     agg_adj = NULL) {
 
   # Names of the donor and recipient surveys
   donor <- names(x$harmonized)[1]
@@ -92,15 +101,22 @@ assemble <- function(x,
   # Determine which donor fusion variables to load from disk
   cat("Identifying donor fusion variables...\n")
 
-  # Load household data (NULL if unavailable or unnecessary)
+  # Load requested respondent level microdata
   fpath <- list.files(path = "survey-processed", pattern = paste(donor, ifelse(respondent == "household", "H", "P"), "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
-  d <- fst::fst(fpath)
+  d1 <- fst::fst(fpath)
+
+  # If respondent = "household", attempt to load person-level microdata as well (NULL if unavailable or unnecessary)
+  fpath <- list.files(path = "survey-processed", pattern = paste(donor, ifelse(respondent == "household", "P", NULL), "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)
+  d2 <- if (length(fpath)) fst::fst(fpath) else NULL
+
+  # All potential donor variable names
+  dnames <- unique(c(names(d1), names(d2)))
 
   # Names of replicate weight variables
-  rvars <- grep("^rep_\\d+$", names(d), value = TRUE)
+  rvars <- grep("^rep_\\d+$", dnames, value = TRUE)
 
   # Identify the fusion variables
-  disallowed <- unique(c(did, rvars, "weight", "state", "puma10", attr(x$location, "intersection.vars")))  # Variables that are not feasible fusion candidates
+  disallowed <- unique(c(did, rvars, "pid", "weight", "state", "puma10", attr(x$location, "intersection.vars")))  # Variables that are not feasible fusion candidates
   employed <- attr(x$harmonized[[donor]], "employed.vars")  # Donor variables used in harmonization
 
   # If no fusion variables specified, return a plausible set
@@ -108,7 +124,7 @@ assemble <- function(x,
   if (is.null(fusion.variables)) fusion.variables <- setdiff(names(d), c(disallowed, employed))
 
   # Check for invalid/problematic fusion variables and report to console
-  invalid1 <- setdiff(fusion.variables, names(d))
+  invalid1 <- setdiff(fusion.variables, dnames)
   if (length(invalid1) > 0) cat("WARNING: Omitted fusion variables; some are not in the donor microdata:\n", paste(invalid1, collapse = ", "), "\n")
   invalid2 <- intersect(fusion.variables, disallowed)
   if (length(invalid2) > 0) cat("WARNING: Removed fusion variables; some are not feasible candidates:\n", paste(invalid2, collapse = ", "), "\n")
@@ -133,10 +149,87 @@ assemble <- function(x,
   fvars <- sort(fvars)
   cat("Including the following fusion variables:\n", paste(fvars, collapse = ", "), "\n")
 
+  #-----
+
   # Load necessary donor variables from disk
-  rvars <- if (replicates) rvars else NULL
-  keep <- c(did, fvars, rvars)
-  fusion.data <- d[keep]
+  rvars <- if (replicates) rvars else NULL  # Replicate weight variables
+  avars <- unique(unlist(lapply(agg_adj, all.vars)))  # Variables used in the "adjustment" formulae
+  keep <- unique(c(did, "pid", fvars, avars, rvars))
+
+  # Load required data from disk
+  d1 <- d1[intersect(names(d1), keep)]
+  d2 <- d2[c(did, intersect(names(d2), setdiff(keep, names(d1))))]
+
+  # Person-level fusion variables to be aggregated
+  pvars <- intersect(fvars, names(d2))
+
+  #-----
+
+  # Aggregate person-level fusion variables to household level, if necessary
+  if (length(pvars)) {
+
+    # Create merged 'd2' object for aggregation to household-level
+    d2v <- unique(c(did, "pid", avars, pvars))
+    d2 <- full_join(d1, d2, by = did) %>%
+      select(all_of(d2v)) %>%
+      as.data.table()
+
+    # Ensure rows are ordered by household ID and then 'pid'
+    # This is necessary for the  ref() aggregation function to work as intended (i.e. return obs. for pid = 1 in first position)
+    setorderv(d2, cols = c(did, "pid"))
+
+    # Apply any custom modification code to 'd2' before aggregation
+    cat("Applying pre-aggregation adjustment code:\n")
+    for (i in seq_along(agg_adj)) {
+      v <- names(agg_adj)[i]
+      f <- as.character(agg_adj[[i]])[2]
+      cat(" ", paste(v, "=", f), "\n")
+      d2 <- mutate(d2, !!v := !!rlang::parse_quo(f, env = rlang::current_env()))
+    }
+
+    # Create aggregation function call for each person-level fusion variable
+    cat("Using following aggregation functions for person-level variables:\n")
+    pcalls <- lapply(pvars, function(v) {
+      cl <- class(d2[[v]])[1]
+      f <- switch(cl,
+                  numeric = "sum",
+                  factor = "ref",
+                  ordered = "max")
+
+      # Check that the data class  of 'v' is valid
+      # Should be numeric or a factor (possibly ordered)
+      if (is.null(f)) stop("Invalid data class (", cl, ") for: ", v)
+
+      # Replace 'f' with custom aggregation function, if provided
+      if (v %in% names(agg_fun)) f <- agg_fun[[v]]
+
+      # Return expression to be evaluated
+      paste0(v, " = ", f, "(", v, ", na.rm = T)")
+    })
+
+    # Report the aggregation calls to console
+    cat(paste(" ", pcalls, collapse = "\n"), "\n")
+
+    # Do the data.table aggregation call
+    cat("Aggregating person-level fusion variables to household-level...\n")
+    fcall <- paste("list(", paste(pcalls, collapse = ", "), ")")
+    d2 <- d2[, eval(parse(text = fcall)), by = did]
+
+    # Merge 'd2' and 'd1'
+    # Now we have all fusion variables at household-level
+    stopifnot(nrow(d2) == nrow(d1))
+    fusion.data <- merge(d2, d1, by = did) %>%
+      select(any_of(c(did, "pid", fvars)))
+
+  } else {
+
+    # If no aggregation necessary, simply return 'd1'
+    fusion.data <- d1
+
+  }
+
+  # Clean up
+  rm(d1, d2)
 
   #-----
 
@@ -246,7 +339,6 @@ assemble <- function(x,
       # Impute NA's in donor
       dgeo.num <- dgeo[ind]
       na.cols <- names(which(sapply(dgeo.num, anyNA)))
-      #dgeo.num[na.cols] <- map(dgeo.num[na.cols], ~ replace_na(.x, replace = median(.x, na.rm = TRUE)))
       dgeo.num[na.cols] <- map(dgeo.num[na.cols], ~ replace(.x, list = is.na(.x), values = median(.x, na.rm = TRUE)))
 
       # Fit PCA to donor data
@@ -271,7 +363,6 @@ assemble <- function(x,
       # Impute NA's in recipient
       rgeo.num <- rgeo[ind]
       na.cols <- names(which(sapply(rgeo.num, anyNA)))
-      #rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace_na(.x, replace = median(.x, na.rm = TRUE)))
       rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace(.x, list = is.na(.x), values = median(.x, na.rm = TRUE)))
 
       # PCA output with updated column names
@@ -330,13 +421,11 @@ assemble <- function(x,
 
   dout <- dout %>%
     select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
-    #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
     mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
     arrange_at(did)
 
   rout <- rout %>%
     select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
-    #mutate_at(hvars, ~ convertPercentile(x = ., w = weight, min.unique = 100, min.zero = 0.05))
     mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
     arrange_at(rid)
 
@@ -361,24 +450,6 @@ assemble <- function(x,
 
   #----
 
-  # !TESTING! -- perhaps move?
-  # Issue is that there are potentially spatial variables that we want to check that are only added in assemble()
-  # Compute absolute error
-  # wd <- dout$weight / sum(dout$weight)
-  # wr <- rout$weight / sum(rout$weight)
-  #
-  # prop <- sapply(fxvars, function(v) {
-  #   pd <- xtabs(wd ~ dout[[v]])
-  #   pr <- xtabs(wr ~ rout[[v]])
-  #   m <- matrix(c(pd, pr), ncol = 2, dimnames = list(NULL, c("donor", "recipient")))
-  #   m
-  #   #list(error = sum(abs(pr - pd)) / 2, prop = m)
-  # })
-  #
-  # err <- sapply(prop, function(x) sum(abs(x[, 2] - x[, 1])) / 2)
-
-  #-----
-
   # Return as list
   result <- setNames(list(dout, rout), c(donor, recipient))
 
@@ -392,3 +463,11 @@ assemble <- function(x,
   return(result)
 
 }
+
+# Custom aggregation functions made available for use in assemble()
+# This can be used in the 'agg_fun' input list
+# Returns first value in 'x'
+ref <- function(x, na.rm = TRUE) x[1]
+# Returns modal value of 'x'
+mode <- function(x, na.rm = TRUE) data.table(x = if (na.rm) na.omit(x) else x)[, .N, by = x][order(N, decreasing = TRUE)]$x[1]
+

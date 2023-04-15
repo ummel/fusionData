@@ -152,9 +152,8 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   #-----
 
   #i <- 5
-  #N <- 1000
-
-  sampleIntersection <- function(i, N = 1000, ncores) {
+  #N <- 500
+  sampleIntersection <- function(i, N = 500, ncores) {
 
     # Subset 'D' for intersection 'i' and remove columns with NA values
     d <- subset(D, id == i)

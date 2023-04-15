@@ -2,14 +2,17 @@
 #'
 #' @description
 #' Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Optionally uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
-#' \cr\cr!!! Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
+#'
+#' NOTE: Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
 #'
 #' @param donor Character. Donor survey identifier (e.g. `"RECS_2015"`).
 #' @param recipient Character. Recipient (ACS) survey identifier (e.g. `"ACS_2015"`).
 #' @param respondent Character. Desired respondent level of microdata. Either `"household"` or `"person"`.
-#' @param fuse Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process.
+#' @param fuse Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process (it is preferable to specify explicitly, though).
 #' @param force Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.
 #' @param note Character. Optional note supplied by user. Inserted in the log file for reference.
+#' @param agg_fun List. Optional override of default aggregation function for person-level `fuse` variables when `respondent = "household"`. Passed to \code{\link{assemble}} internally. See Details.
+#' @param agg_adj List. Optional pre-aggregation adjustment code to apply to person-level `fuse` variables when `respondent = "household"`. Passed to \code{\link{assemble}} internally. See Details.
 #' @param test_mode Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).
 #' @param ncores Integer. Number of physical CPU cores used for parallel computation.
 #'
@@ -28,6 +31,16 @@
 #'
 #' The user is prompted for console input (including asking about GDrive upload) *only* if \code{\link{interactive}} is \code{TRUE}. Otherwise, the steps proceed without user input.
 #'
+#' If `donor` refers to a survey with both household- and person-level microdata *and* `respondent = "household"` *and* `fuse` includes person-level variables, then we have a situation where person-level fusion variables need to be aggregated to household-level prior to fusion.
+#' This is done automatically within \code{\link{assemble}}. In this scenario, person-level fusion variables are aggregated based on their class.
+#' By default, numeric variables return the household total (sum), unordered factors return the level of the household's reference person, and ordered factors return the household's maximum level.
+#'
+#' The `agg_fun` argument can be used to override the default aggregation function for specific fusion variables. It can reference any function that takes a vector and returns a single value and includes a 'na.rm' argument. Two special, package-specific functions are also available, "ref" and "mode", that return the reference person value and modal value, respectively. These functions are comparatively slow, especially "mode". See Examples.
+#'
+#' The `agg_adj` argument can be used to adjust/modify a person-level fusion variable prior to aggregation. This may be necessary if the variable is defined or measured in a way that doe not allow for straightforward aggregation to the household level. `agg_adj` supplies named formulas to an internal \code{\link[dplyr]{mutate}} call, allowing for complex modifications. See Examples.
+#'
+#' Note in the Examples the use of the convenience utility function `if.else()`. It wraps \code{\link[dplyr]{if_else}} and can be used identically but preserves factor levels and ordering in the result if possible.
+#'
 #' @return Invisibly returns path to local directory where files were saved. Messages printed to console noting progress. Resulting \code{/input} data files are saved to appropriate local directory and (optionally) to remote Google Drive storage. Also saves a .txt log file alongside data files that records console output from \code{fusionInput}.
 #'
 #' @examples
@@ -41,6 +54,21 @@
 #'
 #' # List files in the target /input directory
 #' list.files(dir)
+#'
+#' # Complicated ASEC example using custom aggregation arguments
+#' dir <- fusionInput(donor = "ASEC_2019",
+#'                    recipient = "ACS_2019",
+#'                    respondent = "household",
+#'                    fuse = c("heatsub", "heatval", "kidcneed", "hipval", "spmwic", "spmmort"),
+#'                    agg_adj = list(
+#'                       hipval = ~if.else(duplicated(asec_2019_hid), 0, hipval),
+#'                       kidcneed = ~if.else(kidcneed == "NIU: Over 14", "No", kidcneed),
+#'                       spmwic = ~if.else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic)
+#'                    ),
+#'                    agg_fun = list(
+#'                       spmwic = "mean",
+#'                       kidcneed = "mode"
+#'                    ))
 #'
 #' @export
 
@@ -80,13 +108,32 @@
 # CEI
 # donor = "CEI_2015-2019"
 # recipient = "ACS_2019"
-# ncores = 2
 # respondent = "household"
 # fuse = c("cloftw", "jwlbg", "educ")  # Or fuse = NULL for full processing
 # #fuse = NULL
 # force <- c("fincbtxm", "ref_race", "educ_ref", "fam_size", "cutenure", "division")
 # note = NULL
 # upload = FALSE
+# ncores = 2
+
+# ASEC TEST
+# donor = "ASEC_2019"
+# recipient = "ACS_2019"
+# respondent = "household"
+# fuse = c("heatsub", "heatval", "kidcneed", "hipval", "spmwic", "spmmort")
+# agg_adj = list(
+#   kidcneed = ~if.else(kidcneed == "NIU: Over 14", "No", kidcneed),
+#   spmwic = ~if.else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic),
+#   hipval = ~if.else(duplicated(asec_2019_hid), 0, hipval)
+# )
+# agg_fun = list(
+#   spmwic = "mean",
+#   kidcneed = "mode"
+# )
+# test_mode = TRUE
+# note = NULL
+# upload = FALSE
+# ncores = 3
 
 #-----
 
@@ -96,6 +143,8 @@ fusionInput <- function(donor,
                         fuse = NULL,
                         force = NULL,
                         note = NULL,
+                        agg_fun = NULL,
+                        agg_adj = NULL,
                         test_mode = TRUE,
                         ncores = getOption("fusionData.cores")) {
 
@@ -117,6 +166,8 @@ fusionInput <- function(donor,
     is.null(force) | is.character(force)
     is.null(note) | is.character(note)
     is.logical(test_mode)
+    all(names(agg_adj) %in% fuse) & all(sapply(agg_adj, inherits, what = "formula"))
+    all(names(agg_fun) %in% fuse) & all(sapply(agg_fun, function(x) is.function(get(x))))
     ncores > 0 & ncores %% 1 == 0
   })
 
@@ -218,10 +269,14 @@ fusionInput <- function(donor,
 
   # Specify fusion variables to be retained in harmonization results
   #if (is.null(fuse)) stop("'fuse' is not specified or constructed on-the-fly")
-  data <- fusionData::assemble(prep,
+  data <- fusionData::assemble(x = prep,
                                fusion.variables = unlist(fuse),
                                spatial.datasets = "all",
-                               window = 2)
+                               window = 2,
+                               pca = NULL,
+                               replicates = FALSE,
+                               agg_adj = agg_adj,
+                               agg_fun = agg_fun)
 
   # If NULL, update 'fuse' to reflect variables returned by 'assemble'
   if (is.null(fuse)) fuse <- attr(data, "fusion.vars")
