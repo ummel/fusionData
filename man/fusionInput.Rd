@@ -11,6 +11,8 @@ fusionInput(
   fuse = NULL,
   force = NULL,
   note = NULL,
+  agg_fun = NULL,
+  agg_adj = NULL,
   test_mode = TRUE,
   ncores = getOption("fusionData.cores")
 )
@@ -22,11 +24,15 @@ fusionInput(
 
 \item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
 
-\item{fuse}{Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process.}
+\item{fuse}{Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process (it is preferable to specify explicitly, though).}
 
 \item{force}{Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.}
 
 \item{note}{Character. Optional note supplied by user. Inserted in the log file for reference.}
+
+\item{agg_fun}{List. Optional override of default aggregation function for person-level \code{fuse} variables when \code{respondent = "household"}. Passed to \code{\link{assemble}} internally. See Details.}
+
+\item{agg_adj}{List. Optional pre-aggregation adjustment code to apply to person-level \code{fuse} variables when \code{respondent = "household"}. Passed to \code{\link{assemble}} internally. See Details.}
 
 \item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).}
 
@@ -37,7 +43,8 @@ Invisibly returns path to local directory where files were saved. Messages print
 }
 \description{
 Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Optionally uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
-\cr\cr!!! Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
+
+NOTE: Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
 }
 \details{
 The function checks arguments and determines the file path to the appropriate \code{/input} directory (creating it if necessary), based on \code{donor}, \code{recipient}, \code{respondent}, and \code{test_mode}. It then executes the following steps:
@@ -56,6 +63,16 @@ The function checks arguments and determines the file path to the appropriate \c
 }
 
 The user is prompted for console input (including asking about GDrive upload) \emph{only} if \code{\link{interactive}} is \code{TRUE}. Otherwise, the steps proceed without user input.
+
+If \code{donor} refers to a survey with both household- and person-level microdata \emph{and} \code{respondent = "household"} \emph{and} \code{fuse} includes person-level variables, then we have a situation where person-level fusion variables need to be aggregated to household-level prior to fusion.
+This is done automatically within \code{\link{assemble}}. In this scenario, person-level fusion variables are aggregated based on their class.
+By default, numeric variables return the household total (sum), unordered factors return the level of the household's reference person, and ordered factors return the household's maximum level.
+
+The \code{agg_fun} argument can be used to override the default aggregation function for specific fusion variables. It can reference any function that takes a vector and returns a single value and includes a 'na.rm' argument. Two special, package-specific functions are also available, "ref" and "mode", that return the reference person value and modal value, respectively. These functions are comparatively slow, especially "mode". See Examples.
+
+The \code{agg_adj} argument can be used to adjust/modify a person-level fusion variable prior to aggregation. This may be necessary if the variable is defined or measured in a way that doe not allow for straightforward aggregation to the household level. \code{agg_adj} supplies named formulas to an internal \code{\link[dplyr]{mutate}} call, allowing for complex modifications. See Examples.
+
+Note in the Examples the use of the convenience utility function \code{if.else()}. It wraps \code{\link[dplyr]{if_else}} and can be used identically but preserves factor levels and ordering in the result if possible.
 }
 \examples{
 # Since 'test_mode = TRUE' by default, this will affect files in local /fusion_ directory
@@ -68,5 +85,20 @@ dir <- fusionInput(donor = "RECS_2015",
 
 # List files in the target /input directory
 list.files(dir)
+
+# Complicated ASEC example using custom aggregation arguments
+dir <- fusionInput(donor = "ASEC_2019",
+                   recipient = "ACS_2019",
+                   respondent = "household",
+                   fuse = c("heatsub", "heatval", "kidcneed", "hipval", "spmwic", "spmmort"),
+                   agg_adj = list(
+                      hipval = ~if.else(duplicated(asec_2019_hid), 0, hipval),
+                      kidcneed = ~if.else(kidcneed == "NIU: Over 14", "No", kidcneed),
+                      spmwic = ~if.else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic)
+                   ),
+                   agg_fun = list(
+                      spmwic = "mean",
+                      kidcneed = "mode"
+                   ))
 
 }

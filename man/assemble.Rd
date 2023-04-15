@@ -10,7 +10,9 @@ assemble(
   spatial.datasets = "all",
   window = 2,
   pca = NULL,
-  replicates = FALSE
+  replicates = FALSE,
+  agg_fun = NULL,
+  agg_adj = NULL
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ assemble(
 \item{pca}{Numeric. Controls whether/how PCA is used to reduce dimensionality of spatial variables. Default (NULL) is no PCA. If non-NULL, should be a numeric vector of length two; e.g. \code{pca = c(50, 0.95)}. First number is the maximum number of components to return; second number is target proportion of variance explained. See Details.}
 
 \item{replicates}{Logical. Should replicate observation weights be included, if available? Defaults to FALSE.}
+
+\item{agg_fun}{List. See \code{\link{fusionInput}}.}
+
+\item{agg_adj}{List. See \code{\link{fusionInput}}.}
 }
 \value{
 A list of length two containing donor and recipient microdata to pass to \code{\link[fusionModel]{train}} and \code{\link[fusionModel]{fuse}}.
