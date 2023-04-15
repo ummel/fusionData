@@ -33,7 +33,7 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
     return(x1)
   } else {
     x2 <- intFUN(scale(x), x)
-    if (length(unique(x1)) <= length(unique(x2))) return(x1) else return(x2)
+    if (uniqueN(x1) <= uniqueN(x2)) return(x1) else return(x2)
   }
 
 }
@@ -107,7 +107,7 @@ betterAbbreviate <- function(x) {
 #-------------------
 
 # Function returns TRUE if 'x' has only one non-NA value
-novary <- function(x) length(unique(na.omit(x))) == 1
+novary <- function(x) uniqueN(na.omit(x)) == 1
 
 #-------------------
 
@@ -200,14 +200,14 @@ safeCharacters <- function(x) {
 # test2 <- convert2scaled(acs$mortgage, acs$weight)
 
 convert2scaled <- function(x, w, min.unique = 100, precision = 3) {
-  if (is.numeric(x) & length(unique(x)) >= min.unique) {
+  if (is.numeric(x) & uniqueN(x) >= min.unique) {
     i <- x != 0
     x0 <- x[i]
-    xmed <- weightedQuantile(x0, w[i], p = 0.5)
-    xmad <- 1.4826 * weightedQuantile(abs(x0 - xmed), w[i], p = 0.5)
+    xmed <- matrixStats::weightedMedian(x0, w[i])
+    xmad <- 1.4826 * matrixStats::weightedMedian(abs(x0 - xmed), w[i])
     x0 <- (x0 - xmed) / xmad
     x[i] <- x0 + (xmed / xmad)
-    xmed <- weightedQuantile(x[i], w[i], p = 0.5)
+    xmed <- matrixStats::weightedMedian(x[i], w[i])
     if (xmed != 0) x <- x / xmed
     x <- signif(round(x, precision), precision)
   }
@@ -221,7 +221,7 @@ numFormat <- function(x, w = NULL) {
   if (is.null(w)) w <- rep(1, length(x))
   paste(
     c("Min:", "Median:", " Mean:", "Max:"),
-    cleanNumeric(c(min(x, na.rm = TRUE), weightedQuantile(x, w, p = 0.5), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
+    cleanNumeric(c(min(x, na.rm = TRUE), matrixStats::weightedMedian(x, w), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
     collapse = ", ")
 }
 
@@ -380,4 +380,29 @@ match.call.defaults <- function(..., exclude = NULL) {
 # Return normalized path using the '.Platform$file.sep' separator
 full.path <- function(path, mustWork = NA) {
   normalizePath(path = path, winslash = .Platform$file.sep, mustWork = mustWork)
+}
+
+#-------------------
+
+# Modified version of dplyr::if_else() that preserves original factor levels of 'yes' or 'no' in the output, if possible
+# This can be used as a drop-in replacement for ifelse() or if_else() when factor level preservation is needed
+# Note that the 'yes' levels and ordering are prioritized over 'no' when both are consistent with the returned values
+
+# Examples of factor preservation use case
+# x <- factor(sample(letters[1:2], 20, replace = TRUE))
+# levels(x)
+# test <- if.else(x == "a", "b", x)
+# levels(test)
+# test <- if.else(x == "a", NA, x)
+
+if.else <- function(test, yes, no) {
+  out <- dplyr::if_else(test, yes, no)
+  yl <- levels(yes)
+  nl <- levels(no)
+  if (length(yl) | length(nl)) {
+    ou <- na.omit(unique(out))
+    if (all(ou %in% nl)) out <- factor(out, levels = intersect(nl, ou), ordered = is.ordered(no))
+    if (all(ou %in% yl)) out <- factor(out, levels = intersect(yl, ou), ordered = is.ordered(yes))
+  }
+  return(out)
 }
