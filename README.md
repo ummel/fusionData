@@ -63,15 +63,15 @@ Although fusionData is structured (and loadable) as a *R* package, it
 also acts as a code and data *repository* that is shared and
 continuously modified by authorized users. fusionData grows over time as
 new surveys and spatial datasets – and the code needed to process and
-manipulate them – are added. fusionData is *not public*.
+manipulate them – are added.
 
 Now that the shared Github repository has been cloned to your local
 drive (in a `/fusionData` project directory), we can install the package
 locally and load it. This step will install any required package
 dependencies and may take awhile. You will be redirected to a browser
 window to enter credentials for the Google Drive account storing
-fusionData’s remote files. The username and password are provided
-separately.
+fusionData’s remote files. The password is provided separately for
+approved users.
 
 ``` r
 # Do initial local install of the fusionData package
@@ -527,9 +527,6 @@ This will open the app in a browser window. The tool allows the
 sorted and searched. A user should consult the universal dictionary
 after initial ingestion of a new survey, because it is an effective way
 to identify variables that need additional editing.
-
-We may eventually make the app public so that potential fusionACS users
-can browse the universe of available fusion variables.
 
 ## Harmonize variables
 
