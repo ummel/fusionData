@@ -9,7 +9,7 @@ Authors@R: c(
     person(given = "Miguel", family = "Poblete Cazenave", role = "ctb"),
     person(given = "Steven", family = "Herrera Tenorio", role = "ctb"))
 Description: Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.
-License: proprietary
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
