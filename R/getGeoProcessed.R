@@ -16,23 +16,6 @@
 
 getGeoProcessed <- function(dataset = "essential") {
 
-  # See: vignette("non-interactive-auth") in gargle package
-  # https://gargle.r-lib.org/articles/get-api-credentials.html
-  # message("You may need to authorize the 'googledrive' package via your browser")
-  # message("Password: fusethis!")
-  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
-
-  # 2022-07-19: Run this once to save the token
-  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
-  # token <- googledrive::drive_token()
-  # save(token, file = "data/token.rda")
-
-  # Authenticate with locally-stored token
-  load("data/token.rda")
-  googledrive::drive_auth(token = token)
-
-  #-----
-
   # Identify files to be downloaded
 
   # Identify the "essential" files first, if necessary

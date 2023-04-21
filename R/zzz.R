@@ -34,16 +34,6 @@ NULL
   # If in interactive mode, ask user to authenticate in browser
   if (interactive()) googledrive::drive_auth(email = "fusionacsdata@gmail.com")
 
-  # Authenticate 'fusionACSdata' GDrive access using locally-stored token
-  # load("data/token.rda")
-  # googledrive::drive_deauth()
-  # googledrive::drive_auth(token = token)
-
-  # NOTE: To generate/update the token, run this once in console
-  # googledrive::drive_auth(email = "fusionacsdata@gmail.com")
-  # token <- googledrive::drive_token()
-  # save(token, file = "data/token.rda")
-
   # Print package information to console
   packageStartupMessage("fusionData v", utils::packageVersion("fusionData"), " | https://github.com/ummel/fusionData")
 
