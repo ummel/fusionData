@@ -83,7 +83,7 @@ dir <- fusionInput(donor = "RECS_2015",
                    force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division"),
                    note = "Hello world. Reminder: running in test mode by default.")
 
-# List files in the target /input directory
+# List files in the /input directory
 list.files(dir)
 
 # Complicated ASEC example using custom aggregation arguments

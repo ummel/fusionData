@@ -52,7 +52,7 @@
 #'                    force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division"),
 #'                    note = "Hello world. Reminder: running in test mode by default.")
 #'
-#' # List files in the target /input directory
+#' # List files in the /input directory
 #' list.files(dir)
 #'
 #' # Complicated ASEC example using custom aggregation arguments
@@ -468,24 +468,20 @@ fusionInput <- function(donor,
   # Determine fusion order and subset of 'pred.vars' to use with each fusion variable/block
   n0 <- nrow(data[[1]])
   pfrac <- min(1, ifelse(test_mode, 10e3, max(50e3, n0 * 0.1)) / n0)
-  prep <- fusionModel::prepXY(data = data[[1]],
-                              y = fuse,
-                              x = pred.vars,
-                              weight = "weight",
-                              xforce = xforce,
-                              fraction = pfrac,
-                              cor_thresh = 0.025,
-                              lasso_thresh = 0.975,
-                              xmax = 100,
-                              cores = ncores)
-
-  # Save output from prepXY()
-  # saveRDS(prep, file = file.path(td, paste(donor, acs.vintage, rid, "prep.rds", sep = "_")))
-  # cat("Results of prepXY() saved to temporary directory\n")
+  prep.xy <- fusionModel::prepXY(data = data[[1]],
+                                 y = fuse,
+                                 x = pred.vars,
+                                 weight = "weight",
+                                 cor_thresh = 0.025,
+                                 lasso_thresh = 0.975,
+                                 xmax = 100,
+                                 xforce = xforce,
+                                 fraction = pfrac,
+                                 cores = ncores)
 
   # Save output from prepXY()
   xfile <- paste(stub, "prep.rds", sep = "_")
-  saveRDS(prep, file = xfile)
+  saveRDS(prep.xy, file = xfile)
   fsize <- signif(file.size(xfile) / 1e6, 3)
   cat("\nResults of prepXY() saved to:", paste0(basename(xfile), " (", fsize, " MB)"), "\n")
 
@@ -493,8 +489,8 @@ fusionInput <- function(donor,
 
   cat("\n|=== Write training and prediction datasets to disk ===|\n\n")
 
-  # Update 'pred.vars' to the subset of predictors retained in 'prep'
-  pred.vars <- attr(prep, "xpredictors")
+  # Update 'pred.vars' to the subset of predictors retained in 'prep.xy'
+  pred.vars <- attr(prep.xy, "xpredictors")
 
   # Save training data to disk
   cat("Writing training dataset...\n")
@@ -503,7 +499,7 @@ fusionInput <- function(donor,
   if (test_mode) data[[1]] <- slice(data[[1]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
 
   data[[1]] %>%
-    select(one_of(c("weight", unlist(prep$y), pred.vars))) %>%
+    select(one_of(c("weight", unlist(prep.xy$y), pred.vars))) %>%
     fst::write_fst(path = tfile, compress = 100)
 
   fsize <- signif(file.size(tfile) / 1e6, 3)
