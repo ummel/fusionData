@@ -22,7 +22,7 @@ NULL
 
 .onLoad <- function (libname, pkgname) {
 
-  # Prevent styler cahce message; See ?styler::caching
+  # Prevent styler cache message; See ?styler::caching
   options(styler.cache_root = "styler")
 
   # Create default option value for number of cores
