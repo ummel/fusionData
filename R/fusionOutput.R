@@ -42,7 +42,7 @@
 #' list.files(out)
 #'
 #' @export
-# @noRd # For copy in fusionModel package
+# @noRd
 
 #-----
 
@@ -229,8 +229,13 @@ fusionOutput <- function(input,
                                  x = prep$x,
                                  fsn = paste0(stub, "model.fsn"),
                                  weight = "weight",
-                                 cores = ncores,
+                                 nfolds = 5,
+                                 nquantiles = 3,
+                                 nclusters = 2000,
+                                 krange = c(10, 500),
                                  hyper = hyper.params,
+                                 fork = fork,
+                                 cores = ncores,
                                  ...)
 
   # If train() was forked, reset number of threads allowed in data.table and fst
