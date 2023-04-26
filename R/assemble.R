@@ -204,7 +204,7 @@ assemble <- function(x,
       if (v %in% names(agg_fun)) f <- agg_fun[[v]]
 
       # Return expression to be evaluated
-      paste0(v, " = ", f, "(", v, ", na.rm = T)")
+      paste0(v, " = ", f, "(", v, ")")
     })
 
     # Report the aggregation calls to console

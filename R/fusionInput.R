@@ -73,36 +73,17 @@
 #' @export
 
 #---------------------------
+
 # TESTING
 
 # RECS
-# fusionInput(
-#   donor = "RECS_2015",
-#   recipient = "ACS_2015",
-#   ncores = 2,
-#   respondent = "household",
-#   fuse = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp",
-#                 "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma'),
-#   force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division")
-# )
-
-# CEI
-# fusionInput(
-#   donor = "CEI_2015-2019",
-#   recipient = "ACS_2019",
-#   ncores = 2,
-#   respondent = "household",
-#   fuse = c("cloftw", "jwlbg", "educ"),  # Or fuse = NULL for full processing
-#   force = c("fincbtxm", "ref_race", "educ_ref", "fam_size", "cutenure", "division")
-# )
-
-# RECS
-# donor = "RECS_2015"
-# recipient = "ACS_2015"
+# donor = "RECS_2015",
+# recipient = "ACS_2015",
+# respondent = "household",
+# note = NULL
+# upload = FALSE
 # ncores = 2
-# respondent = "household"
-# fuse = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp",
-#          "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma')
+# fuse = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp", "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma'),
 # force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division")
 #
 # CEI
@@ -110,30 +91,29 @@
 # recipient = "ACS_2019"
 # respondent = "household"
 # fuse = c("cloftw", "jwlbg", "educ")  # Or fuse = NULL for full processing
-# #fuse = NULL
-# force <- c("fincbtxm", "ref_race", "educ_ref", "fam_size", "cutenure", "division")
+# force = c("fincbtxm", "ref_race", "educ_ref", "fam_size", "cutenure", "division")
 # note = NULL
 # upload = FALSE
 # ncores = 2
 
 # ASEC TEST
+# test_mode = TRUE
 # donor = "ASEC_2019"
 # recipient = "ACS_2019"
 # respondent = "household"
-# fuse = c("heatsub", "heatval", "kidcneed", "hipval", "spmwic", "spmmort")
+# fuse = c("heatsub", "heatval", "kidcneed", "hipval", "spmwic", "spmmort", "fedretir")
+# force = NULL
+# note = NULL
+# ncores = getOption("fusionData.cores")
 # agg_adj = list(
+#   hipval = ~if.else(duplicated(asec_2019_hid), 0, hipval),
 #   kidcneed = ~if.else(kidcneed == "NIU: Over 14", "No", kidcneed),
-#   spmwic = ~if.else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic),
-#   hipval = ~if.else(duplicated(asec_2019_hid), 0, hipval)
+#   spmwic = ~if.else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic)
 # )
 # agg_fun = list(
 #   spmwic = "mean",
 #   kidcneed = "mode"
 # )
-# test_mode = TRUE
-# note = NULL
-# upload = FALSE
-# ncores = 3
 
 #-----
 
@@ -268,7 +248,6 @@ fusionInput <- function(donor,
   cat("\n|=== assemble() microdata ===|\n\n")
 
   # Specify fusion variables to be retained in harmonization results
-  #if (is.null(fuse)) stop("'fuse' is not specified or constructed on-the-fly")
   data <- fusionData::assemble(x = prep,
                                fusion.variables = unlist(fuse),
                                spatial.datasets = "all",
