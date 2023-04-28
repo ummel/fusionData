@@ -299,21 +299,22 @@ levels = levels(empstat)
     comment = "",
     modified = "2023-01-06 15:55:07"),
 
-  ftype__sfr = list(
-    ASEC = list(
-      groups = c(1, 1, 2, 2, 1),
-      levels = c("Primary family", "Nonfamily householder", "Related subfamily", "Unrelated subfamily", "Secondary individual"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 2, 2, 2, 2, 2),
-      levels = c("Not in a subfamily", "Husband / Wife no children", "Husband / Wife with children", "Parent in a one-parent subfamily", "Child in a married-couple subfamily", "Child in a mother-child subfamily", "Child in a father-child subfamily"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = FALSE,
-    comment = "Non-family householders and secondary individuals are not part of Census defined subfamilies",
-    modified = "2022-09-13 10:01:02"),
+  # this has a very low similarity score -> not measuring same thing so don't use
+  # ftype__sfr = list(
+  #   ASEC = list(
+  #     groups = c(1, 1, 2, 2, 1),
+  #     levels = c("Primary family", "Nonfamily householder", "Related subfamily", "Unrelated subfamily", "Secondary individual"),
+  #     breaks = "",
+  #     adj = ""),
+  #   ACS = list(
+  #     groups = c(1, 2, 2, 2, 2, 2, 2),
+  #     levels = c("Not in a subfamily", "Husband / Wife no children", "Husband / Wife with children", "Parent in a one-parent subfamily", "Child in a married-couple subfamily", "Child in a mother-child subfamily", "Child in a father-child subfamily"),
+  #     breaks = "",
+  #     adj = "",
+  #     agg = ""),
+  #   ordered = FALSE,
+  #   comment = "Non-family householders and secondary individuals are not part of Census defined subfamilies",
+  #   modified = "2022-09-13 10:01:02"),
 
   fullpart__wkhp = list(
     ASEC = list(
@@ -928,7 +929,7 @@ levels = c(\"NIU: Less than 16 or older than 55\", levels(sch)
       adj = ""),
     ACS = list(
       groups = c(1, 2, 11, 11, 3, 11, 5, 11, 11, 7, 11, 9, 4, 6, 8, 10),
-      levels = c("Never served in military", "Gulf War: 9/2001 or later", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Gulf War: 8/1990 - 8/2001", "Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Vietnam Era", "Vietnam Era and Korean War", "Vietnam Era, Korean War, and WWII", "Korean War", "Korean War and WWII", "WWII", "Between Gulf War and Vietnam Era only", "Between Vietnam Era and Korean War only", "Between Korean War and World War II only", "Pre-WWII only"),
+      levels = c("Never served in the military", "Gulf War: 9/2001 or later", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Gulf War: 8/1990 - 8/2001", "Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Vietnam Era", "Vietnam Era and Korean War", "Vietnam Era, Korean War, and WWII", "Korean War", "Korean War and WWII", "WWII", "Between Gulf War and Vietnam Era only", "Between Vietnam Era and Korean War only", "Between Korean War and World War II only", "Pre-WWII only"),
       breaks = "",
       adj = "",
       agg = ""),
@@ -944,7 +945,7 @@ levels = c(\"NIU: Less than 16 or older than 55\", levels(sch)
       adj = ""),
     ACS = list(
       groups = c(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-      levels = c("Never served in military", "Gulf War: 9/2001 or later", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Gulf War: 8/1990 - 8/2001", "Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Vietnam Era", "Vietnam Era and Korean War", "Vietnam Era, Korean War, and WWII", "Korean War", "Korean War and WWII", "WWII", "Between Gulf War and Vietnam Era only", "Between Vietnam Era and Korean War only", "Between Korean War and World War II only", "Pre-WWII only"),
+      levels = c("Never served in the military", "Gulf War: 9/2001 or later", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001", "Gulf War: 9/2001 or later and Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Gulf War: 8/1990 - 8/2001", "Gulf War: 8/1990 - 8/2001 and Vietnam Era", "Vietnam Era", "Vietnam Era and Korean War", "Vietnam Era, Korean War, and WWII", "Korean War", "Korean War and WWII", "WWII", "Between Gulf War and Vietnam Era only", "Between Vietnam Era and Korean War only", "Between Korean War and World War II only", "Pre-WWII only"),
       breaks = "",
       adj = "",
       agg = ""),
@@ -980,7 +981,7 @@ levels = levels(wnlwnilf)
       groups = 1:4,
       levels = c("Less than 16 years old", "Within the past 12 months", "1-5 years ago", "Over 5 years ago or never worked"),
       breaks = "",
-      adj = "if_else(agep <= 49, wkl, factor(\"Less than 16 years old\", \nordered = T,
+      adj = "if_else(agep <= 49 & esr == \"Not in labor force\", wkl, factor(\"Less than 16 years old\", \nordered = T,
 levels = levels(wkl)
 )
 )",
