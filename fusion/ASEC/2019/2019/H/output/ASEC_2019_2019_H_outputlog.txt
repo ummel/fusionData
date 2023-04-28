@@ -1,0 +1,264 @@
+2023-04-27 22:09:27 PDT 
+R version 4.2.1 (2022-06-23) 
+Platform: x86_64-pc-linux-gnu 
+fusionData v1.0.3
+fusionModel v2.2.4
+
+fusionOutput(input = input.dir, output = NULL, M = M, note = note, 
+    test_mode = TEST, validation = FALSE, ncores = ncores, margin = 4, 
+    ... = pairlist(fork = T))
+
+fusionOutput() is running in PRODUCTION mode.
+
+User-supplied note:
+ ASEC run 
+
+The input files directory is:
+ /global/scratch/users/heroashman/fusionACS/input 
+
+Result files will be saved to:
+ /global/scratch/users/heroashman/fusionACS/input/fusion/ASEC/2019/2019/H/output 
+
+The local /output directory already exists.
+
+|=== Load training data inputs ===|
+
+Loading training microdata: ASEC_2019_2019_H_train.fst 
+Loading prepXY() results: ASEC_2019_2019_H_prep.rds 
+
+|=== Run fusionModel::train() ===|
+
+Running in 'production' mode using standard hyper-parameter settings:
+$boosting
+[1] "goss"
+
+$num_leaves
+[1] 16 32 64
+
+$min_data_in_leaf
+[1] 69
+
+$num_iterations
+[1] 2000
+
+$bagging_fraction
+[1] 1
+
+$feature_fraction
+[1] 0.8
+
+$learning_rate
+[1] 0.05
+
+$max_depth
+[1] -1
+
+$max_bin
+[1] 255
+
+$min_data_in_bin
+[1] 3
+
+$max_cat_threshold
+[1] 32
+
+Training fusion model
+Missing values imputed for the following 'x' variable(s):
+ acs.sf..b080, acs.sf..b25080, nrel.urdb..rsed 
+55 fusion variables
+268 initial predictor variables
+68301 observations
+Using specified set of predictors for each fusion variable
+Processing 55 training steps in parallel via forking (20 cores)
+Fusion model saved to:
+ /global/scratch/users/heroashman/fusionACS/input/fusion/ASEC/2019/2019/H/output/ASEC_2019_2019_H_model.fsn 
+Total processing time: 13.1 mins 
+
+|=== Fuse onto prediction data ===|
+
+Loading prediction microdata: ASEC_2019_2019_H_predict.fst 
+
+Fusing to ACS microdata (30 implicates)
+55 fusion variables
+268 initial predictor variables
+1276716 observations
+Missing values imputed for the following variable(s):
+ acs.sf..b080, acs.sf..b25080, nrel.urdb..rsed 
+Generating 30 implicates 
+Using OpenMP multithreading within LightGBM (20 cores)
+Fusion step 1 of 55: spmmort
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 2 of 55: spmsnap
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 3 of 55: schllunch
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 4 of 55: spmwkxpns
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 5 of 55: stataxac
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 6 of 55: fica
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 7 of 55: fedtaxac
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 8 of 55: spmftotval
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 9 of 55: spmpov
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 10 of 55: health
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 11 of 55: spmwic
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 12 of 55: pubhous
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 13 of 55: rentsub
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 14 of 55: spmcaphous
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 15 of 55: adjginc
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 16 of 55: filestat
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 17 of 55: incbus
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 18 of 55: spmchsup
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 19 of 55: incfarm
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 20 of 55: inceduc
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 21 of 55: incother
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 22 of 55: incasist
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 23 of 55: incrann
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 24 of 55: incwkcom
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 25 of 55: whyabsnt
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 26 of 55: incchild
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 27 of 55: incunemp
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 28 of 55: spmcapxpns
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 29 of 55: spmchxpns
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 30 of 55: kidcneed
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 31 of 55: incdisab
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 32 of 55: inccapg
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 33 of 55: incvet
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 34 of 55: incdivid
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 35 of 55: incrent
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 36 of 55: incsurv
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 37 of 55: retcont
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 38 of 55: incretir
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 39 of 55: incret1
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 40 of 55: srcret1
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 41 of 55: incret2
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 42 of 55: srcret2
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 43 of 55: incpens
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 44 of 55: srcpen1
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 45 of 55: incpen1
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 46 of 55: incpen2
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 47 of 55: srcpen2
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 48 of 55: incrint1
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 49 of 55: incint
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 50 of 55: incrint2
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 51 of 55: hipval
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 52 of 55: moop
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 53 of 55: spmmedxpns
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 54 of 55: heatval
+-- Predicting LightGBM models
+-- Simulating fused values
+Fusion step 55 of 55: heatsub
+-- Predicting LightGBM models
+-- Simulating fused values
+Writing fusion output to .fsd file 
+Fusion results saved to:
+ /global/scratch/users/heroashman/fusionACS/input/fusion/ASEC/2019/2019/H/output/ASEC_2019_2019_H_fused.fsd 
+Total processing time: 2.69 hours 
+
+|=== fusionOutput() is finished! ===|
+
+Total processing time: 2.91 hours 
+
+Log file saved to:
+ /global/scratch/users/heroashman/fusionACS/input/fusion/ASEC/2019/2019/H/output/ASEC_2019_2019_H_outputlog.txt

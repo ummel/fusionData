@@ -1,0 +1,253 @@
+2023-04-23 14:00:26 PDT 
+R version 4.2.1 (2022-06-23 ucrt) 
+Platform: x86_64-w64-mingw32 
+fusionData v1.0.3
+fusionModel v2.2.3
+
+fusionInput(donor = "ASEC_2019", recipient = "ACS_2019", respondent = "household", 
+    fuse = fuse_vec, force = force_vec, note = "ASEC full run - household", 
+    agg_fun = agg_fun_list, agg_adj = agg_adj_list, test_mode = FALSE, 
+    ncores = 1)
+
+fusionInput() is running in PRODUCTION mode.
+
+User-supplied note:
+ ASEC full run - household 
+
+Result files will be saved to:
+ C:/Users/heroa/Documents/fusionData/fusion/ASEC/2019/2019/H/input 
+
+The local /input directory was created.
+
+|=== Check for custom pre-processing script ===|
+
+None found.
+
+|=== prepare() microdata ===|
+
+Harmonizing ASEC_2019 (donor) microdata at household level
+  |                                                  | 0 % ~calculating    |+                                                 | 2 % ~02s            |++                                                | 3 % ~02s            |+++                                               | 5 % ~03s            |++++                                              | 7 % ~02s            |+++++                                             | 8 % ~04s            |+++++                                             | 10% ~04s            |++++++                                            | 11% ~03s            |+++++++                                           | 13% ~03s            |++++++++                                          | 15% ~04s            |+++++++++                                         | 16% ~04s            |++++++++++                                        | 18% ~04s            |++++++++++                                        | 20% ~04s            |+++++++++++                                       | 21% ~04s            |++++++++++++                                      | 23% ~04s            |+++++++++++++                                     | 25% ~04s            |++++++++++++++                                    | 26% ~05s            |++++++++++++++                                    | 28% ~04s            |+++++++++++++++                                   | 30% ~04s            |++++++++++++++++                                  | 31% ~04s            |+++++++++++++++++                                 | 33% ~04s            |++++++++++++++++++                                | 34% ~03s            |+++++++++++++++++++                               | 36% ~03s            |+++++++++++++++++++                               | 38% ~03s            |++++++++++++++++++++                              | 39% ~03s            |+++++++++++++++++++++                             | 41% ~03s            |++++++++++++++++++++++                            | 43% ~03s            |+++++++++++++++++++++++                           | 44% ~02s            |+++++++++++++++++++++++                           | 46% ~02s            |++++++++++++++++++++++++                          | 48% ~02s            |+++++++++++++++++++++++++                         | 49% ~02s            |++++++++++++++++++++++++++                        | 51% ~02s            |+++++++++++++++++++++++++++                       | 52% ~02s            |++++++++++++++++++++++++++++                      | 54% ~02s            |++++++++++++++++++++++++++++                      | 56% ~02s            |+++++++++++++++++++++++++++++                     | 57% ~02s            |++++++++++++++++++++++++++++++                    | 59% ~02s            |+++++++++++++++++++++++++++++++                   | 61% ~01s            |++++++++++++++++++++++++++++++++                  | 62% ~01s            |++++++++++++++++++++++++++++++++                  | 64% ~01s            |+++++++++++++++++++++++++++++++++                 | 66% ~01s            |++++++++++++++++++++++++++++++++++                | 67% ~01s            |+++++++++++++++++++++++++++++++++++               | 69% ~01s            |++++++++++++++++++++++++++++++++++++              | 70% ~01s            |+++++++++++++++++++++++++++++++++++++             | 72% ~01s            |+++++++++++++++++++++++++++++++++++++             | 74% ~01s            |++++++++++++++++++++++++++++++++++++++            | 75% ~01s            |+++++++++++++++++++++++++++++++++++++++           | 77% ~01s            |++++++++++++++++++++++++++++++++++++++++          | 79% ~01s            |+++++++++++++++++++++++++++++++++++++++++         | 80% ~01s            |+++++++++++++++++++++++++++++++++++++++++         | 82% ~01s            |++++++++++++++++++++++++++++++++++++++++++        | 84% ~01s            |+++++++++++++++++++++++++++++++++++++++++++       | 85% ~01s            |++++++++++++++++++++++++++++++++++++++++++++      | 87% ~01s            |+++++++++++++++++++++++++++++++++++++++++++++     | 89% ~00s            |++++++++++++++++++++++++++++++++++++++++++++++    | 90% ~00s            |++++++++++++++++++++++++++++++++++++++++++++++    | 92% ~00s            |+++++++++++++++++++++++++++++++++++++++++++++++   | 93% ~00s            |++++++++++++++++++++++++++++++++++++++++++++++++  | 95% ~00s            |+++++++++++++++++++++++++++++++++++++++++++++++++ | 97% ~00s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 98% ~00s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=04s  
+Harmonizing ACS_2019 (recipient) microdata at household level
+  |                                                  | 0 % ~calculating    |+                                                 | 2 % ~50s            |++                                                | 3 % ~36s            |+++                                               | 5 % ~30s            |++++                                              | 7 % ~01m 21s        |+++++                                             | 8 % ~01m 46s        |+++++                                             | 10% ~01m 31s        |++++++                                            | 11% ~01m 20s        |+++++++                                           | 13% ~01m 16s        |++++++++                                          | 15% ~01m 27s        |+++++++++                                         | 16% ~01m 36s        |++++++++++                                        | 18% ~01m 27s        |++++++++++                                        | 20% ~01m 19s        |+++++++++++                                       | 21% ~01m 24s        |++++++++++++                                      | 23% ~01m 18s        |+++++++++++++                                     | 25% ~01m 24s        |++++++++++++++                                    | 26% ~01m 27s        |++++++++++++++                                    | 28% ~01m 24s        |+++++++++++++++                                   | 30% ~01m 18s        |++++++++++++++++                                  | 31% ~01m 20s        |+++++++++++++++++                                 | 33% ~01m 15s        |++++++++++++++++++                                | 34% ~01m 10s        |+++++++++++++++++++                               | 36% ~01m 08s        |+++++++++++++++++++                               | 38% ~01m 04s        |++++++++++++++++++++                              | 39% ~01m 01s        |+++++++++++++++++++++                             | 41% ~01m 03s        |++++++++++++++++++++++                            | 43% ~59s            |+++++++++++++++++++++++                           | 44% ~55s            |+++++++++++++++++++++++                           | 46% ~52s            |++++++++++++++++++++++++                          | 48% ~49s            |+++++++++++++++++++++++++                         | 49% ~46s            |++++++++++++++++++++++++++                        | 51% ~43s            |+++++++++++++++++++++++++++                       | 52% ~40s            |++++++++++++++++++++++++++++                      | 54% ~38s            |++++++++++++++++++++++++++++                      | 56% ~36s            |+++++++++++++++++++++++++++++                     | 57% ~37s            |++++++++++++++++++++++++++++++                    | 59% ~35s            |+++++++++++++++++++++++++++++++                   | 61% ~35s            |++++++++++++++++++++++++++++++++                  | 62% ~35s            |++++++++++++++++++++++++++++++++                  | 64% ~35s            |+++++++++++++++++++++++++++++++++                 | 66% ~33s            |++++++++++++++++++++++++++++++++++                | 67% ~31s            |+++++++++++++++++++++++++++++++++++               | 69% ~29s            |++++++++++++++++++++++++++++++++++++              | 70% ~28s            |+++++++++++++++++++++++++++++++++++++             | 72% ~26s            |+++++++++++++++++++++++++++++++++++++             | 74% ~25s            |++++++++++++++++++++++++++++++++++++++            | 75% ~23s            |+++++++++++++++++++++++++++++++++++++++           | 77% ~21s            |++++++++++++++++++++++++++++++++++++++++          | 79% ~20s            |+++++++++++++++++++++++++++++++++++++++++         | 80% ~19s            |+++++++++++++++++++++++++++++++++++++++++         | 82% ~18s            |++++++++++++++++++++++++++++++++++++++++++        | 84% ~16s            |+++++++++++++++++++++++++++++++++++++++++++       | 85% ~14s            |++++++++++++++++++++++++++++++++++++++++++++      | 87% ~13s            |+++++++++++++++++++++++++++++++++++++++++++++     | 89% ~11s            |++++++++++++++++++++++++++++++++++++++++++++++    | 90% ~09s            |++++++++++++++++++++++++++++++++++++++++++++++    | 92% ~08s            |+++++++++++++++++++++++++++++++++++++++++++++++   | 93% ~07s            |++++++++++++++++++++++++++++++++++++++++++++++++  | 95% ~05s            |+++++++++++++++++++++++++++++++++++++++++++++++++ | 97% ~03s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 98% ~02s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=01m 41s
+Identified 329 geographic intersections in the donor...
+Imputing PUMA for donor observations...
+  |                                                  | 0 % ~calculating    |+                                                 | 1 % ~05m 60s        |++                                                | 2 % ~05m 31s        |++                                                | 4 % ~06m 18s        |+++                                               | 5 % ~05m 18s        |++++                                              | 6 % ~06m 39s        |++++                                              | 7 % ~06m 20s        |+++++                                             | 8 % ~05m 40s        |+++++                                             | 10% ~05m 03s        |++++++                                            | 11% ~04m 38s        |+++++++                                           | 12% ~05m 05s        |+++++++                                           | 13% ~04m 49s        |++++++++                                          | 14% ~04m 35s        |++++++++                                          | 16% ~04m 27s        |+++++++++                                         | 17% ~04m 41s        |++++++++++                                        | 18% ~04m 22s        |++++++++++                                        | 19% ~04m 10s        |+++++++++++                                       | 20% ~04m 03s        |+++++++++++                                       | 22% ~03m 51s        |++++++++++++                                      | 23% ~03m 45s        |+++++++++++++                                     | 24% ~03m 33s        |+++++++++++++                                     | 25% ~03m 22s        |++++++++++++++                                    | 27% ~03m 26s        |++++++++++++++                                    | 28% ~03m 36s        |+++++++++++++++                                   | 29% ~03m 25s        |++++++++++++++++                                  | 30% ~03m 32s        |++++++++++++++++                                  | 31% ~03m 22s        |+++++++++++++++++                                 | 33% ~03m 18s        |+++++++++++++++++                                 | 34% ~03m 16s        |++++++++++++++++++                                | 35% ~03m 08s        |+++++++++++++++++++                               | 36% ~03m 02s        |+++++++++++++++++++                               | 37% ~02m 55s        |++++++++++++++++++++                              | 39% ~02m 55s        |++++++++++++++++++++                              | 40% ~02m 48s        |+++++++++++++++++++++                             | 41% ~02m 41s        |++++++++++++++++++++++                            | 42% ~02m 36s        |++++++++++++++++++++++                            | 43% ~02m 31s        |+++++++++++++++++++++++                           | 45% ~02m 27s        |+++++++++++++++++++++++                           | 46% ~02m 21s        |++++++++++++++++++++++++                          | 47% ~02m 15s        |+++++++++++++++++++++++++                         | 48% ~02m 10s        |+++++++++++++++++++++++++                         | 49% ~02m 06s        |++++++++++++++++++++++++++                        | 51% ~02m 02s        |++++++++++++++++++++++++++                        | 52% ~02m 06s        |+++++++++++++++++++++++++++                       | 53% ~02m 03s        |++++++++++++++++++++++++++++                      | 54% ~02m 02s        |++++++++++++++++++++++++++++                      | 55% ~02m 01s        |+++++++++++++++++++++++++++++                     | 57% ~01m 57s        |+++++++++++++++++++++++++++++                     | 58% ~01m 52s        |++++++++++++++++++++++++++++++                    | 59% ~01m 48s        |+++++++++++++++++++++++++++++++                   | 60% ~01m 43s        |+++++++++++++++++++++++++++++++                   | 61% ~01m 40s        |++++++++++++++++++++++++++++++++                  | 63% ~01m 37s        |++++++++++++++++++++++++++++++++                  | 64% ~01m 33s        |+++++++++++++++++++++++++++++++++                 | 65% ~01m 30s        |++++++++++++++++++++++++++++++++++                | 66% ~01m 26s        |++++++++++++++++++++++++++++++++++                | 67% ~01m 23s        |+++++++++++++++++++++++++++++++++++               | 69% ~01m 19s        |+++++++++++++++++++++++++++++++++++               | 70% ~01m 15s        |++++++++++++++++++++++++++++++++++++              | 71% ~01m 14s        |+++++++++++++++++++++++++++++++++++++             | 72% ~01m 10s        |+++++++++++++++++++++++++++++++++++++             | 73% ~01m 06s        |++++++++++++++++++++++++++++++++++++++            | 75% ~01m 05s        |++++++++++++++++++++++++++++++++++++++            | 76% ~01m 02s        |+++++++++++++++++++++++++++++++++++++++           | 77% ~58s            |++++++++++++++++++++++++++++++++++++++++          | 78% ~55s            |++++++++++++++++++++++++++++++++++++++++          | 80% ~51s            |+++++++++++++++++++++++++++++++++++++++++         | 81% ~48s            |+++++++++++++++++++++++++++++++++++++++++         | 82% ~44s            |++++++++++++++++++++++++++++++++++++++++++        | 83% ~41s            |+++++++++++++++++++++++++++++++++++++++++++       | 84% ~39s            |+++++++++++++++++++++++++++++++++++++++++++       | 86% ~36s            |++++++++++++++++++++++++++++++++++++++++++++      | 87% ~33s            |++++++++++++++++++++++++++++++++++++++++++++      | 88% ~30s            |+++++++++++++++++++++++++++++++++++++++++++++     | 89% ~27s            |++++++++++++++++++++++++++++++++++++++++++++++    | 90% ~25s            |++++++++++++++++++++++++++++++++++++++++++++++    | 92% ~22s            |+++++++++++++++++++++++++++++++++++++++++++++++   | 93% ~19s            |+++++++++++++++++++++++++++++++++++++++++++++++   | 94% ~16s            |++++++++++++++++++++++++++++++++++++++++++++++++  | 95% ~12s            |+++++++++++++++++++++++++++++++++++++++++++++++++ | 96% ~09s            |+++++++++++++++++++++++++++++++++++++++++++++++++ | 98% ~06s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 99% ~03s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=04m 21s
+Assigning location variables to recipient observations...
+
+|=== assemble() microdata ===|
+
+Identifying donor fusion variables...
+WARNING: Some fusion variables were used to construct harmonized predictors:
+ incasist, incbus, incchild, incdisab, incdivid, inceduc, incfarm, incint, incpens, incrann, incrent, incret1, incret2, incsurv, incother, incunemp, incvet, incwkcom 
+WARNING: Removed harmonized predictors that conflict with fusion variables:
+ incasist__oip, incbus__semp, incdivid__intp, incret1__retp 
+Including the following fusion variables:
+ adjginc, fedretir, fedtaxac, fica, filestat, health, heatsub, heatval, hipval, incasist, incbus, inccapg, incchild, incdisab, incdivid, inceduc, incfarm, incint, incother, incpen1, incpen2, incpens, incrann, incrent, incret1, incret2, incretir, incrint1, incrint2, incsurv, incunemp, incvet, incwkcom, kidcneed, moop, pubhous, rentsub, retcont, schllunch, spmcaphous, spmcapxpns, spmchsup, spmchxpns, spmftotval, spmmedxpns, spmmort, spmpov, spmsnap, spmwic, spmwkxpns, srcpen1, srcpen2, srcret1, srcret2, stataxac, whyabsnt 
+Applying pre-aggregation adjustment code:
+  hipval = if.else(duplicated(data.table(asec_2019_hid, famid)), 0, hipval) 
+  moop = if.else(duplicated(data.table(asec_2019_hid, famid)), 0, moop) 
+  schllunch = if.else(duplicated(data.table(asec_2019_hid, famid)), 0, schllunch) 
+  spmcaphous = if.else(duplicated(spmfamunit), 0, spmcaphous) 
+  spmcapxpns = if.else(duplicated(spmfamunit), 0, spmcapxpns) 
+  spmchsup = if.else(duplicated(spmfamunit), 0, spmchsup) 
+  spmchxpns = if.else(duplicated(spmfamunit), 0, spmchxpns) 
+  spmftotval = if.else(duplicated(spmfamunit), 0, spmftotval) 
+  spmmedxpns = if.else(duplicated(spmfamunit), 0, spmmedxpns) 
+  spmsnap = if.else(duplicated(spmfamunit), 0, spmsnap) 
+  spmwic = if.else(duplicated(spmfamunit), 0, spmwic) 
+  spmwkxpns = if.else(duplicated(spmfamunit), 0, spmwkxpns) 
+  spmmort = if.else(duplicated(spmfamunit), NA, spmmort) 
+  spmpov = if.else(duplicated(spmfamunit), NA, spmpov) 
+  kidcneed = if.else(kidcneed == "NIU: Over 14", "No", kidcneed) 
+Using following aggregation functions for person-level variables:
+  adjginc = sum(adjginc, na.rm = T)
+  fedretir = sum(fedretir, na.rm = T)
+  fedtaxac = sum(fedtaxac, na.rm = T)
+  fica = sum(fica, na.rm = T)
+  filestat = ref(filestat, na.rm = T)
+  health = max(health, na.rm = T)
+  hipval = sum(hipval, na.rm = T)
+  incasist = sum(incasist, na.rm = T)
+  incbus = sum(incbus, na.rm = T)
+  inccapg = sum(inccapg, na.rm = T)
+  incchild = sum(incchild, na.rm = T)
+  incdisab = sum(incdisab, na.rm = T)
+  incdivid = sum(incdivid, na.rm = T)
+  inceduc = sum(inceduc, na.rm = T)
+  incfarm = sum(incfarm, na.rm = T)
+  incint = sum(incint, na.rm = T)
+  incother = sum(incother, na.rm = T)
+  incpen1 = sum(incpen1, na.rm = T)
+  incpen2 = sum(incpen2, na.rm = T)
+  incpens = sum(incpens, na.rm = T)
+  incrann = sum(incrann, na.rm = T)
+  incrent = sum(incrent, na.rm = T)
+  incret1 = sum(incret1, na.rm = T)
+  incret2 = sum(incret2, na.rm = T)
+  incretir = sum(incretir, na.rm = T)
+  incrint1 = sum(incrint1, na.rm = T)
+  incrint2 = sum(incrint2, na.rm = T)
+  incsurv = sum(incsurv, na.rm = T)
+  incunemp = sum(incunemp, na.rm = T)
+  incvet = sum(incvet, na.rm = T)
+  incwkcom = sum(incwkcom, na.rm = T)
+  kidcneed = mode(kidcneed, na.rm = T)
+  moop = sum(moop, na.rm = T)
+  retcont = sum(retcont, na.rm = T)
+  schllunch = sum(schllunch, na.rm = T)
+  spmcaphous = sum(spmcaphous, na.rm = T)
+  spmcapxpns = sum(spmcapxpns, na.rm = T)
+  spmchsup = sum(spmchsup, na.rm = T)
+  spmchxpns = sum(spmchxpns, na.rm = T)
+  spmftotval = sum(spmftotval, na.rm = T)
+  spmmedxpns = sum(spmmedxpns, na.rm = T)
+  spmmort = max(spmmort, na.rm = T)
+  spmpov = max(spmpov, na.rm = T)
+  spmsnap = sum(spmsnap, na.rm = T)
+  spmwic = sum(spmwic, na.rm = T)
+  spmwkxpns = sum(spmwkxpns, na.rm = T)
+  srcpen1 = ref(srcpen1, na.rm = T)
+  srcpen2 = ref(srcpen2, na.rm = T)
+  srcret1 = ref(srcret1, na.rm = T)
+  srcret2 = ref(srcret2, na.rm = T)
+  stataxac = sum(stataxac, na.rm = T)
+  whyabsnt = ref(whyabsnt, na.rm = T) 
+Aggregating person-level fusion variables to household-level...
+Applying integer scaling to spatial predictor variables...
+Merging spatial predictor variables to the donor...
+Merging spatial predictor variables to the recipient...
+Assembling output data frames...
+Performing consistency checks...
+
+|=== Check for custom .R scripts ===|
+
+None found.
+
+|=== Check categorical harmonized variables ===|
+
+Similarity scores for 47 categorical harmonized variables:
+# A tibble: 47 × 2
+   `Harmonized variable` `Similarity score`
+   <chr>                              <dbl>
+ 1 wnlwnilf__wkl                      0.782
+ 2 ind__naicsp                        0.849
+ 3 occ__socp                          0.862
+ 4 classwkr__cow                      0.881
+ 5 dpcovnw__hins2                     0.899
+ 6 educ__schl                         0.907
+ 7 champvanw__hins6                   0.908
+ 8 diffmob__dphy                      0.909
+ 9 himcaidnw__hins4                   0.911
+10 race__rac3p                        0.916
+11 grpcovnw__hins1                    0.917
+12 prvtcovnw__privcov                 0.922
+13 fullpart__wkhp                     0.925
+14 famkind__hht                       0.931
+15 migsta1__migsp                     0.932
+16 vacovnw__hins6                     0.938
+17 phone__tel                         0.949
+18 unitsstr__bld                      0.96 
+19 relate__relshipp                   0.962
+20 empstat__esr                       0.964
+21 nativity__nativity                 0.965
+22 vetserv__vps                       0.97 
+23 age__agep                          0.971
+24 foodstmp__fs                       0.973
+25 labforce__esr                      0.974
+26 workly__wkl                        0.974
+27 diffcare__ddrs                     0.978
+28 bpl__pobp                          0.979
+29 marst__mar                         0.979
+30 trccovnw__hins5                    0.98 
+31 diffhear__dear                     0.981
+32 child_pres_age__paoc               0.983
+33 diffeye__deye                      0.983
+34 schlcoll__sch                      0.983
+35 asec_division__region              0.985
+36 himcarenw__hins3                   0.986
+37 yrimmig__yoep                      0.989
+38 asian__rac2p                       0.99 
+39 hhtenure__ten                      0.991
+40 ownershp__ten                      0.991
+41 anycovnw__hicov                    0.992
+42 citizen__cit                       0.992
+43 ownchild__oc                       0.992
+44 inhcovnw__hins7                    0.993
+45 hispan__hisp                       0.994
+46 vetstat__vps                       0.996
+47 sex__sex                           0.999
+
+Should any of the categorical harmonized variables be excluded?
+Retaining all categorical harmonized variables
+
+|=== Check location variables ===|
+
+The representative location variable 'loc..state' has 51 levels.
+The following location variables have been flagged for possible exclusion:
+# A tibble: 1 × 2
+  `Location variable` `Number of levels`
+  <chr>                            <int>
+1 loc..asec_county                   100
+
+Should any of these location variables be excluded?
+Retaining all location variables
+
+|=== Check fusion and predictor variables ===|
+
+Identified 56 fusion variables (0 blocks):
+ [1] "hipval"     "moop"       "schllunch"  "kidcneed"   "srcpen1"    "srcpen2"    "srcret1"   
+ [8] "srcret2"    "filestat"   "whyabsnt"   "spmcaphous" "spmcapxpns" "spmchsup"   "spmchxpns" 
+[15] "spmftotval" "spmmedxpns" "spmmort"    "spmpov"     "spmsnap"    "spmwic"     "spmwkxpns" 
+[22] "incasist"   "incbus"     "inccapg"    "incchild"   "incdisab"   "incdivid"   "inceduc"   
+[29] "incfarm"    "incint"     "incpens"    "incrann"    "incrent"    "incret1"    "incret2"   
+[36] "incsurv"    "incother"   "incunemp"   "incvet"     "incwkcom"   "incretir"   "incpen1"   
+[43] "incpen2"    "incrint1"   "incrint2"   "retcont"    "health"     "fedtaxac"   "adjginc"   
+[50] "stataxac"   "fedretir"   "fica"       "heatsub"    "heatval"    "pubhous"    "rentsub"   
+
+Identified 57 harmonized variables and 277 total predictors
+
+Identified 6 predictors to force and use for validation:
+[1] "hhincome__hincp" "race__rac3p"     "educ__schl"      "numprec__np"     "hhtenure__ten"  
+[6] "loc..state"     
+
+|=== Run fusionModel::prepXY() ===|
+
+Missing values imputed for the following 'x' variable(s):
+ acs.sf..b080, acs.sf..b25080, nrel.urdb..rsed 
+Identifying 'x' that pass absolute Spearman correlation threshold
+Fitting full models for each 'y'
+Iteratively constructing preferred fusion order
+Retained 268 of 277 predictor variables
+Total processing time: 32.6 mins 
+
+Results of prepXY() saved to: ASEC_2019_2019_H_prep.rds (0.00655 MB) 
+
+|=== Write training and prediction datasets to disk ===|
+
+Writing training dataset...
+Training dataset saved to: ASEC_2019_2019_H_train.fst (14.7 MB) 
+
+Writing prediction dataset...
+Prediction dataset saved to: ASEC_2019_2019_H_predict.fst (353 MB) 
+
+|=== Upload /input files to Google Drive ===|
+
+Preparing to upload following file(s) to /fusionData directory in 'fusionACSdata' Google Drive:
+fusion/ASEC/2019/2019/H/input/ASEC_2019_2019_H_prep.rds
+fusion/ASEC/2019/2019/H/input/ASEC_2019_2019_H_train.fst
+fusion/ASEC/2019/2019/H/input/ASEC_2019_2019_H_predict.fst 
+
+The required directory hierarchy will be created, if necessary.
+Upload will overwrite existing remote file(s) if they exist.
+
+drive_dircreate(): Creating Google Drive directory structure for:
+ ~/fusionData/fusion/ASEC/2019/2019/H/input 
+drive_dircreate() success: ~/fusionData/fusion/ASEC/2019/2019/H/input 
+uploadFiles(): File(s) successfully uploaded.
+
+|=== fusionInput() is finished! ===|
+
+Total processing time: 3.11 hours 
+
+Log file saved to:
+ C:/Users/heroa/Documents/fusionData/fusion/ASEC/2019/2019/H/input/ASEC_2019_2019_H_inputlog.txt
