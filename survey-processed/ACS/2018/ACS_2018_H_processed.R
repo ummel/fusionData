@@ -7,17 +7,16 @@ source("R/detectDependence.R")
 # Load ACS-specific helper functions
 source("survey-processed/ACS/processACScodebook.R")
 source("survey-processed/ACS/adjustedRentalValue.R")
-source("survey-processed/ACS/utilityCostFlags.R")  # Only necessary prior to 2018
 
 #-----
 
-# Process 2015 codebook into standard format
-codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
+# Process 2018 codebook into standard format
+codebook <- processACScodebook("survey-raw/ACS/2018/PUMS_Data_Dictionary_2018.csv")
 
 #-----
 
 # Unzip raw .zip file
-unzip("survey-raw/ACS/2015/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
+unzip("survey-raw/ACS/2018/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
 hus.files <- list.files(path = tempdir(), pattern = "hus..csv$", full.names = TRUE)
 
 # Read household PUMS data
@@ -37,9 +36,6 @@ unlink(hus.files, recursive = TRUE)
 gc()
 
 #-----
-
-# The only variable in 'hus' that contains useful information about group quarter individuals is "FS" (Did anyone in household receive SNAP?)
-# Idea: Could create 'FS' version in the 'pus' data, with 1's if the household received SNAP and 0 otherwise...
 
 # Apply 'ADJHSG' and 'ADJINC' adjustment to appropriate variables
 v.adjhsg <- filter(codebook, var %in% names(d) & adj == "ADJHSG")$var
@@ -69,6 +65,7 @@ codebook <- codebook %>%
   filter(!(n > 1 & is.na(value) & var %in% names(which(!map_lgl(d, anyNA))))) %>%
   filter(!var %in% c("SRNT", "SVAL")) %>%   # Manual removal of variables without useful information
   mutate(
+    label = ifelse(var == "CPLT" & is.na(value), "No couple present", label),  # Manual edit: codebook appears to be wrong
     label = ifelse(var == "RNTM" & is.na(value), "No", label),
     desc = ifelse(var == "FS", "Food stamp recipient in household", desc),
     desc = ifelse(var == "HHT2", "Household/family type, including cohabiting", desc),
@@ -76,14 +73,7 @@ codebook <- codebook %>%
   )
 
 # Check for possible remaining issues in 'codebook'
-# NOTE: I cannot find a good explanation for the remaining NA's for the variables identified below
-# The codebook claims NA's should only be found for GQ's, but NA's remain after GQ observations are removed
-# I am treating these NA's as legitimate missing and they are imputed further down in code
-filter(codebook, is.na(value), label == "")
-
-# Set blank labels to legitimate NA (see note above)
-codebook <- codebook %>%
-  mutate(label = na_if(label, ""))
+#filter(codebook, is.na(value), label == "")
 
 #----------------
 
@@ -120,17 +110,17 @@ d <- d[intersect(names(d), codebook$var)]
 
 # Loop through each variable in 'd', assigning labels when applicable
 for (v in names(d)) {
-
+  
   cb <- filter(codebook, var == v)
   x <- d[[v]]
   y <- unlist(cb$value)
   z <- unlist(cb$label)
   m <- match(x, y)
-
+  
   # Update 'x' with new value labels
   new.labels <- z[na.omit(m)]
   x[!is.na(m)] <- new.labels
-
+  
   # Coerce result to ordered factor, if specified
   # Note that levels are restricted to those actually present in the data
   if (v %in% ordered.factors) {
@@ -138,10 +128,10 @@ for (v in names(d)) {
     x <- factor(x, levels = intersect(z, x), ordered = TRUE)
     stopifnot(sum(is.na(x)) == num.na)  # This is a final safety check to ensure no NA's introduced inadvertently
   }
-
+  
   # Apply type.convert() to 'x'; leave ordered factors unchanged
   x <- if (is.ordered(x)) x else type.convert(x, as.is = FALSE)
-
+  
   # Ensure unordered factor levels are sorted according to codebook order of levels
   # Originally, unordered factors were sorted alphabetically -- but there is often useful information in the codebook ordering
   # This retains a valid codebook ordering if one exists; otherwise sort levels alphabetically
@@ -154,34 +144,19 @@ for (v in names(d)) {
     }
     stopifnot(sum(is.na(x)) == num.na)  # This is a final safety check to ensure no NA's introduced inadvertently
   }
-
+  
   # Update column in 'd'
   d[[v]] <- x
-
+  
 }
 
 gc()
 
 #----------------
 
-# Convert TAXP categorical property tax variable to estimated continuous values (only necessary prior to 2018)
-# This is less than ideal (especially for top-coded entries) but no obviously better approach comes to mind
-# This step is necessary prior to 2018, which is when a continuous property tax variable (TAXAMT) was introduced
-# The median of top-coded values is derived from the 2019 TAXAMT variable, adjusted for 2015-to-2019 inflation:
-#  x <- 0.93 * TAXAMT; median(x[x >= 10e3]) using raw 2019 ACS data
-
-x <- levels(d$TAXP)
-x[length(x)] <- 13485  # Assumed median of top-coded values
-x <- strsplit(gsub("$", "", x, fixed = TRUE), "-", fixed = TRUE)
-x <- map_dbl(x, ~ median(suppressWarnings(as.numeric(.x))))  # Use median of provided range
-x <- replace_na(x, 0)
-d$TAXP <- x[match(d$TAXP, levels(d$TAXP))]
-
-#----------------
-
 # Calculate annual mortgage payment (mortgage) with property taxes and insurance excluded
 # Determine if the annual property tax and insurance amounts are valid or need to be imputed (i.e. set to NA)
-# Set property tax (TAXP) and home insurance (INSP) to NA if expenditure is included in mortgage payment
+# Set property tax (TAXAMT) and home insurance (INSP) to NA if expenditure is included in mortgage payment
 # Total mortgage payment is sum of MRGP (first mortgage) and SMP (all second and junior mortgages and home equity loans)
 # Variables MRGI and MRGT indicate if first mortgage payment includes insurance (MRGI) or property taxes (MRGT)
 # Assume that property taxes can be zero, but insurance payment must be positive if the property is mortgaged
@@ -190,14 +165,14 @@ d <- d %>%
   mutate(
     smp_share = ifelse(grepl("Owned with mortgage", TEN), SMP / (SMP + MRGP), 0),  # Second/junior/HELOC mortgages as percent of total mortgage payment
     mortgage = 12 * (MRGP + SMP),
-    mortgage = ifelse(MRGT == "Yes, taxes included in payment", mortgage - TAXP, mortgage),
+    mortgage = ifelse(MRGT == "Yes, taxes included in payment", mortgage - TAXAMT, mortgage),
     mortgage = ifelse(MRGI == "Yes, insurance included in payment", mortgage - INSP, mortgage),
     mortgage = ifelse(mortgage == 0 & grepl("Owned with mortgage", TEN), NA, mortgage),  # Mortgage cannot be zero if a mortgage is present
     invalid = mortgage < 0,  # Mortgage payment cannot be negative
     mortgage = ifelse(invalid, NA, mortgage),
-    TAXP = ifelse(invalid, NA, TAXP),
+    TAXAMT = ifelse(invalid, NA, TAXAMT),
     INSP = ifelse(invalid, NA, INSP),
-    TAXP = ifelse(TAXP == 0 & MRGT == "Yes, taxes included in payment", NA, TAXP),
+    TAXAMT = ifelse(TAXAMT == 0 & MRGT == "Yes, taxes included in payment", NA, TAXAMT),
     INSP = ifelse(INSP == 0 & (MRGI == "Yes, insurance included in payment" | grepl("Owned with mortgage", TEN)), NA, INSP)
   ) %>%
   select(-invalid)
@@ -270,22 +245,18 @@ d <- d %>%
     ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
     PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
   ) %>%
-  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
+  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%
   rename(
-    acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
+    acs_2018_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     weight = WGTP,
     state = ST,
     puma10 = PUMA
   ) %>%
   rename_with(~ gsub("WGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("WGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(acs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  select(acs_2018_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
   select(-division, -region) %>%
-  arrange(acs_2015_hid)
-
-# Add utility cost flag variables (only necessary prior to 2018)
-# See "utilityCostFlags.R" for details
-d <- utilityCostFlags(d)
+  arrange(acs_2018_hid)
 
 # Add description labels for custom/undefined/ambiguous variables
 labelled::var_label(d$mrgp) <- "First mortgage payment, principal and interest"
@@ -294,7 +265,6 @@ labelled::var_label(d$valp) <- "Property value, zero for renter-occupied units"
 labelled::var_label(d$mortgage) <- "Annual mortgage payment, principal and interest"
 labelled::var_label(d$renteq) <- "Annual rental value, imputed for owner-occupied units"
 
-labelled::var_label(d$dsl) <- "DSL service"
 labelled::var_label(d$ocpip) <- "Selected monthly owner costs as a percentage of household income during the past 12 months"
 labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"
 labelled::var_label(d$tel) <- "Telephone service"
@@ -302,17 +272,12 @@ labelled::var_label(d$tel) <- "Telephone service"
 #----------------
 
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2015, respondent = "H")
-saveRDS(object = dictionary, file = "survey-processed/ACS/2015/ACS_2015_H_dictionary.rds")
+dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2018, respondent = "H")
+saveRDS(object = dictionary, file = "survey-processed/ACS/2018/ACS_2018_H_dictionary.rds")
 gc()
 
 #----------------
 
 # Save data to disk (.fst)
-fst::write_fst(x = d, path = "survey-processed/ACS/2015/ACS_2015_H_processed.fst", compress = 100)
-
-
-
-
-d <- read_fst(path = "survey-processed/ACS/2015/ACS_2015_H_processed.fst")
+fst::write_fst(x = d, path = "survey-processed/ACS/2018/ACS_2018_H_processed.fst", compress = 100)
 

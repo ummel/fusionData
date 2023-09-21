@@ -125,7 +125,7 @@ processACScodebook <- function(dictionary.file) {
 # Function to convert .txt dictionary file (pre-2017) to something similar to the .csv structure that is provided from 2017 onward
 
 # Example input
-#file <- "survey-raw/ACS/2016/PUMSDataDict16.txt"
+#file <- "survey-raw/ACS/2015/PUMSDataDict15.txt"
 
 convertTXTdictionary <- function(file) {
 
@@ -178,7 +178,7 @@ convertTXTdictionary <- function(file) {
   k <- which(substring(temp, 1, 1) == ".")
   d[k] <- substring(temp[k], first = 2)
   for (i in rev(k)) d[i - 1] <- paste(d[i - 1], d[i])
-  d <- d[-k]
+#  d <- d[-k]
 
   #-----
 

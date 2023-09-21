@@ -5,19 +5,19 @@ source("R/imputeMissing.R")
 source("R/detectDependence.R")
 
 # Load ACS-specific helper functions
-source("survey-processed/ACS/processACScodebook.R")
+source("survey-processed/ACS/processACScodebook_2016.R")
 source("survey-processed/ACS/adjustedRentalValue.R")
 source("survey-processed/ACS/utilityCostFlags.R")  # Only necessary prior to 2018
 
 #-----
 
-# Process 2015 codebook into standard format
-codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
+# Process 2016 codebook into standard format
+codebook <- processACScodebook("survey-raw/ACS/2016/PUMSDataDict16.txt")
 
 #-----
 
 # Unzip raw .zip file
-unzip("survey-raw/ACS/2015/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
+unzip("survey-raw/ACS/2016/csv_hus.zip", exdir = tempdir(), overwrite = TRUE)
 hus.files <- list.files(path = tempdir(), pattern = "hus..csv$", full.names = TRUE)
 
 # Read household PUMS data
@@ -36,8 +36,12 @@ for (i in 1:ncol(d)) {
 unlink(hus.files, recursive = TRUE)
 gc()
 
-#-----
 
+#-----
+# Prevent Serial number from being transformed into scientific number and indistinguishable to dictionary
+d$SERIALNO <- paste0("H", as.character(d$SERIALNO)) 
+
+#-----
 # The only variable in 'hus' that contains useful information about group quarter individuals is "FS" (Did anyone in household receive SNAP?)
 # Idea: Could create 'FS' version in the 'pus' data, with 1's if the household received SNAP and 0 otherwise...
 
@@ -69,6 +73,7 @@ codebook <- codebook %>%
   filter(!(n > 1 & is.na(value) & var %in% names(which(!map_lgl(d, anyNA))))) %>%
   filter(!var %in% c("SRNT", "SVAL")) %>%   # Manual removal of variables without useful information
   mutate(
+    ##### Does not have 2019's: label = ifelse(var == "CPLT" & is.na(value), "No couple present", label),  # Manual edit: codebook appears to be wrong
     label = ifelse(var == "RNTM" & is.na(value), "No", label),
     desc = ifelse(var == "FS", "Food stamp recipient in household", desc),
     desc = ifelse(var == "HHT2", "Household/family type, including cohabiting", desc),
@@ -270,18 +275,18 @@ d <- d %>%
     ST = factor(str_pad(ST, width = 2, pad = 0)),   # Standard geographic variable definitions for 'state' and 'puma10' (renamed below)
     PUMA = factor(str_pad(PUMA, width = 5, pad = 0))
   ) %>%
-  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
+  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>% # 2019 has .strict option = TRUE
   rename(
-    acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
+    acs_2016_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     weight = WGTP,
     state = ST,
     puma10 = PUMA
   ) %>%
   rename_with(~ gsub("WGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("WGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(acs_2015_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  select(acs_2016_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
   select(-division, -region) %>%
-  arrange(acs_2015_hid)
+  arrange(acs_2016_hid)
 
 # Add utility cost flag variables (only necessary prior to 2018)
 # See "utilityCostFlags.R" for details
@@ -294,7 +299,7 @@ labelled::var_label(d$valp) <- "Property value, zero for renter-occupied units"
 labelled::var_label(d$mortgage) <- "Annual mortgage payment, principal and interest"
 labelled::var_label(d$renteq) <- "Annual rental value, imputed for owner-occupied units"
 
-labelled::var_label(d$dsl) <- "DSL service"
+#labelled::var_label(d$dsl) <- "DSL service" #2019 script does not include this line
 labelled::var_label(d$ocpip) <- "Selected monthly owner costs as a percentage of household income during the past 12 months"
 labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"
 labelled::var_label(d$tel) <- "Telephone service"
@@ -302,17 +307,11 @@ labelled::var_label(d$tel) <- "Telephone service"
 #----------------
 
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2015, respondent = "H")
-saveRDS(object = dictionary, file = "survey-processed/ACS/2015/ACS_2015_H_dictionary.rds")
+dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2016, respondent = "H")
+saveRDS(object = dictionary, file = "survey-processed/ACS/2016/ACS_2016_H_dictionary.rds")
 gc()
 
 #----------------
 
 # Save data to disk (.fst)
-fst::write_fst(x = d, path = "survey-processed/ACS/2015/ACS_2015_H_processed.fst", compress = 100)
-
-
-
-
-d <- read_fst(path = "survey-processed/ACS/2015/ACS_2015_H_processed.fst")
-
+fst::write_fst(x = d, path = "survey-processed/ACS/2016/ACS_2016_H_processed.fst", compress = 100)

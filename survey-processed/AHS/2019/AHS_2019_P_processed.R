@@ -262,6 +262,7 @@ d <- d %>%
   mutate(FIRPARENT = gsub("\\<Not applicable\\>","No parent number one",FIRPARENT)) %>%
   mutate(SECPARENT = gsub("\\<Not applicable\\>","No parent number two",SECPARENT)) %>%
   mutate(SPOUSE = gsub("\\<Not applicable\\>","No Spouse",SPOUSE)) %>% 
+   mutate(INUSYR = ifelse(INUSYR == 0,"Born in US",INUSYR)) %>% 
   mutate(GRAD = gsub("\\<Not applicable\\>", NA,GRAD))
 
 
@@ -325,7 +326,7 @@ p.final <- d  %>%
   ) %>%
   rename_with(tolower) %>%  # Convert all variable names to lowercase
   dplyr::select(ahs_2019_hid, sample, pid, everything()) %>%   # Reorder columns with replicate weights at the end
-  arrange(ahs_2019_hid,pid)
+  arrange(ahs_2019_hid,pid) %>% filter(sample == "National")
 
 
 # Create dictionary and save to disk

@@ -66,7 +66,7 @@ codebook <- codebook %>%
     label = ifelse(var == "LANP" & is.na(value), "English", label),  # Manual edit: Based on questionnaire, it looks like NA's for LANP are English speakers
     label = ifelse(var == "CITWP" & is.na(value), "Not naturalized", label),
     label = ifelse(var == "DRAT" & is.na(value), "Never served in military", label),
-    label = ifelse(var == "MIL" & is.na(value), "Never served in military", label),
+    label = ifelse(var == "MIL" & is.na(value), "Never served in the military", label),
     label = ifelse(var == "OC" & is.na(value), "No", label),
     label = ifelse(var == "RC" & is.na(value), "No", label),
     label = ifelse(var == "SCH" & is.na(value), "No, has not attended in the last 3 months", label),
@@ -218,6 +218,7 @@ dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2017, respond
 saveRDS(object = dictionary, file = "survey-processed/ACS/2017/ACS_2017_P_dictionary.rds")
 gc()
 
+compileDictionary()
 #----------------
 
 # Save data to disk (.fst)

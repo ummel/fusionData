@@ -190,7 +190,47 @@ d <- d %>%
 d <- d %>%
   mutate(renteq = ifelse(TEN == "Rented" & RNTP >= 100, 12 * RNTP, NA))
 
-#----------------
+#----------------Poverty Ratio--------------#
+d <- d %>% mutate(factor = pmax(NP - 8, 0)) %>% 
+  mutate(thresh = ifelse((ST != '02' & ST != '15') & NP == 1, 12490,
+                  ifelse((ST != '02' & ST != '15') & NP == 2, 16910,
+                  ifelse((ST != '02' & ST != '15') & NP == 3, 21330,
+                  ifelse((ST != '02' & ST != '15') & NP == 4, 25750,
+                  ifelse((ST != '02' & ST != '15') & NP == 5, 30170,
+                  ifelse((ST != '02' & ST != '15') & NP == 6, 34590,
+                  ifelse((ST != '02' & ST != '15') & NP == 7, 39010,
+                  ifelse((ST != '02' & ST != '15') & NP == 8, 43430,
+                         
+                  ifelse((ST != '02' & ST != '15') & NP > 8, 43430+ factor*4420 ,
+                    
+                  ifelse((ST == '02'  & NP == 1), 15600,
+                  ifelse((ST == '02'  & NP == 2), 21130,
+                  ifelse((ST == '02'  & NP == 3), 26660,
+                  ifelse((ST == '02'  & NP == 4), 32190,
+                  ifelse((ST == '02'  & NP == 5), 37720,
+                  ifelse((ST == '02'  & NP == 6), 43250,
+                  ifelse((ST == '02' & NP == 7), 48780,
+                  ifelse((ST == '02'  & NP == 8), 54310,
+                  
+                 ifelse((ST == '02' & NP > 8), 54310 + factor*5530,
+                         
+                  ifelse((ST == '15'  & NP == 1), 14380,
+                  ifelse((ST == '15'  & NP == 2), 19460,
+                  ifelse((ST == '15'  & NP == 3), 24540,
+                  ifelse((ST == '15'  & NP == 4), 29620,
+                  ifelse((ST == '15'  & NP == 5), 34700,
+                  ifelse((ST == '15'  & NP == 6), 39780,
+                  ifelse((ST == '15' & NP == 7), 44860,
+                  ifelse((ST == '15'  & NP == 8),49940,
+                         
+                  ifelse((ST == '15' & NP > 8), 49940 + factor*5080,
+                          
+                         NA)))))))))))))))))))))))))))) %>%
+  
+  mutate(POVR = round(HINCP/thresh,2),
+         POVR = ifelse(POVR > 5, "Greater than 5",POVR),
+         POVR = as.factor(ifelse(POVR < 0, 0,POVR))) %>% select(-thresh,-factor)
+
 
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
@@ -268,6 +308,8 @@ labelled::var_label(d$renteq) <- "Annual rental value, imputed for owner-occupie
 labelled::var_label(d$ocpip) <- "Selected monthly owner costs as a percentage of household income during the past 12 months"
 labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 census definition"
 labelled::var_label(d$tel) <- "Telephone service"
+
+labelled::var_label(d$povr) <- "Poverty ratio of family income to poverty threshold"
 
 #----------------
 

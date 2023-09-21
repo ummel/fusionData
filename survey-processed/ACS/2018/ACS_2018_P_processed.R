@@ -7,13 +7,13 @@ source("survey-processed/ACS/processACScodebook.R")
 
 #-----
 
-# Process 2015 codebook into standard format
-codebook <- processACScodebook("survey-raw/ACS/2015/PUMSDataDict15.txt")
+# Process 2018 codebook into standard format
+codebook <- processACScodebook("survey-raw/ACS/2018/PUMS_Data_Dictionary_2018.csv")
 
 #-----
 
 # Unzip raw .zip file
-unzip("survey-raw/ACS/2015/csv_pus.zip", exdir = tempdir(), overwrite = TRUE)
+unzip("survey-raw/ACS/2018/csv_pus.zip", exdir = tempdir(), overwrite = TRUE)
 pus.files <- list.files(path = tempdir(), pattern = "pus..csv$", full.names = TRUE)
 
 # Read person PUMS data
@@ -32,6 +32,11 @@ for (i in 1:ncol(d)) {
 unlink(pus.files)
 gc()
 
+#-----
+# Prevent Serial number from being transformed into scientific number and indistinguishable to dictionary
+if (any(!grepl("[A-Z]", as.character(d$SERIALNO[1:20])))){
+  d$SERIALNO <- paste0("H", as.character(d$SERIALNO))
+}
 #-----
 
 # Apply 'ADJINC' adjustment to appropriate variables
@@ -189,15 +194,15 @@ d <- d %>%
   addPID(hid = "SERIALNO", refvar = "RELP") %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var)) %>%
   rename(
-    acs_2015_hid = SERIALNO,  # Rename ID and weight variables to standardized names
+    acs_2018_hid = SERIALNO,  # Rename ID and weight variables to standardized names
     weight = PWGTP,
     state = ST,
     puma10 = PUMA
   ) %>%
   rename_with(~ gsub("PWGTP", "REP_", .x, fixed = TRUE), .cols = starts_with("PWGTP")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(acs_2015_hid, pid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
-  arrange(acs_2015_hid, pid)
+  select(acs_2018_hid, pid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(acs_2018_hid, pid)
 
 # Manual removal of variables without useful information
 d <- d %>%
@@ -209,12 +214,12 @@ labelled::var_label(d$puma10) <- "Public use microdata area code based on 2010 c
 #----------------
 
 # Create dictionary and save to disk
-dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2015, respondent = "P")
-saveRDS(object = dictionary, file = "survey-processed/ACS/2015/ACS_2015_P_dictionary.rds")
+dictionary <- createDictionary(data = d, survey = "ACS", vintage = 2018, respondent = "P")
+saveRDS(object = dictionary, file = "survey-processed/ACS/2018/ACS_2018_P_dictionary.rds")
 gc()
 
 compileDictionary()
 #----------------
 
 # Save data to disk (.fst)
-fst::write_fst(x = d, path = "survey-processed/ACS/2015/ACS_2015_P_processed.fst", compress = 100)
+fst::write_fst(x = d, path = "survey-processed/ACS/2018/ACS_2018_P_processed.fst", compress = 100)
