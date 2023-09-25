@@ -1,0 +1,333 @@
+---
+title: "ASEC Validation"
+output: html_notebook
+---
+
+The notebook does external checks on the ASEC 2019 fusion. 
+
+Donor = ASEC 2019
+Recipient = ACS 2019
+Implicates = 30 
+Fused variables = 55
+
+```{r setup}
+rm(list = ls())
+
+# run if any changes to fusionModel package
+#devtools::install_github("ummel/fusionModel")
+library(pacman)
+p_load(here, tidyverse, data.table, fusionModel)
+#library(tidyverse)
+
+TEST = T
+
+# directories 
+
+# files with fused ASEC data in 
+here()
+if (TEST == F) dir <- paste0(here(), "/fusion/ASEC/2019/2019/H/")
+if (TEST == T) dir <- paste0(here(), "/fusion_/ASEC/2019/2019/H/")
+output.dir <- paste0(dir, "/output/")
+input.dir <- paste0(dir, "/input/")
+
+```
+
+## PUMA level estimates
+Create a PUMA level summary file of all ASEC fused variables. This gives point estimates and uncertainty for each of the 55 fused variables from ASEC. 
+
+```{r, echo = F}
+
+if (!file.exists(paste0(here(), "./production/puma_summary/ASEC/ASEC_2019_2019_puma_fused.fst"))){
+
+  sim_path <- paste0(here(), "/production/v2/ASEC/Household/ASEC_2019-ACS_2019.fst")
+  acs_path <- paste0(here(), "/survey-processed/ACS/2019/ACS_2019_H_processed.fst")
+  
+  # all fused variables
+  d <- fst::read_fst(sim_path, from = 1, to = 1)
+  
+  # it keeps crashing so I am doing it in batches
+  for (x in seq(1, 50, by = 10)){
+    
+    x = 51
+    y = ifelse(x != 51, x+9, 55)
+    
+    fuse_vars <- setdiff(names(d), "M")[x:y]
+    fuse_vars
+    #rm(d)
+    
+    puma_summary <- analyze2(analyses = list(mean = fuse_vars), 
+                             implicates = sim_path,
+                             static = acs_path,
+                             by = c("state", "puma10"),
+                             weight = "weight", 
+                             rep_weights = paste0("rep_", 1:80),
+                             cores = 4)
+    
+    fst::write_fst(puma_summary, path = paste0(here(), "./production/puma_summary/ASEC/ASEC_2019_2019_puma_fused_", x, "_", y, ".fst"))
+    rm(puma_summary)
+    gc()
+    
+  }
+  
+  
+  #1-10 - Warning: Column 3 of item 1 is an ordered factor but level 1 ['Owners with a mortgage'] is missing from the ordered levels from column 3 of item 61. Each set of ordered factor levels should be an ordered subset of the first longest. A regular factor will be created for this column.
+  #11-20 - Warning: Column 3 of item 1 is an ordered factor but level 1 ['NIU: Owns house'] is missing from the ordered levels from column 3 of item 61. Each set of ordered factor levels should be an ordered subset of the first longest. A regular factor will be created for this column.
+  #21-30 - Warning: Column 3 of item 31 is an ordered factor but level 1 ['No'] is missing from the ordered levels from column 3 of item 1. Each set of ordered factor levels should be an ordered subset of the first longest. A regular factor will be created for this column.
+  # 31-40 - none
+  # 41-50 - Warning: Column 3 of item 1 is an ordered factor but level 1 ['403b account'] is missing from the ordered levels from column 3 of item 31. Each set of ordered factor levels should be an ordered subset of the first longest. A regular factor will be created for this column.
+  # 41-55 (but this failed b/c of memory) - weirdly warning was different to the above and below for the same vars - Warning: Column 3 of item 1 is an ordered factor but level 1 ['401k account'] is missing from the ordered levels from column 3 of item 61. Each set of ordered factor levels should be an ordered subset of the first longest. A regular factor will be created for this column.
+  # 51-55 - none
+  
+  # bind them together
+  files <- list.files(paste0(here(), "./production/puma_summary/ASEC/"))
+  
+  d_list <- map(files, ~fst::read_fst(paste0(here(), "./production/puma_summary/ASEC/", .)))
+                          
+  d_bind <- rbindlist(d_list)
+  
+  # save
+  fst::write_fst(d_bind, path = paste0(here(), "./production/puma_summary/ASEC/ASEC_2019_2019_puma_fused.fst"))
+}
+
+```
+
+```{r, echo = F}
+# look at PUMA level summary
+d <- fst::read_fst(path = paste0(here(), "./production/puma_summary/ASEC/ASEC_2019_2019_puma_fused.fst"))
+
+head(d)
+
+```
+
+
+## Public Housing and Rent Subsidy
+ASEC has two variables at the household level on housing benefits, which we have fused to the 2019 ACS. They are:
+
+-   pubhouse = indicates whether the household is living in a home that is part of a government housing project
+
+-   rentsub = indicates whether rent is reduced through any government program, such as Section 8 housing vouchers
+
+Note that the two are mutually exclusive - you are not asked if you received rent subsidies if you are living in public housing and are automatically coded as "no". 
+
+Based on the PUMA-level estimates constructed above, around 3% of households on average in a PUMA live in public housing. 
+
+```{r, echo = F}
+
+# share of households living in public housing 
+d %>%
+  filter(str_detect(rhs, "pubhous")) %>%
+  filter(level == "Yes") %>%
+  pull(est) %>%
+  summary()
+
+```
+
+About 1% of households report receiving any type of rental subsidy on average across all PUMAs. 
+
+```{r, echo = F}
+
+# share of households with rent subsidies 
+d %>%
+  filter(str_detect(rhs, "rentsub")) %>%
+  filter(level == "Yes") %>%
+  pull(est) %>%
+  summary()
+
+```
+
+### HUD county-level data
+HUD collects participation data on number of households and residents in public housing and receiving some form of rent subsidy. The dataset is called Picture of Subsidized Households. These data are available from [HUD](https://www.huduser.gov/portal/datasets/assthsg.html#2009-2022_data) at various geographic levels (smallest is the tract). I download them for the county level, because these are the closest in area to the PUMA-level estimates we can produce. 
+
+I download the 2019 data, which uses 2010 geographies. 
+
+```{r, echo = F}
+
+d_raw <- readxl::read_excel(paste0(here(), "/production/v2/ASEC/COUNTY_2019.xlsx")) %>%
+  as.data.table()
+
+# drop any counties where pct reported is less than 50 or where cell is suppressed b/c count is less than 11
+nrow(filter(d_raw, people_total == -5))
+nrow(filter(d_raw, people_total == -4))
+
+d <- d_raw %>%
+  filter(people_total != -5 & people_total != -4)
+
+# drop any rows where county is missing - 9
+table(d$state,  useNA = "always")
+#head(d[state == 'XX' | is.na(state)])
+d <- d[state != 'XX']
+d <- d[!str_detect(code, 'XX')]
+
+# limit to desired variables
+names(d)
+d <- d %>%
+  select(Quarter:people_total, state)
+
+
+```
+
+The data is at the county-program level. There are eight types of program reported and a total count (Summary of All HUD Programs):
+
+```{r, echo = F, warning=F}
+
+# program labels
+d %>%
+  group_by(program, program_label) %>%
+  summarize(units = sum(total_units))
+
+```
+
+I take program 2 (Public Housing) to be equivalent to ASEC's `pubhous` and the sum of the remaining programs to be equivalent to ASEC's `rentsub`. There are two possible counts:
+
+  - number of occupied units - this can be obtained with percent occupied*number of total units 
+  
+  - number of reported units - this is the number of households that sent in a report in the last 18 months (on average, the report was received 6 months ago) and can be smaller than the number of occupied units
+  
+The two counts are highly correlated. I start by using number of reports, which I assume is most equivalent to number of households in each program. 
+
+```{r, echo = F}
+
+# check that pct_reported is the same as number reported / number occupied 
+# number occupied can be got from pct_occupied * total units 
+d[ , occ_units := round((pct_occupied/100)*total_units)]
+
+d[ , pct_rep_check := (number_reported/occ_units)*100]
+
+cor(d$occ_units, d$number_reported)
+
+```
+
+```{r, echo = F}
+
+# county
+# program (1) total, (2) pubhous, (3) rentsub
+# number occupied
+# number reported
+
+d[ , type := fcase(program == 1, 'total', 
+                   program == 2, 'pubhous', 
+                   program >= 3, 'rentsub')]
+
+d_hud <- d %>%
+  group_by(code, name, state, type) %>%
+  reframe(reported = sum(number_reported),
+            occupied = sum(occ_units),
+            people = sum(people_total)) %>%
+  pivot_wider(id_cols = c(code, name, state), 
+              names_from = type,
+              values_from = c(reported, occupied, people))
+
+```
+
+After dropping counties with missing reports, I have counts for `r nrow(d_hud)` counties. 
+
+The estimates from ASEC will be percentage of households in a county with public housing or rent subsidies. To calculate an equivalent share from the HUD data I need counts of total households by county for the same year that HUD is using. 
+
+NHGIS has county counts of total households from the 2020 Decennial Census. This is one year after the HUD estimates. I can't find household counts at the county level from 2019, though Census Quick Facts has it from 2017-2021 (not sure what this means): https://www.census.gov/quickfacts/fact/table/bronxcountynewyork,US/HSD410221
+
+I can't use the ACS to get 2019 household counts because not all counties are publically available. I thought that the NHGIS would have aggregates for all counties from the 2019 ACS but they only have it for 840 counties. 
+
+
+```{r}
+
+d_acs <- fread(paste0(here(), "/production/validation/ASEC/nhgis0026_ds243_2019_county.csv")) %>%
+  as.data.table() %>%
+  select(YEAR, STATE, STATEA, COUNTY, COUNTYA, AK12E001)
+
+# only 840 observations...b/c ACS doesn't have counts from all counties!
+
+# 2020 decenial counts 
+d_census <- fread(paste0(here(), "/production/validation/ASEC/nhgis0027_ds258_2020_county.csv")) %>%
+  as.data.table() %>%
+  select(YEAR, STATE, STATEA, COUNTY, COUNTYA, U83001) %>%
+  rename(total_hh = U83001)
+
+d_census[ , code := paste0(sprintf("%02d", STATEA), 
+                           sprintf("%03d", COUNTYA))]
+
+
+```
+
+
+### County estimates from fused data
+
+The next step is to get county-level estimates from our fused ASEC-ACS variables. This is done in production/validation/ASEC/asec_hud_county_maps.R. Two datasets are output: 
+
+-   asec_pubhous_county.fst - share of county by public housing status 
+-   asec_rentsub_county.fst - share of county by rent subsidy status
+
+
+```{r}
+
+# read in
+ex1 <- fst::read_fst(paste0(here(), "/production/validation/ASEC/asec_pubhous_county.fst")) %>% as.data.table()
+ex2 <- fst::read_fst(paste0(here(), "/production/validation/ASEC/asec_rentsub_county.fst"))  %>% as.data.table()
+
+
+# estimate counts
+ex1[ , est_count := round(est*N, 0)]
+
+# create state*county code
+ex1[ , code := paste0(state, county10)]
+
+# compare
+comp <- ex1 %>%
+  filter(level == "Yes") %>%
+  # join with HUD counts
+  left_join(select(d_hud, code, name, state, reported_pubhous), by = "code") %>%
+  # join with Census total household counts
+  left_join(select(d_census, code, total_hh), by = "code") # there is some mismatch
+  
+# estimate HUD shares
+comp[ , hud_est := reported_pubhous/total_hh]
+
+# correlation between our estimates and hud_est...very low
+cor(comp$est, comp$hud_est, use = "complete.obs")
+
+# CHECK GEOGRAPHIES --> this could be a technical fault
+# USE DIFFERENT DENOMINATORS FOR HUD? (not 2020, or some count from HUD?)
+# USE DIFFERENT MEASURES FROM HUD? --> check that the reported_pubhous is what we want
+# LOOK AT SMALLER AREAS
+  
+
+```
+
+
+```{r}
+
+# # if running
+# if (TEST == T){
+#   sim_path <- read_fsd(paste0(output.dir, "/ASEC_2019_2019_H_fused.fsd"))
+#   # limit to 10K obs
+#   acs_path <- fst::read_fst(paste0(here(), "/survey-processed/ACS/2019/ACS_2019_H_processed.fst"), 
+#                             from = 1, to = 10000) 
+#   
+#   table(sim_path$health)
+# }
+# if (TEST == F){
+#   sim_path <- paste0(here(), "/production/v2/ASEC/Household/ASEC_2019-ACS_2019.fst")
+#   acs_path <- paste0(here(), "/survey-processed/ACS/2019/ACS_2019_H_processed.fst")
+# }
+# 
+# # check
+# #nrow(acs) == nrow(sim) / max(sim$M)
+# 
+# # THIS IS AT THE HOUSEHOLD LEVEL 
+# 
+# # value of foodstamp received 
+# #snap_val <- function(x) data.table::fifelse(x > 0, x, NA_integer_)
+# analyses <- list(snap_mean ~ mean(data.table::fifelse(spmsnap > 0, spmsnap, NA_integer_)),
+#                  snap_med ~median(data.table::fifelse(spmsnap > 0, spmsnap, NA_integer_)),
+#                  health ~ mean(health))
+# 
+# analyze_test <- analyze2(analyses = analyses[3], 
+#                          implicates = sim_path,
+#                          static = acs_path,
+#                          by = c("state", "puma10"),
+#                          weight = "weight", 
+#                          rep_weights = paste0("rep_", 1:80))
+
+
+```
+
+Note - HUD has linked it's data to the 2015 ACS (see notes [here](https://www.huduser.gov/portal/datasets/acs-hud-data-linkage.html)). These data are not publicly available but you can download a HUD-household identification variable, whereby you can identify households in the 2015 ACS that are in public housing or have rent subsidy through HUD programs. If we fuse 2015 ASEC to 2015 ACS, we can use this as a check. 
