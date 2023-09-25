@@ -1,0 +1,166 @@
+---
+title: "ASEC - Potenial Variable Fusion"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+suppressMessages(suppressWarnings({ 
+  library(tidyverse)
+  library(data.table)
+  library(quarto)
+}))
+options(scipen = 999)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r, echo = F}
+rm(list = ls())
+# read in data dictionary for ASEC
+dictH <- readRDS(file = "ASEC_2019_H_dictionary.rds")
+dictP <- readRDS(file = "ASEC_2019_P_dictionary.rds")
+
+# get list of variables that were used for harmony 
+harmony <- source("../../../harmony/harmonies/ASEC_2019__ACS_2019.R")
+```
+
+The goal of this memo is to consider which donor variables from the ASEC 2019 sample we should fuse. For context, the ASEC 2019 ingested sample contains `r nrow(dictP)` variables at the person level and `r nrow(dictH)` variables at the household level. We used `r length(harmony$value)` variables common to both ASEC 2019 and ACS 2019 for the harmonization. Of the remaining variables, we went to decide which should be fused. There are three (broad) goals for fusion:
+
+1.  Fuse variables that are not available in the ACS or the over surveys that we have fused (RECS, CEI, AHS, and NHTS). There is considerable overlap between the ACS and ASEC, as both are household surveys aimed at capturing work, income, and family characteristics. There will also be some overlap between the ASEC and CEI in terms of income and expenditure variables and we may want to consider the different quality in the surveys.
+
+2.  Fuse variables to be used at the PUMA level - for example, the EPA may be interested in more disaggregated income variables from ASEC without needing them downscaled.
+
+3.  Fuse variables that we want to downscale - for example, variables unavailable in other surveys that capture some dimensions of compound environmental injustice/inequality. Downscaling introduces further considerations for variable selection, such as when variables are zero-inflated.
+
+Fusion can happen in multiple stages where we fuse a smaller number of ASEC variables first and then return to fuse others. For the first pass, I suggest we fuse around 40 variables from ASEC - with some caveats described below.
+
+```{r, echo = F}
+# read in whether variable should be included in fusion 
+dictP <- fread(file = "fusionACS - ASEC harmony variables - Person.csv") %>%
+  select(variable, `potential fusion`, category) %>%
+  rename(fusion = `potential fusion`) %>%
+  right_join(dictP)
+
+dictH <- fread(file = "fusionACS - ASEC harmony variables - Household.csv") %>%
+  select(variable, `potential fusion`, category) %>%
+  rename(fusion = `potential fusion`) %>%
+  right_join(dictH)
+```
+
+## Income Variables
+
+One of ASEC's main advantages is it's disaggregated income variables at the person level. There are **18** person-level income variables that we can fuse to the ACS. We use the majority of these in the harmony process as well because they are disagregates of ACS variable. (For instance, the ACS "other income" variable is a combination of ASEC's incunemp, incvet, incwkcom, incchild, inceduc, incother, incasist and incdisab.)
+
+```{r, echo=F}
+dictP %>% 
+  filter(str_detect(category, "income") & fusion == 1) %>%
+  select(variable, description, values) %>%
+  knitr::kable(format = "html", align = "l",
+             caption = "Income Variables for Fusing") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+
+# quarto::to_table(df, width = "100%", align = "l", caption = "Example data frame with wrapped text in columns")
+
+```
+
+As seen in the table above, a lot of the income variables have median values of zero, so they may be tricky for downscaling.
+
+The other income variables we could fuse are even further disaggregates (pensions, interest, survivor and disability income are all broken into income from source 1 and source 2) and the source of different incomes. These seem like less of a priority for fusing.
+
+## Poverty Variables
+
+Both the ACS and ASEC have variables used to calculate the Supplemental Poverty Measure (SPM). These include variables on family's receipt of benefits (WIC, school lunch subsidy, housing subsidy, SNAP, EITC), child care expenses, and other financial measures (child support, cash income, mortgage status). These would be helpful for constructing measures of compound environmental burden.
+
+**These variables are all present in the ACS**, so fusing them from ASEC is unnecessary. **However, they do not seem to be have been ingested with the ACS.** One reason for this might be that they are measured for a slightly different unit. Rather than being at the household level, they are for the [SPM family unit](https://cps.ipums.org/cps-action/variables/SPMFAMUNIT#description_section), which is most akin to the Census defined family unit.
+
+There are **4** similar variables at the **household** level, that we could fuse in place of the SPM variables:
+
+```{r, echo=F}
+dictH %>% 
+  filter(category == "welfare" & fusion == 0.5) %>%
+  select(variable, description, values) %>%
+  knitr::kable(format = "html", align = "l",
+             caption = "Poverty Variables for Fusing") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+
+```
+
+## Welfare Variables
+
+The ASEC includes variables on welfare that are not part of the SPM category (and therefore are not present in the ACS) that would likewise be useful for constructing compound measures of environmental and economic injustice.
+
+There are **4** variables at the person level:
+
+```{r, echo=F}
+dictP %>% 
+  filter(str_detect(category, "welfare") & fusion == 1) %>%
+  select(variable, description, values) %>%
+  knitr::kable(format = "html", align = "l",
+             caption = "Welfare Variables for Fusing") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+And **4** variables at the **household** level:
+
+```{r, echo=F}
+dictH %>% 
+  filter(str_detect(category, "welfare") & fusion == 1) %>%
+  select(variable, description, values) %>%
+  knitr::kable(format = "html", align = "l",
+             caption = "Poverty Variables for Fusing") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+## Tax Variables
+
+ASEC includes tax estimates at the person level for federal and state tax liabilities before and after credits. It also separately reports values for the EITC, child tax credit, and the additional child tax credit. These are not directly asked from respondents but are estimated using the Census's tax model (an alternative to NBER's TAXSIM).
+
+The ACS contains tax estimates for the SPM, but we have not ingested these (interestingly, these were calculated using NBER's TAXSIM model). The CEI also contains an estimate of family income pre- and post-taxes for which we have calculated and fused a net tax burden (though in general, income information in the CEI is considered less accurate than the ASEC).
+
+If we want a post-redistribution measure of income, we can fuse at minimum **3** tax variables.
+
+```{r, echo=F}
+dictP %>% 
+  filter(variable %in% c('fedtaxac', 'stataxac', 'fica')) %>%
+  select(variable, description, values) %>%
+  knitr::kable(format = "html", align = "l",
+             caption = "Tax Variables for Fusing") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+## Misc. Variables
+
+There are **4** additional variables at the person-level that could be helpful to fuse. One captures health status, two capture spending on medical insurance, and one captures why people missed work in the preceding week.
+
+```{r, echo=F}
+dictP %>% 
+  filter(category %in% c('health insurance', 'work', 'misc') & fusion == 1) %>%
+  select(variable, description, values) %>%
+  knitr::kable(format = "html", align = "l",
+             caption = "Other Variables for Fusing") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+## What about all the other ASEC variables?
+
+There are three categories of ASEC variables that I have not discussed for fusion because I do not think they are a high priority given the goals we discussed last week. These are:
+
+-   [Work variables](https://cps.ipums.org/cps-action/variables/group?id=asec_work) - in general, the ASEC and ACS capture similar work measurements, with the main difference being that the ASEC has a greater level of detail. Specifically, for most work variables (eg. hours worked) ASEC distinguishes between three different time periods: "usually", "last week", and "last year". This doesn't seem like an important distinction for us. Additionally, the ASEC provides industry and occupation codes for previous time periods. Again, this seem like low value added because I think it is possible to use crosswalks to get from the ACS industry and occupation codes to these - I may be wrong here though!
+
+-   [Health insurance variables](https://cps.ipums.org/cps-action/variables/group?id=asec_insur) - the ACS includes information about the type of health insurance that people are *currently* covered with. ASEC goes into much greater detail about when the coverage started, who it is for (are there dependents), who is paying etc. Again, these did not seem like a high priority for us.
+
+-   [Family interrelations variables](https://cps.ipums.org/cps-action/variables/group?id=core_fam) - there are more pointer variables in ASEC (that come from the core CPS) that can be used to understand how people within households are related to one another.
+
+## Household vs. person level fusing
+
+The majority of the variables in ASEC are at the person level. However, we want to fuse at the household level (see notes from Kevin below)
+
+**From Kevin (3/12/23)** Fusing at person-level is not a *technical* problem, but fusionModel does not have any ability to statistically link or correlate fused variables *within* households. So, for example, ASEC person income variables fused to ACS person microdata will not *necessarily* result in *household* totals (when summed for ACS households) that reflect the original distribution of ASEC household totals. They may come reasonably close, but that's an empirical question \-- there's no guarantee.\
+\
+Another way of putting this: If an end-user wants to do household-level analysis, they should use variables fused at household level and generally avoid aggregating person-level fused variables (in fact, I would just impose that as a rule). I suspect that everyone within the orbit of fusionACS, at the moment at least, is thinking about household-level analysis.\
+\
+If that's true, then *for now* I recommend only fusing variables at household level. For all of the income/dollar/continuous variables of interest in ASEC, that's no problem: We just sum them for all ASEC households and then fuse at household level. For *categorical* variables, we would need to think about what kind of aggregation function makes sense; there are various options.\
+\
+In longer term, we could certainly fuse *both* household and person level versions of the ASEC variables (the latter aggregated as I just described). Then ask the end-user to specify what level of analysis they want and let the fusionACS data analysis platform (more on that when we all talk) use the "correct" fusion output based on their answer.
