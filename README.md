@@ -514,6 +514,11 @@ the Github repository and are used by both the “Universal Survey
 Dictionary” and “Survey Harmonization Tool” Shiny apps that are part of
 fusionData.
 
+If this is the first time you are calling `compileDictionary()` for a 
+new survey, you will need to add the survey abbreviation and description 
+of the survey to the R script `universe/app.R` on line 32 so it can be 
+called on by `universe()` (described below).
+
 The “Universal Survey Dictionary” is a Shiny app that can be accessed by
 the following call:
 
