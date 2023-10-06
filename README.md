@@ -1070,6 +1070,63 @@ for a given donor survey, since the process can flag issues with
 variable harmonization that need to be addressed before finalizing the
 fusion inputs.
 
+### Person-to-household aggregation
+
+If `donor` refers to a survey with both household- and person-level microdata *and* `respondent = "household"` *and* `fuse` includes person-level variables, then we have a situation where person-level fusion variables need to be aggregated to household-level prior to fusion. For example, most variables in the ASEC 2019 microdata are at the person level. When fusing with ACS 2019 data, these variables need to be aggregated to the household level.
+
+This is done automatically within [`assemble`](https://ummel.github.io/fusionData/reference/assemble.html). In this scenario, person-level fusion variables are aggregated based on their class. By default, numeric variables return the household total (sum), unordered factors return the level of the household's reference person, and ordered factors return the household's maximum level. This is one reason why specifying variables as ordered or unordered factors is important within the ingestion process.
+
+If the default aggregation methods are not correct for a specific variable, then you can override them in one of two ways: using the `agg_fun` argument or the `agg_adj` argument. Lets look at an example using ASEC and two variables at the person level: `kidcneed`, which flags if a child under the age of 14 needs paid childcare while their parents work, and `schllunch`, which is the value of school lunch meals provided to children for free at school.
+
+First, download the processed microdata for both the ASEC 2019 and ACS 2019 surveys:
+
+```         
+getSurveyProcessed(survey = "ACS_2019")
+getSurveyProcessed(survey = "ACES_2019")
+```
+
+```{r, echo = TRUE}
+asec <- fst::read_fst("survey-processed/ASEC/2019/ASEC_2019_P_processed.fst")
+head(select(asec, asec_2019_hid, weight, rep_1, schllunch, kidcneed))
+```
+
+By default, `schllunch` would be summed across all household members (because it is numeric) and `kidcneed` would take the reference person's value (because it is an unordered factor). However, (somewhat confusingly) in the person-level data, ASEC records `schllunch` as the same for all members of the *family*. Summing `schllunch` across household members would result in double counting the total school lunch value of that household, even if there are multiple families in the household. This problem occurs with many of the ASEC variables related to poverty because the *family-level* response is recorded for each *individual* in the family.
+
+The default behavior for `kidcneed` would be the value of the reference person. As the reference person is the householder, who is never a child under the age 14, this would result in the aggregated variable being always "not in universe". Instead, we want to take the modal value across members of the household. This will ignore the NIU values and be a 1 if the majority of children need paid child care, and 0 if not.
+
+Let's implement these two custom adjustments to the aggregation process within `fusionInput()`.
+
+```{r, echo = TRUE}
+
+input.dir <- fusionInput(donor = "ASEC_2019",
+                         recipient = "ACS_2019",
+                         respondent = "household",
+                         # variables we always want as predictors:
+                         force = c("hhincome", "race", "educ", "numprec", "hhtenure", "state"), 
+                         # the two person-level variables we want to aggregate and fuse
+                         fuse = c("kidcneed", "schllunch"),
+                         # here we provide a list of specific custom functions for aggregation
+                         agg_adj = list(
+                           schllunch = ~if.else(duplicated(data.table(asec_2019_hid, famid)), 0, schllunch)
+                         ),
+                         # here we provide a list of specific pre-packaged functions for aggregation (which still override the defaults)
+                         agg_fun = list(
+                           kidcneed = "mode"
+                         ),
+                         note = "ASEC example of custom aggregation")
+
+
+```
+
+For `kidcneed` the custom aggregation uses a package-specific function called "mode", which returns to modal value across household members. Any other function that takes in a vector and returns a single value can be passed to the `agg_fun` argument.
+
+For `schllunch` the aggregation is more specific. We want to take the value of the first person within the *family*. This is different to reference person (which we could otherwise get with the package-specific function "ref" passed to `agg_fun`) because there could be multiple families within a household. Because it is not an existing function, it needs to be passed to `agg_adj`.
+
+Note that in the `schllunch` custom aggregation function, we use the convenience utility function `if.else()`. It wraps [`if_else`](https://dplyr.tidyverse.org/reference/if_else.html) and can be used identically but preserves factor levels and ordering in the result if possible.
+
+The results files for this call to `fusionInput()` will now be at the *household* level, and the person level variables will be aggregated as we specified.
+
+
 ## Generate fusion outputs
 
 Once the necessary input files are ready-to-go, it is straightforward to
