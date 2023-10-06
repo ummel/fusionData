@@ -297,6 +297,7 @@
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/compileDictionary.html">compileDictionary</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>As the console output reveals, <code><a href="reference/compileDictionary.html">compileDictionary()</a></code> updates two files: <code>data/dictionary.rda</code> and <code>data/surveys.rda</code>. These files are part of the Github repository and are used by both the “Universal Survey Dictionary” and “Survey Harmonization Tool” Shiny apps that are part of fusionData.</p>
+<p>If this is the first time you are calling <code><a href="reference/compileDictionary.html">compileDictionary()</a></code> for a new survey, you will need to add the survey abbreviation and description of the survey to the R script <code>universe/app.R</code> on line 32 so it can be called on by <code><a href="reference/universe.html">universe()</a></code> (described below).</p>
 <p>The “Universal Survey Dictionary” is a Shiny app that can be accessed by the following call:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Open "Universal Survey Dictionary" Shiny app</span></span>
