@@ -1,5 +1,6 @@
 library(fusionModel)
 library(fusionData)
+library(tidyverse)
 source("R/utils.R")
 source("R/createDictionary.R")
 source("R/compileDictionary.R")
@@ -25,12 +26,21 @@ d_v <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_V_summary.fst") %>% r
 #Read trip-level data summarized at the household level
 d_t <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_T_summary.fst") %>% rename(HOUSEID = nhts_2017_hid)
 
+#Read person-level file and summarise it
+d_p <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_P_processed.fst") %>% select(nhts_2017_hid,deliver,weight) %>%
+        mutate(deliver = ifelse(deliver == "No online delivery",0,deliver)) %>%
+        group_by(nhts_2017_hid) %>% summarise(deliver_home = weighted.mean(deliver,weight)) %>% rename(HOUSEID = nhts_2017_hid)
+
 #Merge household data and summarized vehicle data
 d_03 <- merge(d_02,d_v, by = c('HOUSEID'),  all.x=TRUE)
 
 #Merge household data and summarized trip-level data
-d <- merge(d_03,d_t, by = c('HOUSEID'),  all.x=TRUE)
-rm(d_01,d_02,d_03)
+d_04 <- merge(d_03,d_t, by = c('HOUSEID'),  all.x=TRUE)
+
+#Merge household data and summarized person-level data
+d <- merge(d_04,d_p, by = c('HOUSEID'),  all.x=TRUE)
+
+rm(d_01,d_02,d_03,d_04)
 
 #Replace NA arising from trip-level merger with O. This could be due to household members not traveling
 for (v in names(d_t)) {
@@ -75,12 +85,14 @@ codebook_v <- fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_V_codeb
 codebook_t <- fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_codebook_summary.fst")
 
 #Merge trip,vehicle, and household codebooks
-codebook <-   bind_rows(codebook_h,codebook_v,codebook_t) %>% distinct(var,value,label, .keep_all = T)
+codebook <-   bind_rows(codebook_h,codebook_v,codebook_t) %>% distinct(var,value,label, .keep_all = T) %>%
+              add_row(var = "deliver_home",desc = "Online deliveries made to home",value = NA, label = NA)
+
 rm(codebook_h,codebook_v,codebook_t)
 
 # Add replicate household weight variables to codebook
 
-rep_var<-colnames(wt)
+rep_var <-colnames(wt)
 rep_var <- rep_var[-c(1)]
 
 rep_desc <- str_extract(rep_var,"\\d+$")
@@ -108,7 +120,7 @@ as.values <- list(
   PARA = "No para-transit available"
 )
 
-    # These are cases where the variable measures a continuous/numeric concept,
+  # These are cases where the variable measures a continuous/numeric concept,
   # but inserting a zero-value for "Not applicable" entries does not make sense.
   # In this case, a categorical value is assigned to override the default zero
   # and the variable should be treated as an ordered factor.
@@ -167,16 +179,16 @@ ordered.factors <- list(
   PLACE = c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
   PRICE =  c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
   PTRANS =  c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
-  RAIL =c("MSA does not have rail, or hh not in an MSA","MSA has rail"),
-  SPHONE =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
-  TAB =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
-  TAXI =c("No taxi available","Never","A few times a year","A few times a month","A few times a week","Daily"),
-  TRAIN =c("No train available","Never","A few times a year","A few times a month","A few times a week","Daily"),
+  RAIL = c("MSA does not have rail, or hh not in an MSA","MSA has rail"),
+  SPHONE = c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  TAB = c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  TAXI = c("No taxi available","Never","A few times a year","A few times a month","A few times a week","Daily"),
+  TRAIN = c("No train available","Never","A few times a year","A few times a month","A few times a week","Daily"),
   URBAN = c("Not in urban area","In an area surrounded by urban areas", "In an urban area","In an Urban cluster"),
   URBANSIZE = c("Not in an urbanized area","50,000 - 199,999","200,000 - 499,999","500,000 - 999,999","1 million or more without heavy rail","1 million or more with heavy rail"),
-  WALK =c("Never","A few times a year","A few times a month","A few times a week","Daily"),
+  WALK = c("Never","A few times a year","A few times a month","A few times a week","Daily"),
   WALK2SAVE = c("Strongly disagree","Disagree","Neither Agree or Disagree","Agree","Strongly agree"),
-  WEBUSE17 =c("Never","A few times a year","A few times a month","A few times a week","Daily")
+  WEBUSE17 = c("Never","A few times a year","A few times a month","A few times a week","Daily")
   )
 
 # Safety check
@@ -280,13 +292,20 @@ d1 <- d %>%
   rename(
     nhts_region = CENSUS_R,
     nhts_division = CENSUS_D,
-    cbsa13 = HH_CBSA,
+    cbsa13 = (HH_CBSA),
     state = HHSTFIPS) %>% 
   
   mutate(
     ur12 = ifelse(URBRUR == 'Rural','R','U'),
     state = str_pad(state, 2, pad ="0"),
+   # cbsa13 = as.factor(cbsa13),
     state = as.factor(state)) 
+
+# Check for non-numeric entries and replace "None" with NA
+d1$cbsa13[d1$cbsa13 == "None"] <- NA
+
+# Convert to factor
+d1$cbsa13 <- as.factor(d1$cbsa13)
 
 #Remove entries with travel flag at the state-division level. This could be due to the response being from a non-home location
 #Similar filter was used in the BTS model
@@ -300,7 +319,6 @@ dxx <-  d1  %>%
   rename(
     region = nhts_region ,
     division = nhts_division)
-
 
 #Remove entries with travel flag at the cbsa-division level.This could be due to the response being from a non-home location
 #Similar filter was used in the BTS model
@@ -318,21 +336,20 @@ dxx <-  d1  %>%
  #   division = nhts_division)
 
 
-# See which variables in 'd' are also in 'geo_concordance' and
+# See which variables in 'dxx' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
-
 gvars <- intersect(gnames, names(dxx))
 
 # Class new/added geo identifiers as unordered factors
 dxx <- dxx %>%
-  mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE)) %>% 
-  
-  #CBSA correction: There are some CBSA which have been suppressed in NHTS but available in geoconcordance.fst
-  #We could drop these entries altogehter, randomly assign CBSA to the households, or just drop the CBSA variable. Chose #3
-    mutate(
-    cbsa13 = ifelse((state ==  '09'|state ==  '10'|state ==  '15'|state ==  '34') & (cbsa13 == "None"),NA,cbsa13 ))
 
+  #CBSA correction: There are some CBSA which have been suppressed in NHTS but are available in 'geoconcordance.fst'
+  #We could drop these entries altogether, randomly assign CBSA to the households, or just drop the CBSA variable. Choose #3
+#  mutate(
+ #   cbsa13 = data.table::fifelse((state ==  '09'|state ==  '10'|state ==  '15'|state ==  '34') & is.na(cbsa13), NA, as.factor(cbsa13))) %>%
+    mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE)) 
 #----------------
+dxx$cbsa13[is.na(dxx$cbsa13)] <- "None"
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
@@ -363,5 +380,5 @@ compileDictionary()
 
 # Save data to disk (.fst)
 fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_H_processed.fst", compress = 100)
-
+rm(d_p,d_t,d_v,d,d1,dxx,imp,wt)
 

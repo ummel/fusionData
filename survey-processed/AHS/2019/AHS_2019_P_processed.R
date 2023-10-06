@@ -265,11 +265,15 @@ d <- d %>%
    mutate(INUSYR = ifelse(INUSYR == 0,"Born in US",INUSYR)) %>% 
   mutate(GRAD = gsub("\\<Not applicable\\>", NA,GRAD))
 
-
-#test check
-#result <- apply(d, 2, function(x) any(grepl("Not applicable", x)))
-#names(d)[result]
-#d1 <- d
+d <- d %>% mutate(
+  GRAD = factor(GRAD, levels = c( "Less than 1st grade", "1st, 2nd, 3rd, or 4th grade", "5th or 6th grade", "7th or 8th grade", "9th grade", 
+                                  "10th grade", "11th grade", "12th grade, no diploma", 
+                                 "High school graduate - high school diploma or equivalent (for example: GED)",
+                                 "Diploma or certificate from a vocational, technical, trade or business school beyond", 
+                                  "Associate degree in college - academic program", "Associate degree in college - occupational / vocational program", 
+                                 "Some college but no degree",
+                                    "Bachelor's degree (for example: BA, AB, BS)", "Professional school degree (for example: MD, DDS, DVM, LLB, JD)", 
+                                    "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Doctorate degree (for example: PhD, EdD)"), ordered = T)) 
 
 #exp_vars<-c()
 # selected_vars<-intersect(intersect(labeled_vars,names(d)),
@@ -333,12 +337,6 @@ p.final <- d  %>%
  dictionary <- createDictionary(data = p.final, survey = "AHS", vintage = 2019, respondent = "P")
  saveRDS(object = dictionary, file = "survey-processed/AHS/2019/AHS_2019_P_dictionary.rds")
 
-# #----------------
-# 
 # # Save data to disk (.fst)
 fst::write_fst(x = p.final, path = "survey-processed/AHS/2019/AHS_2019_P_processed.fst", compress = 100)
-# check <-  fst::read_fst("survey-processed/AHS/2019/AHS_2019_P_processed_2.fst")
 compileDictionary()
-
-#test <- p.final %>% filter(mil == "Not applicable")
- 

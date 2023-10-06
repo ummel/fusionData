@@ -34,9 +34,9 @@ gc()
 
 #-----
 # Prevent Serial number from being transformed into scientific number and indistinguishable to dictionary
-if (any(!grepl("[A-Z]", as.character(d$SERIALNO[1:20])))){
-  d$SERIALNO <- paste0("H", as.character(d$SERIALNO))
-}
+#if (any(!grepl("[A-Z]", as.character(d$SERIALNO[1:20])))){
+#  d$SERIALNO <- paste0("H", as.character(d$SERIALNO))
+#}
 #-----
 
 # Apply 'ADJINC' adjustment to appropriate variables
@@ -184,6 +184,7 @@ for (v in names(na.count)) {
 # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
 d <- d %>%
   mutate_if(is.factor, safeCharacters) %>%
+  mutate(SERIALNO = as.factor(SERIALNO)) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   mutate(

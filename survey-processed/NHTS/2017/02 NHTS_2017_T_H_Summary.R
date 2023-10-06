@@ -32,12 +32,12 @@ nhts_h <-  fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_processe
          tdwknd = as.character(tdwknd),
          pubtrans = as.character(pubtrans),
 
-         whytrp1s= gsub("Social/Recreational","social",whytrp1s),
-         whytrp1s= gsub("Something else","other",whytrp1s),
-         whytrp1s= gsub("Shopping/Errands","shopping",whytrp1s),
-         whytrp1s= gsub("School/Daycare/Religious activity","school",whytrp1s),
-         whytrp1s= gsub("Medical/Dental services","medical",whytrp1s),
-         whytrp1s= gsub("Transport someone","transport",whytrp1s))  %>%     
+         whytrp1s = gsub("Social/Recreational","social",whytrp1s),
+         whytrp1s = gsub("Something else","other",whytrp1s),
+         whytrp1s = gsub("Shopping/Errands","shopping",whytrp1s),
+         whytrp1s = gsub("School/Daycare/Religious activity","school",whytrp1s),
+         whytrp1s = gsub("Medical/Dental services","medical",whytrp1s),
+         whytrp1s = gsub("Transport someone","transport",whytrp1s))  %>%     
         
   mutate(whytrp1s = as.character(whytrp1s)) %>%
   
@@ -101,6 +101,26 @@ nhts_h_s2 <- nhts_h %>% select(nhts_2017_hid,weight,which(sapply(., is.numeric))
                         tregrtm = weighted.mean(tregrtm,weight,na.rm = TRUE),
                         trvlcmin = weighted.mean(trvlcmin,weight,na.rm = TRUE))
 
+
+#Summarize trip trans by triptype
+nhts_p_c1 <- nhts_h %>% select(nhts_2017_hid,whytrp2s, trptrans) %>%
+  group_by(nhts_2017_hid,whytrp2s) %>% 
+  mutate(
+    count = n(),
+    trptrans_ = ifelse(trptrans == lag(trptrans), trptrans, "mixed")) %>% 
+  filter (trptrans_ == "mixed" | count == "1") %>% 
+  mutate(
+    trptrans_ = ifelse(count == "1", trptrans, trptrans_))  %>%  
+  select(nhts_2017_hid,whytrp2s,trptrans_)  %>%  
+  unique()  %>% 
+  dplyr::rename(trptrans = trptrans_) %>% 
+  ungroup()
+
+nhts_p_c1_res <- reshape(getanID(nhts_p_c1, c('nhts_2017_hid','whytrp2s')), 
+                         timevar="whytrp2s",idvar=c("nhts_2017_hid"),direction="wide") %>%
+                 mutate_all(~ifelse(is.na(.), "No trip", .))
+
+
 #Count number of trips by trip type 
 #nhts_h_count <- nhts_h %>% select(whytrp2s, nhts_2017_hid,which(sapply(., is.numeric))) %>%
  #               group_by(nhts_2017_hid,whytrp2s) %>% 
@@ -113,9 +133,10 @@ nhts_h_s2 <- nhts_h %>% select(nhts_2017_hid,weight,which(sapply(., is.numeric))
 
 #Merging the summarized files 
 d <- merge(nhts_h_s1_res,nhts_h_s2 ,by = c('nhts_2017_hid'), all = T) %>%
-  #   merge(nhts_h_trp_count_res,by = c('nhts_2017_hid'), all = T) %>%
+    merge(nhts_p_c1_res,by = c('nhts_2017_hid'), all = T) %>%
     colClean()   %>%
-   rename_with(tolower)  
+   rename_with(tolower)   %>%
+  mutate_at(vars(starts_with("trptrans_")), ~ifelse(is.na(.), "No trip", .))
 
 #Replace NA with 0 for all variables
 #Need to reconsider changing variables to categoricals to avoid the 0's or use a flag
@@ -124,12 +145,28 @@ d[is.na(d)] <- 0
 #----------------
 #Create new codebook entries  for numeric variables
 dx <- d %>% select(which(sapply(., is.numeric))) 
-codebook_d = data.frame(var = colnames(dx)) %>%  
+codebook_dx = data.frame(var = colnames(dx)) %>%  
   mutate(
     value_min = apply(dx,2,min,na.rm=T),
     value_max = apply(dx,2,max,na.rm=T),
     value = paste0(value_min,"-",value_max)) %>%  
   subset(., select = -c(value_min,value_max))  %>% mutate_all(trimws)
+
+# Create new entries in the codebook for character variables
+dy <- d %>% select(which(sapply(., is.character)))
+
+codebook_dy = data.frame(var = colnames(dy)) %>% 
+  mutate(
+    value = lapply(dy,unique)) %>%  
+  mutate(
+    value = gsub("\"","",value),
+    value = gsub(")","",value),
+    value = gsub("^c\\(","",value),
+  ) %>%
+  separate_rows(., value,sep=",")
+
+codebook_d <- rbind(codebook_dx,codebook_dy)  %>% mutate_all(trimws)
+
  
 #----------------
 codebook_t <- fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_codebook.fst")  %>%
@@ -141,14 +178,34 @@ label = gsub("Something else","other",label),
 label = gsub("Shopping/Errands","Shopping",label),
 label= gsub("School/Daycare/Religious activity","School",label),
 label = gsub("Transport someone","Transport",label),
-label = gsub("Medical/Dental services","Medical",label)) %>%
-  filter(var %in% c('nhts_2017_hid','pid','numtrans','trpmiles','tregrtm','tracctm','trpmilad',
+label = gsub("Medical/Dental services","Medical",label),
+
+label = gsub("Car|SUV|Van|Pickup truck","personal",label),
+
+label = gsub("Golf cart / Segway|Motorcycle / Moped|Private / Charter / Tour / Shuttle bus", "personal",label),
+label = gsub("rv (motor home, atv, snowmobile)", "personal",label),
+
+
+label = gsub("Bicycle","bicycle",label),
+
+label = gsub("Walk","walk",label),
+
+label = gsub("Something Else","other",label),
+label = gsub("city-to-city bus (greyhound, megabus)","public",label),
+label = gsub("Public or commuter bus|Amtrak / Commuter rail|Subway / elevated / light rail / street car|School bus|paratransit/ dial-a-ride|city-to-city bus (greyhound, megabus)|Airplane|Boat / ferry / water taxi|Airplane","public",label),
+
+label = gsub("Taxi / limo (including Uber / Lyft)","rideshare/rental",label),
+label = gsub("rental car (including zipcar / personal2go)","rideshare/rental",label)) %>%
+ 
+   filter(var %in% c('nhts_2017_hid','pid','numtrans','trpmiles','tregrtm','tracctm','trpmilad','trptrans',
                     'trvlcmin','trwaittm','vehtype','vmt_mile','whytrp1s')) %>%
+  
+  
   filter(label != "N/A") %>%
   mutate(across(where(is.character), tolower)) %>% 
   mutate(
     desc = ifelse(var == "whytrp1s", label,desc)) %>% 
-  mutate_all(trimws)
+  mutate_all(trimws) %>% unique()
 
 whytrp1s <- codebook_t %>% 
   filter(var == 'whytrp1s') %>% subset(., select = c(desc)) %>% rename(whytrp1s = desc)

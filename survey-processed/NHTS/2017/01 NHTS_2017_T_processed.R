@@ -33,7 +33,17 @@ d <- d_t00  %>% select(all_of(nm2))
 #Modify variables to add trailing 0's
 d <- d %>% mutate(OBHTNRNT = ifelse(OBHTNRNT == '5','05', OBHTNRNT),
                   DTHTNRNT = ifelse(DTHTNRNT == '5','05', DTHTNRNT),
-                  WHYTRP1S = ifelse(WHYTRP1S == '1', "01",WHYTRP1S))
+                  WHYTRP1S = ifelse(WHYTRP1S == '1', "01",WHYTRP1S),
+                  
+                  TRPTRANS = ifelse(TRPTRANS == '1', "01",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '2', "02",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '3', "03",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '4', "04",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '5', "05",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '6', "06",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '7', "07",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '8', "08",TRPTRANS),
+                  TRPTRANS = ifelse(TRPTRANS == '9', "09",TRPTRANS))
 
 # Load and process codebook
 codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet ="CODEBOOK_TRIP") %>%
@@ -204,6 +214,8 @@ stopifnot(length(extras) == 0)
 d <- d[intersect(names(d), codebook$var)]
 
 options(scipen = 999) #Removes scientific notation. Scientific notation creeps in during new label creation and creates NA values upon comparison with ordered.factors.
+
+
 
 for (v in names(d)) {
 

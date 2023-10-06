@@ -4,10 +4,10 @@ library(fusionModel)
 dir <- "fusion/NHTS/2017/2017/input"
 
 # Number of cores to use
-ncores <- 1
+ncores <- 3
 
 # Number of implicates to generate
-nimps <- 30
+nimps <- 40
 
 # Output files path stub
 out.path <- file.path(sub("input", "output", dir), sub("train.fst$", "", list.files(dir, "train\\.fst$")))
