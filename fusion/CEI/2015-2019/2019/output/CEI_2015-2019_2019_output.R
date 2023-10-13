@@ -66,10 +66,12 @@ valid <- fuse(data = train.data,
               fsd = paste0(out.path, "valid.fsd"),
               cores = ncores)
 
+valid <- valid %>% select(M,gas,elec,eathome,cloftw,airshp)
+
 # Pass 'valid' implicates to validate() function
 # Subset variables: income; race/ethnicity; education; household size; housing tenure; and a location variable
 validation <- validate(observed = train.data,
-                       implicates = read_fsd(valid),
+                       implicates = valid,
                        subset_vars = attr(prep, "xforce"),
                        weight = "weight",
                        cores = ncores)
