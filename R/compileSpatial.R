@@ -21,7 +21,7 @@ compileSpatial <- function() {
   spatial.dsets <- unique(dirname(flist))
 
   # Print message to console
-  cat("Identified", length(flist), "processed.rds files across", length(spatial.dsets), "spatial datasets:", paste(spatial.dsets, collapse = ", "), "\n")
+  cat("Identified", length(flist), "processed.rds spatial data files across", length(spatial.dsets), "spatial datasets:\n", paste(spatial.dsets, collapse = ", "), "\n")
 
   # Summarize each spatial dataset (in parallel, if possible)
   cat("Summarizing spatial datasets...\n")
@@ -30,8 +30,8 @@ compileSpatial <- function() {
   # Troubleshooting; identify which spatial dataset is giving trouble
   #for (v in spatial.dsets) summarizeSpatialDataset(v)
 
-  # Merge the individual data frames in 'data' (on keyed variables set by summarizeSpatialDataset)
-  result <- Reduce(function(...) merge(..., all = TRUE), result)
+  # Merge the individual data tables in 'result' (on keyed variables set by summarizeSpatialDataset)
+  result <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), result)
 
   # Remove columns with no variation
   keep <- !sapply(result, novary)
@@ -39,7 +39,7 @@ compileSpatial <- function() {
   result <- result[, ..keep]
 
   # Coerce character variables to unordered factor
-  # Any truly ordered factors should be made so in the upstream script that generates the assocaited "*_processed.rds" file
+  # Any truly ordered factors should be made so in the upstream script that generates the associated "*_processed.rds" file
   # Extract the var_labels so they can be reassigned after factor coercion (dropped by coercion step)
   vlabs <- labelled::var_label(result)
   result <- mutate_if(result, is.character, factor)
@@ -68,7 +68,7 @@ compileSpatial <- function() {
 
   # Basic spatial predictor dictionary
   spatial <- labelled::var_label(result) %>%
-    enframe(name = "predictor", value = "variable_rds") %>%
+    tibble::enframe(name = "predictor", value = "variable_rds") %>%
     mutate(variable_rds = as.character(variable_rds),
            vintage = as.character(var.vintages),
            values = var.values,
@@ -209,8 +209,9 @@ summarizeSpatialDataset <- function(dataset) {
     if (any(grepl("-", V))) {
       v <- ifelse(grepl("-", V), map(V, ~ as.character(eval(parse(text = sub("-", ":", .x, fixed = TRUE))))), V)
       d$vintage <- v[match(d$vintage, V)]  # This is rather slow...
-      d <- unnest(d, vintage)
+      d <- tidyr::unnest(d, vintage)
     }
+    d$vintage <- as.character(d$vintage)  # Force 'vintage' to be character (even if input is un-expanded integer)
     return(d)
   }
 
@@ -239,7 +240,7 @@ summarizeSpatialDataset <- function(dataset) {
     data <- map(data, ~ data.table(.x, key = c(gtarget, 'vintage')))
 
     # Merge the individual data frames in 'data' (on keyed variables set in previous step)
-    result <- Reduce(function(...) merge(..., all = TRUE), data)
+    result <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), data)
 
   } else {
 
@@ -249,10 +250,10 @@ summarizeSpatialDataset <- function(dataset) {
 
   #-----
 
-  # Create the abbreviated variables names for spatia predictors
+  # Create the abbreviated variables names for spatial predictors
   # By convention, these use ".." to separate the spatial dataset identifier from the variable abbreviation
   # NOTE that make.names() will remove dashed spatial spatial dataset name (e.g. "EPA-SLD" becomes "epa.sld")
-  # Forcing syntactically valid names avoids issues in rpart()
+  # Forcing syntactically valid names avoids potential downstream issues
   vnames <- make.names(paste(tolower(dataset), betterAbbreviate(gvars), sep = ".."), unique = TRUE)
   vlabs <- setNames(as.list(gvars), vnames)
   names(result) <- c(gtarget, 'vintage', vnames)

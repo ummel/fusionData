@@ -10,6 +10,7 @@
 #' @import fst
 #' @import devtools
 #' @import styler
+#' @import tidyr
 #' @rawNamespace import(shinyjs, except = c(html, runExample, alert))
 #' @rawNamespace import(matrixStats, except = c(count))
 #' @rawNamespace import(shiny, except = c(dataTableOutput, renderDataTable, validate))

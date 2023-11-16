@@ -35,5 +35,6 @@ Imports:
     fst,
     shiny,
     data.table,
-    styler
+    styler,
+    tidyr
 URL: https://ummel.github.io/fusionData/
