@@ -20,7 +20,7 @@ pus.files <- list.files(path = tempdir(), pattern = "pus..csv$", full.names = TR
 d <- pus.files %>%
   map_dfr(data.table::fread) %>%
   as_tibble() %>%
-  rename_with(toupper)  # Ensure upper-case names for consistency for 'codebook'; replicate weights are sometimes lower-case in the raw data
+  rename_with(toupper)# # Ensure upper-case names for consistency for 'codebook'; replicate weights are sometimes lower-case in the raw data
 
 # Replace literal empty strings ("") with NA for character type columns
 # fread() does not convert empty strings to NA, as they are ambiguous
@@ -121,7 +121,7 @@ d <- d[intersect(names(d), codebook$var)]
 
 # Loop through each variable in 'd', assigning labels when applicable
 for (v in names(d)) {
-
+  if (v != "SERIALNO") {
   cb <- filter(codebook, var == v)
   x <- d[[v]]
   y <- unlist(cb$value)
@@ -159,10 +159,10 @@ for (v in names(d)) {
   # Update column in 'd'
   d[[v]] <- x
 
+  }
 }
 
 gc()
-
 #----------------
 
 # No or very few NA's remaining...

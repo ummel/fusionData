@@ -1,4 +1,6 @@
 library(tidyverse)
+library(fusionData)
+
 source("R/utils.R")
 source("R/createDictionary.R")
 source("R/imputeMissing.R")
@@ -13,6 +15,7 @@ source("survey-processed/ACS/utilityCostFlags.R")  # Only necessary prior to 201
 
 # Process 2017 codebook into standard format
 codebook <- processACScodebook("survey-raw/ACS/2017/PUMS_Data_Dictionary_2017.csv")
+options(scipen = 999)
 
 #-----
 
@@ -38,10 +41,12 @@ gc()
 
 
 #-----
+#d <- d %>% mutate(SERIALNO = as.character(as.numeric(SERIALNO)))#,
+                  #result = sprintf("%s%0.0f",SERIALNO))
 # Prevent Serial number from being transformed into scientific number and indistinguishable to dictionary
-if (any(!grepl("[A-Z]", as.character(d$SERIALNO[1:20])))){
-  d$SERIALNO <- paste0("H", as.character(d$SERIALNO))
-}
+#if (any(!grepl("[A-Z]", as.character(d$SERIALNO[1:20])))){
+ # d$SERIALNO <- paste0("H", as.character(d$SERIALNO))
+#}
  
 #-----
 # The only variable in 'hus' that contains useful information about group quarter individuals is "FS" (Did anyone in household receive SNAP?)
@@ -266,10 +271,10 @@ d <- d %>%
          renteq = round(renteq))
 
 #----------------
-
 # Assemble final output
 # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
 d <- d %>%
+  mutate(SERIALNO = as.factor(as.numeric(SERIALNO))) %>% 
   mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
