@@ -19,7 +19,7 @@ dir <- paste("fusion", sub("_", "/", donor), acs.vintage, "input", sep = "/")
 prep <- prepare(donor = donor,
                 recipient = recipient,
                 respondent = "household",
-                implicates = 5)
+                implicates = 1)
 
 # Specify fusion variables to be retained in harmonization results
 data <- assemble(prep,

@@ -2,7 +2,7 @@ library(fusionData)
 library(fusionModel)
 library(tidyverse)
 library(fst)
-
+library(data.table)
 
 
 # Number of cores to use
@@ -34,7 +34,7 @@ fusion.vars <- googlesheets4::read_sheet("13GRKkVZXapHtP7oK1WUh0Yu7OQ_9icd17wUGu
 prep <- prepare(donor = "CEI_2015-2019",
                 recipient = "ACS_2019",
                 respondent = "household",
-                implicates = 5)
+                implicates = 1)
 
 data <- assemble(prep,
                  fusion.variables = fusion.vars,

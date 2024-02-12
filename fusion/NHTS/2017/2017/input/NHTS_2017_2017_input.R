@@ -1,6 +1,7 @@
 library(fusionData)
 library(fusionModel)
-
+library(fst)
+        
 # Number of cores to use
 ncores <- 3
 
@@ -19,11 +20,12 @@ dir <- paste("fusion", sub("_", "/", donor), acs.vintage, "input", sep = "/")
 prep <- prepare(donor = donor,
                 recipient = recipient,
                 respondent = "household",
-                implicates = 5)
+                implicates = 1)
 
 # Specify fusion variables to be retained in harmonization results
 data <- assemble(prep,
-                 fusion.variables = c('bike2save','walk2save','price','place','gstotcst','ptrans'),
+                 fusion.variables = c('bike2save','walk2save',
+                                      'price','place','gstotcst','ptrans'),
                  window = 2)
 
 rm(prep)

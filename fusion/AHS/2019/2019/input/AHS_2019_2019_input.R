@@ -2,7 +2,7 @@ library(fusionData)
 library(fusionModel)
 
 # Number of cores to use
-ncores <- 1
+ncores <- 3
 
 # Donor and recipient survey identifiers
 donor <- "AHS_2019"
@@ -19,7 +19,7 @@ dir <- paste("fusion", sub("_", "/", donor), acs.vintage, "input", sep = "/")
 prep <- prepare(donor = donor,
                 recipient = recipient,
                 respondent = "household",
-                implicates = 5)
+                implicates = 1)
 
 # Specify fusion variables to be retained in harmonization results
 # Removed pca for prep 
@@ -73,14 +73,14 @@ saveRDS(prep, file = file.path(dir, paste(donor, acs.vintage, "prep.rds", sep = 
 pred.vars <- attr(prep, "xpredictors")
 
 # Set cores for 'fst' to use when writing to disk
-threads_fst(ncores)
+fst::threads_fst(ncores)
 
 # Save training data to disk
 data[[1]] %>%
   select(one_of(c("weight", unlist(prep$y), pred.vars))) %>%
-  write_fst(path = file.path(dir, paste(donor, acs.vintage, "train.fst", sep = "_")), compress = 100)
+  fst::write_fst(path = file.path(dir, paste(donor, acs.vintage, "train.fst", sep = "_")), compress = 100)
 
 # Save prediction data to disk
 data[[2]] %>%
   select(one_of(pred.vars)) %>%
-  write_fst(path = file.path(dir, paste(donor, acs.vintage, "predict.fst", sep = "_")), compress = 100)
+  fst::write_fst(path = file.path(dir, paste(donor, acs.vintage, "predict.fst", sep = "_")), compress = 100)
