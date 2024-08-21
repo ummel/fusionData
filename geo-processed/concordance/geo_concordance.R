@@ -165,8 +165,8 @@ asec <- asec %>%
 # This links raw IECC codes to those used in RECS 2009 and 2015
 recs.iecc <- tibble(
   iecc_zone = c("1A*", "2A*", "2B", "2B*", "3A", "3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
-  recs_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK")
-) %>%
+  recs_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK"),
+  ) %>%
   mutate(recs_iecc_zone = paste0("IECC climate zone", ifelse(grepl("-", recs_iecc_zone), "s ", " "), recs_iecc_zone))
 
 recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
@@ -177,11 +177,24 @@ recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
   labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS IECC climate zone", "RECS Building American climate zone"))
 
 #----------
+# This links raw IECC codes to those used in RECS 2020
+recs20.iecc <- tibble(
+  iecc_zone = c("1A*","2A*","2B","2B*","3A","3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7","7","7","8"),
+  recs20_iecc_zone = c("1A", "2A","2B","2B","3A","3A","3B", "3C", "4A", "4B", "4C", "5A", "5B","5C", "6A", "6B", "7A","7AK","7B","8AK"),
+) 
+
+recs20.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
+  mutate(recs20_ba_zone = ifelse(ba_zone %in% c('Very Cold'),'Very-Cold',ba_zone)) %>%
+  left_join(recs20.iecc, by = "iecc_zone") %>%
+  select(state, county10, starts_with("recs20_")) %>%
+  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2020 IECC climate zone", "RECS 2020 Building American climate zone"))
 
 # Merge various datasets
 result <- geocorr %>%
   left_join(state.merge, by = "state") %>%
   left_join(recs.climate, by = c("state", "county10")) %>%
+  left_join(recs20.climate, by = c("state", "county10")) %>%
+  
   left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
   left_join(asec, by = c("state", "county14")) %>%
   mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
