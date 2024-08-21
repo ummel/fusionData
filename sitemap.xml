@@ -1,69 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://ummel.github.io/fusionData/404.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/authors.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/index.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/assemble.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/bg_centroids.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/compileDictionary.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/compileSpatial.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/conveyHarmony.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/createDictionary.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/fusionData-package.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/fusionInput.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/fusionOutput.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/getGeoProcessed.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/getSurveyProcessed.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/harmonize.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/harmony.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/installPackage.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/prepare.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/universe.html</loc>
-  </url>
-  <url>
-    <loc>https://ummel.github.io/fusionData/reference/uploadFiles.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://ummel.github.io/fusionData/404.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/LICENSE.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/authors.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/index.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/assemble.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/bg_centroids.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/compileDictionary.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/compileSpatial.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/conveyHarmony.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/createDictionary.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/fusionData-package.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/fusionInput.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/fusionOutput.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/getGeoProcessed.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/getSurveyProcessed.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/harmonize.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/harmony.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/index.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/installPackage.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/prepare.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/universe.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/uploadFiles.html</loc></url>
 </urlset>
+
