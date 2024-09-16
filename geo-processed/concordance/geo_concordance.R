@@ -1,4 +1,5 @@
 library(tidyverse)
+library(data.table)
 library(labelled)
 library(sf)
 
@@ -18,7 +19,7 @@ state.merge <- readRDS("geo-raw/miscellaneous/Geographic entities to merge on st
 
 #----------
 
-# Unzpip the compressed geocorr file in geo-raw/concordance
+# Unzip the compressed geocorr file in geo-raw/concordance
 unzip(zipfile = "geo-raw/concordance/geocorr2018_2116808121.csv.zip", exdir = tempdir())
 geocorr.file <- list.files(path = tempdir(), pattern = "^geocorr", full.names = TRUE)
 
@@ -30,8 +31,14 @@ d <- data.table::fread(file = geocorr.file,
                        skip = 2,
                        col.names = names(meta),
                        colClasses = list(character = 1:(ncol(meta) - 2))) %>%
-  labelled::set_variable_labels(.labels = unlist(meta[1, ])) %>%
-  mutate_all(na_if, y = " ")
+  labelled::set_variable_labels(.labels = unlist(meta[1, ]))
+
+# Replace literal empty strings ("") with NA for character type columns
+# fread() does not convert empty strings to NA, as they are ambiguous
+for (i in 1:ncol(d)) {
+  x <- d[[i]]
+  if (is.character(x)) set(d, j = i, value = na_if(x, ""))
+}
 
 #----------
 
@@ -145,15 +152,17 @@ stopifnot(!anyNA(climdiv))
 #          cex_cbsasize = c("Less than 100 thousand", "100-500 thousand", "0.5-1.0 million", "1-5 million", "More than 5 million")[cex_cbsasize]) %>%
 #   select(-pop10)
 
-# Custom Variables ----
+#----------
+
+# DEFINE CUSTOM VARIABLES
+# These are geographic variables used within specific donor surveys
 
 ## ASEC ----
 
-# Include CPS-ASEC county codes - not identified for each observation 
-
+# Include CPS-ASEC county codes - not identified for each observation
 asec <- readRDS("geo-processed/ASEC/asec_county.rds")
 
-# rename to be consistent with the processed H data 
+# rename to be consistent with the processed H data
 asec <- asec %>%
   mutate(asec_county = county) %>%
   rename(county14 = county) %>%
@@ -166,7 +175,7 @@ asec <- asec %>%
 recs.iecc <- tibble(
   iecc_zone = c("1A*", "2A*", "2B", "2B*", "3A", "3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
   recs_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK"),
-  ) %>%
+) %>%
   mutate(recs_iecc_zone = paste0("IECC climate zone", ifelse(grepl("-", recs_iecc_zone), "s ", " "), recs_iecc_zone))
 
 recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
@@ -177,28 +186,30 @@ recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
   labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS IECC climate zone", "RECS Building American climate zone"))
 
 #----------
+
 # This links raw IECC codes to those used in RECS 2020
 recs20.iecc <- tibble(
-  iecc_zone = c("1A*","2A*","2B","2B*","3A","3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7","7","7","8"),
-  recs20_iecc_zone = c("1A", "2A","2B","2B","3A","3A","3B", "3C", "4A", "4B", "4C", "5A", "5B","5C", "6A", "6B", "7A","7AK","7B","8AK"),
-) 
+  iecc_zone = c("1A*","2A*","2B","2B*","3A","3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
+  recs20_iecc_zone = c("1A", "2A","2B","2B","3A","3A","3B", "3C", "4A", "4B", "4C", "5A", "5B","5C", "6A", "6B", "7", "8"),
+)
 
 recs20.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
-  mutate(recs20_ba_zone = ifelse(ba_zone %in% c('Very Cold'),'Very-Cold',ba_zone)) %>%
+  mutate(recs20_ba_zone = ifelse(ba_zone == 'Very Cold', 'Very-Cold', ba_zone)) %>%
   left_join(recs20.iecc, by = "iecc_zone") %>%
   select(state, county10, starts_with("recs20_")) %>%
   labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2020 IECC climate zone", "RECS 2020 Building American climate zone"))
+
+#----------
 
 # Merge various datasets
 result <- geocorr %>%
   left_join(state.merge, by = "state") %>%
   left_join(recs.climate, by = c("state", "county10")) %>%
   left_join(recs20.climate, by = c("state", "county10")) %>%
-  
-  left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
-  left_join(asec, by = c("state", "county14")) %>%
-  mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
-         asec_division = if_else(!str_detect(recs_division, "Mountain"), recs_division, "Mountain")) %>%
+  #left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%  # FIX THIS!!!
+  #left_join(asec, by = c("state", "county14")) %>%  # FIX THIS!!!
+  # mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
+  #        asec_division = if_else(!str_detect(recs_division, "Mountain"), recs_division, "Mountain")) %>%
   # left_join(cbsasize, by = "cbsa13") %>%
   # mutate(cex_cbsasize = ifelse(ur12 == "U" & !is.na(cbsa13), cex_cbsasize, "Rural"),
   #        cex_metro = ifelse(ur12 == "U" & !is.na(cbsa13) & cbsatype13 == "Metro", "Metro", "Not metro")) %>%

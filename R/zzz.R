@@ -32,8 +32,9 @@ NULL
   # Check that the current working directory is /fusionData
   if (basename(getwd()) != "fusionData") stop("The fusionData package requires the working directory to be /fusionData")
 
+  # Deactivating for now -- oauth issues
   # If in interactive mode, ask user to authenticate in browser
-  if (interactive()) googledrive::drive_auth(email = "fusionacsdata@gmail.com")
+  #if (interactive()) googledrive::drive_auth(email = "fusionacsdata@gmail.com")
 
   # Print package information to console
   packageStartupMessage("fusionData v", utils::packageVersion("fusionData"), " | https://github.com/ummel/fusionData")

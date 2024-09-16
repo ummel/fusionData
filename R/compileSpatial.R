@@ -103,7 +103,7 @@ summarizeSpatialDataset <- function(dataset) {
   # Check for valid 'dataset' argument
   stopifnot(dataset %in% basename(list.dirs("geo-processed", recursive = FALSE)))
 
-  # Soft load the puma_concordance.fst file
+  # Soft load the geo_concordance.fst file
   pcord <- fst::fst("geo-processed/concordance/geo_concordance.fst")
 
   #---
@@ -142,7 +142,7 @@ summarizeSpatialDataset <- function(dataset) {
 
   #---
 
-  # Variables in puma_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
+  # Variables in geo_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
   gtarget <- c("state", "puma10")
 
   # The PUMA-related weight variable in 'pcord' (i.e. housing unit count)
@@ -150,7 +150,7 @@ summarizeSpatialDataset <- function(dataset) {
 
   gv <- unique(c(gtarget, gdonor))
   pcord <- pcord[c(gw, gv)] %>%
-    na.omit() %>%   # Removes an entries where the 'gdonor' variables might be missing/incomplete
+    na.omit() %>%   # Removes any entries where the 'gdonor' variables might be missing/incomplete
     setnames(c("W", gv)) %>%  # Rename the 'gw' variable to "W" for ease of use in data.table operations
     mutate(W = W / mean(W)) %>%   # Just to avoid integer overflow issues
     data.table(key = gv)
@@ -173,7 +173,7 @@ summarizeSpatialDataset <- function(dataset) {
 
     # Merge 'd' and 'pcord' on the common spatial variable(s)
     d <- d[pcord, on = intersect(gdonor, names(d)), allow.cartesian = TRUE]
-    d <- d[!is.na(vintage), ]
+    d <- d[!is.na(d$vintage), ]
 
     # Summary function; handles numeric and categorical cases
     # Returns weighted mean in the numeric case

@@ -6,7 +6,8 @@ fif <- data.table::fifelse
 #---
 
 # Load the raw daily data (2000-2020) from Spangler et al. (2022)
-d <- readRDS("geo-raw/heatmetrics/Heatvars_County_2000-2020_v1.2.rds")
+# NOTE: This was only downloaded temporarily, because the file was very large
+d <- readRDS("geo-raw/climate/Heatvars_County_2000-2020_v1.2.rds")
 
 # Create desired time and space identifying variables
 # Set observations to NA when the associated data quality flag is > 1

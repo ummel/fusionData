@@ -1,7 +1,7 @@
 # Function to "clean" a numeric vector by reducing to significant digits and converting to integer, if possible
-cleanNumeric <- function(x, convert = TRUE, ...) {
-  x <- signifDigits(x, ...)
-  if (convert) x <- convertInteger(x)
+cleanNumeric <- function(x, convert = TRUE, tol = 0.001, minimize = FALSE, threshold = 0.99) {
+  x <- signifDigits(x, tol = tol, minimize = minimize)
+  if (convert) x <- convertInteger(x, threshold = threshold)
   return(x)
 }
 
@@ -9,7 +9,7 @@ cleanNumeric <- function(x, convert = TRUE, ...) {
 
 # Function to return numeric vector rounded to reasonable significant digits
 # Returns a significant digit-ized result that is within 'tol' (percent) of the original value for all observations
-# If minimize = TRUE, function will try converting x to Z-scores first and 'tol' assesed relative to the Z-scores, then return result that minimizes number of unique values
+# If minimize = TRUE, function will try converting x to Z-scores first and 'tol' assessed relative to the Z-scores, then return result that minimizes number of unique values
 signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 
   intFUN <- function(x, orig = x) {
@@ -33,7 +33,7 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
     return(x1)
   } else {
     x2 <- intFUN(scale(x), x)
-    if (uniqueN(x1) <= uniqueN(x2)) return(x1) else return(x2)
+    if (data.table::uniqueN(x1) <= data.table::uniqueN(x2)) return(x1) else return(x2)
   }
 
 }
@@ -42,12 +42,16 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 
 # Function to convert a numeric vector to integer, if possible
 # Checks if maximum value is coercible to 32-bit integer; see ?integer "Details"
-convertInteger <- function(x) {
-  if (all(x[!is.na(x)] %% 1 == 0) & max(x, na.rm = TRUE) <= .Machine$integer.max) {
-    return(as.integer(round(x)))
-  } else {
-    return(x)
+# If the fraction of integer-coercible values exceeds 'threshold', then non-integer values are coerced to integer
+convertInteger <- function(x, threshold = 0.99) {
+  ok32 <- max(x, na.rm = TRUE) <= .Machine$integer.max
+  if (ok32) {
+    chk <- x[!is.na(x)] %% 1 == 0
+    if (sum(chk) / length(chk) >= threshold) {
+      x <- as.integer(round(x))
+    }
   }
+  return(x)
 }
 
 #-------------------
@@ -107,7 +111,7 @@ betterAbbreviate <- function(x) {
 #-------------------
 
 # Function returns TRUE if 'x' has only one non-NA value
-novary <- function(x) uniqueN(na.omit(x)) == 1
+novary <- function(x) data.table::uniqueN(na.omit(x)) == 1
 
 #-------------------
 
@@ -119,7 +123,7 @@ safeCharacters <- function(x) {
   y <- y0 <- if (is.factor(x)) levels(x) else unique(as.character(x))
 
   # This code chunk attempts to ensure that the factor levels are all ASCII-compliant
-  # If it detects non-ASCII strings, it attemps to convert using stringi::stri_trans_general()
+  # If it detects non-ASCII strings, it attempts to convert using stringi::stri_trans_general()
   # However, this conversion may not work as-is on a Windows machine (see here: https://github.com/gagolews/stringi/issues/269)
   enc <- stringi::stri_enc_mark(y)
   fix <- which(!is.na(y) & enc != "ASCII")
@@ -200,7 +204,7 @@ safeCharacters <- function(x) {
 # test2 <- convert2scaled(acs$mortgage, acs$weight)
 
 convert2scaled <- function(x, w, min.unique = 100, precision = 3) {
-  if (is.numeric(x) & uniqueN(x) >= min.unique) {
+  if (is.numeric(x) & data.table::uniqueN(x) >= min.unique) {
     i <- x != 0
     x0 <- x[i]
     xmed <- matrixStats::weightedMedian(x0, w[i])

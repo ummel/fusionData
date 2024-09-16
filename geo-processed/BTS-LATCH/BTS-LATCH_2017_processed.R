@@ -1,5 +1,6 @@
 library(tidyverse)
 library(RSocrata)
+source("R/utils.R")
 
 # All census tracts
 tracts <- fst::read_fst("geo-processed/concordance/geo_concordance.fst") %>%
@@ -37,6 +38,7 @@ latch <- d %>%
     urban_group = factor(urban_group, levels = c("urban", "suburban", "rural"), ordered = TRUE),
   ) %>%
   select(state, county10, tract10, vintage, urban_group, est_pmiles:est_vtrp) %>%
-  inner_join(tracts, by = join_by(state, county10, tract10))  # Just to remove tracts not in the concordance data
+  inner_join(tracts, by = join_by(state, county10, tract10)) %>%   # Just to remove tracts not in the concordance data
+  mutate_if(is.numeric, cleanNumeric, tol = 0.001)
 
 saveRDS(latch, "geo-processed/BTS-LATCH/BTS-LATCH_2017_processed.rds")

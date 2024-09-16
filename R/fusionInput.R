@@ -76,15 +76,23 @@
 
 # TESTING
 
-# RECS
-# donor = "RECS_2015",
-# recipient = "ACS_2015",
-# respondent = "household",
+# library(tidyverse)
+# library(data.table)
+# source("R/utils.R")
+
+# # RECS
+# donor = "RECS_2015"
+# donor = "RECS_2020"
+# recipient = "ACS_2015"
+# respondent = "household"
 # note = NULL
-# upload = FALSE
-# ncores = 2
-# fuse = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp", "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma'),
+# fuse = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp", "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma')
 # force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division")
+# agg_fun = NULL
+# agg_adj = NULL
+# test_mode = TRUE
+# ncores = 2
+
 #
 # CEI
 # donor = "CEI_2015-2019"
@@ -132,8 +140,8 @@ fusionInput <- function(donor,
   ask <- interactive()
 
   # Respondent identifier ("H" or "P")
-  rid <- substring(toupper(respondent), 1, 1)
-  respondent = ifelse(rid == "H", "household", "person")
+  rtype <- substring(toupper(respondent), 1, 1)
+  respondent = ifelse(rtype == "H", "household", "person")
   donor <- toupper(donor)
   recipient <- toupper(recipient)
 
@@ -141,7 +149,7 @@ fusionInput <- function(donor,
   stopifnot({
     is.character(donor)
     is.character(recipient)
-    rid %in% c("H", "P")
+    rtype %in% c("H", "P")
     is.null(fuse) | is.character(fuse) | is.list(fuse)
     is.null(force) | is.character(force)
     is.null(note) | is.character(note)
@@ -198,7 +206,7 @@ fusionInput <- function(donor,
   # Directory in /fusionData where /input results will be saved
   # This is automatically constructed from 'donor' and 'recipient', assuming recipient is ACS-based
   acs.vintage <- substring(recipient, 5)
-  dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs.vintage, rid, "input")
+  dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs.vintage, rtype, "input")
   cat("Result files will be saved to:\n", dir, "\n\n")
   if (dir.exists(dir)) {
     cat("The local /input directory already exists.\n")
@@ -208,7 +216,7 @@ fusionInput <- function(donor,
   }
 
   # Update 'stub' to include file name information
-  stub <- file.path(dir, paste(donor, acs.vintage, rid, sep = "_"))
+  stub <- file.path(dir, paste(donor, acs.vintage, rtype, sep = "_"))
 
   #-----
 
@@ -240,8 +248,7 @@ fusionInput <- function(donor,
   # Prepare and assemble data inputs
   prep <- fusionData::prepare(donor = donor,
                               recipient = recipient,
-                              respondent = respondent,
-                              implicates = 1)
+                              respondent = respondent)
 
   #-----
 
@@ -258,7 +265,11 @@ fusionInput <- function(donor,
                                agg_fun = agg_fun)
 
   # If NULL, update 'fuse' to reflect variables returned by 'assemble'
-  if (is.null(fuse)) fuse <- attr(data, "fusion.vars")
+  # Relevant in case ALL available fusion variables are selected automatically
+  #if (is.null(fuse)) fuse <- attr(data, "fusion.vars")
+
+  # Better/safer?
+  fuse <- attr(data, "fusion.vars")
 
   rm(prep)
 
@@ -293,9 +304,17 @@ fusionInput <- function(donor,
   # Recompile the attribute vectors for harmonized, and location variables
   # This is done to ensure the attributes are compatible with 'data', in case custom processing altered things along the way
   temp <- intersect(names(data[[1]]), names(data[[2]]))
-  temp <- setdiff(temp, "weight")
+  temp <- setdiff(temp, c("hid", "pid", "weight", "state", "puma00", "puma10", "puma10"))
   attr(data, "harmonized.vars") <- grep("..", temp, fixed = TRUE, invert = TRUE, value = TRUE)
   attr(data, "location.vars") <- grep("^loc\\.\\.", temp, value = TRUE)
+
+  # Extract variable names
+  harm.vars <- attr(data, "harmonized.vars")
+  loc.vars <- attr(data, "location.vars")
+  spatial.vars <- attr(data, "spatial.vars")
+  merge.vars <- attr(data, "merge.vars")
+  did <- attr(data, "donor.id")
+  rid <- attr(data, "recipient.id")
 
   #-----
 
@@ -304,7 +323,6 @@ fusionInput <- function(donor,
   cat("\n|=== Check categorical harmonized variables ===|\n\n")
 
   # TO DO: Could wrap this into stand-alone function
-  harm.vars <- attr(data, "harmonized.vars")
   fxvars <- data[[1]] %>%
     slice(1L) %>%
     select(all_of(harm.vars)) %>%
@@ -367,7 +385,6 @@ fusionInput <- function(donor,
   cat("\n|=== Check location variables ===|\n\n")
 
   # Determine number of levels associated with each location variable
-  loc.vars <- attr(data, "location.vars")
   loc.levels <- data[[1]] %>%
     select(all_of(loc.vars)) %>%
     map(levels) %>%
@@ -378,7 +395,7 @@ fusionInput <- function(donor,
 
   if (length(rvar) > 0) {
 
-    # Are there location variables we may want to consider dropped?
+    # Are there location variables we may want to consider dropping?
     loc.drop <- loc.levels[loc.levels > max(loc.levels[rvar])]
     loc.drop <- tibble::enframe(loc.drop, name = "Location variable", "Number of levels")
 
@@ -419,8 +436,9 @@ fusionInput <- function(donor,
   print(fuse)
 
   # Identify the predictor variables ('pred.vars')
-  pred.vars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), c("weight", fuse))
-  cat("\nIdentified", length(attr(data, "harmonized.vars")), "harmonized variables and", length(pred.vars), "total predictors\n")
+  #pred.vars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), c("weight", fuse))
+  pred.vars <- c('state', harm.vars, loc.vars,  spatial.vars)
+  cat("\nIdentified", length(attr(data, "harmonized.vars")), "harmonized respondent-level variables,", length(loc.vars) + 1, "location variables, and", length(spatial.vars), "spatial predictors\n")
 
   # Identify the 'xforce' predictor variables
   if (!is.null(force)) {
@@ -430,7 +448,7 @@ fusionInput <- function(donor,
       purrr::compact() %>%
       unlist() %>%
       c(rvar) # Add the previously identified representative geographic variable
-    cat("\nIdentified", length(xforce), "predictors to force and use for validation:\n")
+    cat("\nIdentified", length(xforce), "predictors to force inclusion and use for validation:\n")
     print(xforce)
   } else {
     xforce <- NULL
@@ -446,8 +464,8 @@ fusionInput <- function(donor,
 
   # Determine fusion order and subset of 'pred.vars' to use with each fusion variable/block
   n0 <- nrow(data[[1]])
-  pfrac <- min(1, ifelse(test_mode, 10e3, max(50e3, n0 * 0.1)) / n0)
-  prep.xy <- fusionModel::prepXY(data = data[[1]],
+  pfrac <- min(1, ifelse(test_mode, 5e3, max(10e3, n0 * 0.1)) / n0)
+  prep.xy <- fusionModel::prepXY(data = merge(data[[1]], data$spatial, all.x = TRUE),
                                  y = fuse,
                                  x = pred.vars,
                                  weight = "weight",
@@ -466,53 +484,70 @@ fusionInput <- function(donor,
 
   #-----
 
-  cat("\n|=== Write training and prediction datasets to disk ===|\n\n")
+  cat("\n|=== Write input data to disk ===|\n\n")
 
   # Update 'pred.vars' to the subset of predictors retained in 'prep.xy'
   pred.vars <- attr(prep.xy, "xpredictors")
 
   # Save training data to disk
-  cat("Writing training dataset...\n")
+  cat("Writing training microdata...\n")
   tfile <- paste(stub, "train.fst", sep = "_")
   n0 <- nrow(data[[1]])
   if (test_mode) data[[1]] <- slice(data[[1]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
 
+  # Don't need to include the ID variable ('did')
   data[[1]] %>%
-    select(one_of(c("weight", unlist(prep.xy$y), pred.vars))) %>%
+    select(any_of(c("weight", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
     fst::write_fst(path = tfile, compress = 100)
 
   fsize <- signif(file.size(tfile) / 1e6, 3)
-  fsize.true <- signif(fsize * n0 / nrow(data[[1]]), 3)
+  fsize.true <- signif(fsize * n0 / nrow(data[[1]]), 2)
   data[[1]] <- NA
   invisible(gc())
-  cat("Training dataset saved to:", paste0(basename(tfile), " (", fsize, " MB)"), "\n")
+  cat("Training microdata saved to:", paste0(basename(tfile), " (", fsize, " MB)"), "\n")
   if (test_mode & fsize.true > fsize) cat("Test mode: saved partial training data. Expected production file size is ~", fsize.true, "MB\n")
 
   # Save prediction data to disk
-  cat("\nWriting prediction dataset...\n")
+  cat("\nWriting prediction microdata...\n")
   pfile <- paste(stub, "predict.fst", sep = "_")
   n0 <- nrow(data[[2]])
   if (test_mode) data[[2]] <- slice(data[[2]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
 
   data[[2]] %>%
-    select(one_of(pred.vars)) %>%
+    select(any_of(c(rid, "pid", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
     fst::write_fst(path = pfile, compress = 100)
 
   fsize <- signif(file.size(pfile) / 1e6, 3)
   fsize.true <- signif(fsize * n0 / nrow(data[[2]]), 3)
+  invisible(gc())
+  cat("Prediction microdata saved to:", paste0(basename(pfile), " (", fsize, " MB)"), "\n")
+  if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
+
+  # Save spatial predictors data to disk
+  cat("\nWriting spatial predictors...\n")
+  sfile <- paste(stub, "spatial.fst", sep = "_")
+  # n0 <- nrow(data[[3]])
+  # if (test_mode) data[[2]] <- slice(data[[2]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
+
+  data[[3]] %>%
+    select(any_of(c(merge.vars, pred.vars))) %>%
+    fst::write_fst(path = sfile, compress = 100)
+
+  fsize <- signif(file.size(sfile) / 1e6, 3)
+  fsize.true <- signif(fsize * n0 / nrow(data[[3]]), 3)
   rm(data)
   invisible(gc())
-  cat("Prediction dataset saved to:", paste0(basename(pfile), " (", fsize, " MB)"), "\n")
-  if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
+  cat("Spatial predictors saved to:", paste0(basename(pfile), " (", fsize, " MB)"), "\n")
+  #if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
 
   #-----
 
-  cat("\n|=== Upload /input files to Google Drive ===|\n\n")
-  if (ask) {
-    uploadFiles(files = c(xfile, tfile, pfile), ask = TRUE)
-  } else {
-    cat("Non-interactive session: skipping upload to Google Drive\n")
-  }
+  # cat("\n|=== Upload /input files to Google Drive ===|\n\n")
+  # if (ask) {
+  #   uploadFiles(files = c(xfile, tfile, pfile), ask = TRUE)
+  # } else {
+  #   cat("Non-interactive session: skipping upload to Google Drive\n")
+  # }
 
   #-----
 
@@ -523,7 +558,7 @@ fusionInput <- function(donor,
   cat("Total processing time:", signif(as.numeric(tout), 3), attr(tout, "units"), "\n", sep = " ")
 
   # Finish logging and copy log file to /input
-  log.path <- file.path(dir, paste(donor, acs.vintage, rid, "inputlog.txt", sep = "_"))
+  log.path <- file.path(dir, paste(donor, acs.vintage, rtype, "inputlog.txt", sep = "_"))
   cat("\nLog file saved to:\n", log.path)
   sink(type = "output")
   close(log.txt)

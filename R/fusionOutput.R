@@ -47,14 +47,17 @@
 #-----
 
 # TESTING
-# input <- "fusion_/RECS/2015/2015/H/input" # The input directory
+# library(tidyverse)
+# library(data.table)
+# source("R/utils.R")
+# input <- "fusion_/RECS/2020/2015/H/input" # The input directory
 # M <- NULL
 # note = NULL
 # test_mode = TRUE
 # validation = TRUE
 # ncores = getOption("fusionData.cores")
 # margin = 2
-# output = "~/Desktop"
+# output = NULL
 
 #-----
 
@@ -91,7 +94,7 @@ fusionOutput <- function(input,
   }
 
   # Set number of implicates automatically, if not specified
-  if (is.null(M)) M <- ifelse(test_mode, 2, 40)
+  if (is.null(M)) M <- ifelse(test_mode, 2, 30)
 
   # Check input arguments
   stopifnot({
@@ -158,6 +161,11 @@ fusionOutput <- function(input,
   if (length(afile) == 0) stop("Cannot locate 'predict.fst' file in 'input'")
   if (length(afile) > 1) stop("There is more than one 'predict.fst' file in 'input'...")
 
+  # Check for presence of spatial predictors dataset
+  sfile <- sub("train.fst$", "spatial.fst", tfile)
+  if (length(sfile) == 0) stop("Cannot locate 'spatial.fst' file in 'input'")
+  if (length(sfile) > 1) stop("There is more than one 'spatial.fst' file in 'input'...")
+
   # Construct full output path for results files and create the directory if necessary
   dir <- dirname(file.path(stub, ifelse(test_mode, "fusion_", "fusion"), gsub("_", .Platform$file.sep, basename(tfile), fixed = TRUE)))
   dir <- file.path(dir, "output")
@@ -178,7 +186,11 @@ fusionOutput <- function(input,
 
   # Load the training data
   cat("Loading training microdata:", basename(tfile), "\n")
-  train.data <- fst::read_fst(tfile)
+  train.data <- fst::read_fst(tfile, as.data.table = TRUE)
+
+  # Load spatial predictors data
+  cat("Loading spatial predictors:", basename(sfile), "\n")
+  spatial.data <- fst::read_fst(sfile, as.data.table = TRUE)
 
   # Load results of prepXY() with fusion and predictor variable details
   cat("Loading prepXY() results:", basename(pfile), "\n")
@@ -190,14 +202,14 @@ fusionOutput <- function(input,
 
   # LightGBM hyper-parameter settings
   hyper.params <- if (test_mode) {
-    cat("Running in 'test' mode using fast(er) hyper-parameter settings:\n")
+    cat("Running in 'test' mode using fast(er) hyper-parameter settings\n")
     list(
-      boosting = "goss",
-      num_leaves = 8,
+      boosting = "gbdt",
+      data_sample_strategy = "goss",
+      num_leaves = 7,
       min_data_in_leaf = max(20, ceiling(nrow(train.data) * 0.01)),
       num_iterations = 50,
-      bagging_fraction = 1,
-      feature_fraction = 0.3,
+      feature_fraction = 0.5,
       learning_rate = 0.2,
       max_depth = 3,
       max_bin = 16,
@@ -205,26 +217,26 @@ fusionOutput <- function(input,
       max_cat_threshold = 8
     )
   } else {
-    cat("Running in 'production' mode using standard hyper-parameter settings:\n")
+    cat("Running in 'production' mode using the following hyper-parameter settings:\n")
     hyper.params <- list(
-      boosting = "goss",
-      num_leaves = 2 ^ (4:6),
-      min_data_in_leaf = max(20, ceiling(nrow(train.data) * 0.001)),
-      num_iterations = 2000,
-      bagging_fraction = 1,
+      boosting = "gbdt",
+      data_sample_strategy = "goss",
+      num_leaves = 31,
+      min_data_in_leaf = max(10, ceiling(nrow(train.data) * 0.001)),
+      num_iterations = 2500,
       feature_fraction = 0.8,
-      learning_rate = 0.05,
-      max_depth = -1,
+      learning_rate = 0.1,
+      max_depth = 5,
       max_bin = 255,
       min_data_in_bin = 3,
       max_cat_threshold = 32
     )
   }
-  print(hyper.params)
+  if (!test_mode) print(hyper.params)
 
   # Train fusion model
   cat("Training fusion model\n")
-  fsn.path <- fusionModel::train(data = train.data,
+  fsn.path <- fusionModel::train(data = merge(train.data, spatial.data, all.x = TRUE),
                                  y = prep$y,
                                  x = prep$x,
                                  fsn = paste0(stub, "model.fsn"),
@@ -246,7 +258,7 @@ fusionOutput <- function(input,
     cat("\n|=== Fuse onto training data for internal validation ===|\n\n")
 
     # Fuse multiple implicates to training data for internal validation analysis
-    validfsd <- fusionModel::fuse(data = train.data,
+    validfsd <- fusionModel::fuse(data = merge(train.data, spatial.data, all.x = TRUE),
                                   fsn = fsn.path,
                                   M = M,
                                   fsd = paste0(stub, "valid.fsd"),
@@ -256,10 +268,11 @@ fusionOutput <- function(input,
   #-----
 
   if (validation | validation == 2) {
+
     cat("\n|=== Run fusionModel::validate() ===|\n\n")
 
     # Pass 'valid' implicates to validate() function
-    validresults <- fusionModel::validate(observed = train.data,
+    validresults <- fusionModel::validate(observed = merge(train.data, spatial.data, all.x = TRUE),
                                           implicates = fusionModel::read_fsd(validfsd),
                                           subset_vars = attr(prep, "xforce"),
                                           weight = "weight",
@@ -281,14 +294,15 @@ fusionOutput <- function(input,
 
   # Load the prediction data
   cat("Loading prediction microdata:", basename(afile), "\n\n")
-  predict.data <- fst::read_fst(afile)
+  predict.data <- fst::read_fst(afile, as.data.table = TRUE)
 
   # Fuse multiple implicates to ACS and save results to disk as compressed .csv
   cat("Fusing to ACS microdata (", M, " implicates)\n", sep = "")
-  fusionModel::fuse(data = predict.data,
+  fusionModel::fuse(data = merge(predict.data, spatial.data, all.x = TRUE),
                     fsn = fsn.path,
                     M = M,
                     fsd = paste0(stub, "fused.fsd"),
+                    retain = intersect(c("hid", "pid"), names(predict.data)),  # Retain the ACS household ID in the output
                     cores = ncores)
 
   #-----

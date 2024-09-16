@@ -26,7 +26,7 @@ load("./www/surveys.rda")
 #}
 
 # Remove 'Type' variable from dictionary
-dictionary <- subset(dictionary, select = -Type)
+#dictionary <- subset(dictionary, select = -Type)
 
 # Update the 'Survey' variable with full names
 surveys <- merge(surveys, data.frame(Survey = c("ACS", "AHS", "CEI", "NHTS", "RECS", "ASEC"),
@@ -37,8 +37,8 @@ surveys <- merge(surveys, data.frame(Survey = c("ACS", "AHS", "CEI", "NHTS", "RE
                                                        "Residential Energy Consumption Survey",
                                                        "Annual Social and Economic Supplement of the CPS"),
                                      check.names = FALSE),
-                 all.x = TRUE) |>
-  subset(select = c(Survey, `Survey name`, Vintage, Respondent, `Sample size`, `No. of variables`))
+                 all.x = TRUE) %>%
+  subset(select = c(Survey, `Survey name`, Vintage, Respondent, `Sample size`, `No. of variables`, `Size on disk (MB)`))
 
 #-----------------------------
 

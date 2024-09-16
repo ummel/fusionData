@@ -8,17 +8,28 @@
 
 #-----
 
-assignLocation <- function(harmonized, m, collapse, ncores) {
+assignLocation <- function(harmonized, ncores) {
+
+  # Legacy argument that should eventually be removed...
+  m = 1
+  collapse = FALSE
 
   # Variables in geolink defining the "target" geography (i.e. uniquely-identified PUMA's)
-  gtarget <- c("state", "puma10")
+  # Automatically detected from 'harmonized' object
+  gtarget <- attr(harmonized[[2]], "geo.vars")
 
   # The PUMA-related weight variable in 'glink' (i.e. housing unit count)
   gw <- "puma_weight"
 
   # Household ID variables
-  did <- names(harmonized[[1]])[1]
-  rid <- names(harmonized[[2]])[1]
+  did <- did0 <- attr(harmonized[[1]], "identifier")[1]
+  rid <- rid0 <- attr(harmonized[[2]], "identifier")[1]
+
+  # Ensure the household ID variables are uniquely-named (bit of a kluge, really)
+  did <- paste0("donor_", did)
+  #setnames(harmonized[[1]], did0, did)
+  rid <- paste0("recipient_", rid)
+  #setnames(harmonized[[2]], rid0, rid)
 
   #-----
 
@@ -40,7 +51,7 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   # Read the necessary 'glink' variables from disk and set to keyed data.table
   gv <- unique(c(gtarget, gdonor))
   glink <- glink[c(gw, gv)] %>%
-    mutate_if(is.character, factor) %>%
+    mutate_if(is.character, factor) %>%  # Converts any characters to factor (NOTE: perform elsewhere???)
     data.table(key = gv) %>%
     setnames(c("W", gv))  # Rename the 'gw' variable to "W" for ease of use in data.table operations
 
@@ -50,7 +61,8 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   #---
 
   # Load the necessary geographic donor variables and convert to keyed data.table
-  D <- D[c(did, gdonor)] %>%
+  D <- D[c(did0, gdonor)] %>%
+    setnames(old = did0, new = did) %>%
     data.table(key = gdonor)
 
   # Ensure the factor levels are consistent between 'glink' and 'D' (possible that latter could be missing some levels)
@@ -63,7 +75,7 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   # Which geographic intersection variables should be returned as "loc.." variables in output results?
   # This is restricted to 'gdonor' variables with no missing values in the donor microdata
   gkeep <- names(which(!sapply(D[, ..gdonor], anyNA)))
-  #gkeep <- setdiff(gkeep, gtarget)  # This simply excludes "state" in the event it is present in donor data (to avoid conflict with "state" used for PUMA identification in 'gtarget')
+  gkeep <- setdiff(gkeep, gtarget)  # Excludes state and PUMA, if they happen to be in the donor data
 
   #---
 
@@ -75,7 +87,7 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
 
   #---
 
-  # In event that there are NA values in 'D', building the processed 'glink' data.table sequentially
+  # In event that there are NA values in 'D', build the processed 'glink' data.table sequentially
   # If there are no NA's, a faster data.table operation can be used
 
   if (anyNA(D)) {
@@ -134,19 +146,22 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   # Check for any 'id' values in 'D' that could be find a match in 'glink'
   miss <- sort(setdiff(unique(D$id), unique(glink$id)))
   if (length(miss) > 0) stop("There are geographic intersections in the donor microdata that could not be matched to the 'geo_concordance' file.\nYou should check that the geographic variables in the two datasets are defined identically.")
+  #filter(D, id %in% miss)  # Visual check
 
   #-----
 
   # Donor output from harmonize() with 'id' merged
   D <- harmonized[[1]] %>%
+    rename_at(1, ~did) %>%
     as.data.table() %>%
     merge(D, by = did)
 
   # Recipient output from harmonize()
   R <- harmonized[[2]] %>%
+    rename_at(1, ~rid) %>%
     as.data.table()
 
-  # Variables to use for distance/similarity calculation
+  # Variables to use for distance/similarity calculation via Gower's distance
   X <- setdiff(intersect(names(D), names(R)), c("weight", gdonor, gtarget))
 
   #-----
@@ -158,12 +173,12 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
     # Subset 'D' for intersection 'i' and remove columns with NA values
     d <- subset(D, id == i)
 
-    # puma_share is the naive probability that the respondent is in intersection 'id'
+    # 'puma_share' is the naive probability that the respondent is in intersection 'id'
     # When default sample weight is multiplied by 'puma_share', we get an estimate of the intersection-specific sample weight
     r <- R %>%
       merge(subset(glink, id == i), by = gtarget, allow.cartesian = TRUE) %>%
       mutate(weight = weight * puma_share) %>% # "naive" likelihood of selecting each household in 'r'
-      slice_sample(n = min(N, nrow(.)))
+      slice_sample(n = min(N, nrow(.)))  # Takes random sample to reduce number of observations passed to gower_topn()
 
     # Gower distance for top-N most similar respondents
     G <- gower::gower_topn(x = d[, ..X], y = r[, ..X], n = nrow(r), nthread = ncores)
@@ -216,9 +231,6 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   #keep <- !duplicated(names(D), fromLast = TRUE)
   #D <- D[, ..keep]
 
-  # Set the column order
-  #D <- setcolorder(D, unique(c(did, rid, gtarget, gkeep)))
-
   # Calculate 'weight_adjustment' column
   # When 'D' is merged with microdata, the household "weight" is multiplied by "weight_adjustment" to arrive at correct total sample weight
   # This allow the unique() call below, which reduces the number of row in results (i.e. collapse duplicated entries)
@@ -231,6 +243,9 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   } else {
     D[, weight_adjustment := 1 / m]
   }
+
+  # Set the column order in 'D'
+  D <- setcolorder(D, unique(c(did, gtarget, gkeep)))
 
   gc()
 
@@ -263,9 +278,15 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   glink <- glink[ind]
   setorderv(glink, cols = gtarget)
 
-  # Assign 'gkeep' variables for each recipient household
+  # Safety checks to ensure cbind() below is accurate
   stopifnot(nrow(R) == nrow(glink))
-  R <- cbind(R[, ..rid], glink[, ..gkeep])
+  stopifnot(all.equal(R$state, glink$state))
+  stopifnot(all.equal(R$puma10, glink$puma10))
+
+  # Assign 'gkeep' variables for each recipient household
+  # This also results in column order similar to 'D'
+  rkeep <- unique(c(gtarget, gkeep)) # Ensures that state and PUMA are always retained (i.e. assuming ACS is recipient)
+  R <- cbind(R[, ..rid], glink[, ..rkeep])
 
   #---
 
@@ -275,8 +296,12 @@ assignLocation <- function(harmonized, m, collapse, ncores) {
   setnames(D, old = match(gkeep, names(D)), new = lvars)
   setnames(R, old = match(gkeep, names(R)), new = lvars)
 
+  # Set ID variables names back to originals
+  setnames(D, old = did, new = did0)
+  setnames(R, old = rid, new = rid0)
+
   # Assemble into final results list
-  # Assign attribute indicating the geographic intersection (i.e. "location") variables
+  # Assign attribute indicating the "location" variables ('loc..')
   result <- list(D, R)
   names(result) <- names(harmonized)
   setattr(result, "location.vars", lvars)

@@ -22,8 +22,11 @@ createDictionary <- function(data, survey, vintage, respondent) {
     substring(tolower(respondent), 1, 1) %in% c("h", "p")
   })
 
+  if (is.data.table(data)) data <- as.data.frame(data)
+
   # Check that number of unique households/individuals matches number of rows in 'data'
-  hid <- grep(paste0("^", tolower(survey), ".*_hid$"), names(data), value = TRUE)
+  #hid <- grep(paste0("^", tolower(survey), ".*_hid$"), names(data), value = TRUE)
+  hid <- "hid"
   pid <- intersect(names(data), "pid")
   row.check <- data %>%
     select(all_of(c(hid, pid))) %>%
@@ -48,7 +51,7 @@ createDictionary <- function(data, survey, vintage, respondent) {
   # Variable summaries
   var.values <- data %>%
     select(-matches("^rep_\\d+$")) %>%  # Remove replicate weights
-    select(-matches(paste0("^", tolower(survey), ".*_hid$"), -any_of(c("pid", "weight")))) %>%  # Remove ID and primary weight variables
+    #select(-matches(paste0("^", tolower(survey), ".*_hid$"), -any_of(c("pid", "weight")))) %>%  # Remove ID and primary weight variables
     map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = W)} else {fctFormat(.x)})
 
   # Variables to include in dictionary

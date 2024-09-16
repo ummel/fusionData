@@ -24,7 +24,7 @@ first_year <- 2010
 # Get current SEDS "Codes and Descriptions" file (Excel)
 tmp <- tempfile()
 download.file(url = "https://www.eia.gov/state/seds/CDF/Codes_and_Descriptions.xlsx", destfile = tmp)
-codes <- readxl::read_excel(path = tmp, sheet = "Codes_and_Descriptions", skip = 10)
+codes <- readxl::read_excel(path = tmp, sheet = "MSN descriptions", skip = 10)
 unlink(tmp)
 
 # Get the current SEDS "Consolidated data file" (.zip)
@@ -52,14 +52,21 @@ unlink(tmp)
 
 # The number of households in each state-year based on 1-year ACS survey
 # see ?get_acs: ACS data only available back to 2010 via that function (though help file says 2009)
-acs.years <- 2010:2019  # KLUGE, since get_acs() was throwing error for 2020 ACS 1-year file
+# NOTE: Due to COVID, there are no 1-year ACS estimates for 2020. The code below interpolates a household count for 2020.
+all.years <- 2010:max(seds$year)
+acs.years <- setdiff(all.years, 2020)
 household.count <- acs.years %>%
   map(~ tidycensus::get_acs(geography = "state", variables = "B11001_001", state = NULL, year = .x, survey = "acs1")) %>%
   setNames(acs.years) %>%
   bind_rows(.id = "year") %>%
-  mutate(year = as.integer(year)) %>%
-  rename(hh = estimate, state = GEOID) %>%
-  select(year, state, hh)
+  rename(state = GEOID, hh = estimate) %>%
+  select(year, state, hh) %>%
+  mutate(year = factor(year, levels = all.years)) %>%
+  complete(year, state) %>%
+  group_by(state) %>%
+  mutate(hh = as.integer(approx(x = year, y = hh, xout = year)$y),
+         year = as.integer(as.character(year))) %>%
+  ungroup()
 
 #-----
 
@@ -71,13 +78,13 @@ temp <- seds %>%
   # Average fuel price variables
   mutate(gasoline_price = (120.476 / 1000) * `Motor gasoline average price, all end-use sectors | Dollars per million Btu`,  # Convert gasoline price to dollars per gallon
          electricity_price = `Electricity price in the residential sector | Dollars per million Btu`,
-         natgas_price = `Natural gas price in the residential sector | Dollars per million Btu`,
+         natgas_price = `Natural gas price in the residential sector (including supplemental gaseous fuels) | Dollars per million Btu`,
          lpg_price = `Propane price in the residential sector | Dollars per million Btu`,
          fueloil_price = `Distillate fuel oil price in the residential sector | Dollars per million Btu`) %>%
 
   # Total residential expenditure variables
   mutate(electricity_expend = `Electricity expenditures in the residential sector | Million dollars`,
-         natgas_expend = `Natural gas expenditures in the residential sector | Million dollars`,
+         natgas_expend = `Natural gas expenditures in the residential sector (including supplemental gaseous fuels) | Million dollars`,
          lpg_expend = `Propane expenditures in the residential sector | Million dollars`,
          fueloil_expend = `Distillate fuel oil expenditures in the residential sector | Million dollars` + `Kerosene expenditures in the residential sector | Million dollars`) %>%
 
@@ -93,8 +100,8 @@ seds.state <- temp %>%
   filter(state != "US") %>%
   mutate(
     # Average consumption of all households, whether users of the fuel or not
-    electricity_MWh_hh = 1000 * `Electricity consumed by (i.e., sold to) the residential sector | Million kilowatthours` / hh,
-    natgas_tcf_hh = 1000 * `Natural gas consumed by (delivered to) the residential sector | Million cubic feet` / hh,
+    electricity_MWh_hh = 1000 * `Electricity consumed by (sales to ultimate customers in) the residential sector | Million kilowatthours` / hh,
+    natgas_tcf_hh = 1000 * `Natural gas delivered to the residential sector, used as consumption (including supplemental gaseous fuels) | Million cubic feet` / hh,
     lpg_gal_hh = 42 * 1000 * `Propane consumed by the residential sector | Thousand barrels` / hh,
     fueloil_gal_hh = 42 * 1000 * (`Distillate fuel oil consumed by the residential sector | Thousand barrels` + `Kerosene consumed by the residential sector | Thousand barrels`) / hh
   ) %>%
@@ -131,4 +138,5 @@ result <- seds.state %>%
   select(state, vintage, everything())
 
 # Save result to disk
-saveRDS(result, paste0("geo-processed/EIA-SEDS/eia-seds_", paste(range(result$vintage), collapse = "-"), "_processed.rds"))
+#saveRDS(result, paste0("geo-processed/EIA-SEDS/eia-seds_", paste(range(result$vintage), collapse = "-"), "_processed.rds"))
+saveRDS(result, "geo-processed/EIA-SEDS/eia-seds_AllVintages_processed.rds")

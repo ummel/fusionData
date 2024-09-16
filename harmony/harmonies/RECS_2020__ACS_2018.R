@@ -8,20 +8,21 @@ list(
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 3, Mean: 2.76, Max: 8",
+      levels = "Min: 0, Median: 3, Mean: 2.744, Max: 8",
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 18:55:04.759329"),
+    modified = "2024-09-16 12:25:41.415778"),
 
   cooktop__stov = list(
     RECS = list(
       groups = 1:2,
       levels = c("Less than 1", "1 or more"),
       breaks = 1,
-      adj = ""),
+      adj = "cooktop + range"),
     ACS = list(
       groups = 2:1,
       levels = c("Yes", "No"),
@@ -30,23 +31,7 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2024-01-29 18:55:32.251734"),
-
-  desktop__laptop = list(
-    RECS = list(
-      groups = 1:2,
-      levels = c("Less than 1", "1 or more"),
-      breaks = 1,
-      adj = ""),
-    ACS = list(
-      groups = 2:1,
-      levels = c("Yes", "No"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = TRUE,
-    comment = "",
-    modified = "2024-01-29 18:55:53.255305"),
+    modified = "2024-09-16 12:26:24.921406"),
 
   education__schl = list(
     RECS = list(
@@ -55,18 +40,18 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 5, 5, 5),
-      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
+      groups = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 5, 5, 5),
+      levels = c("Less than 3 years old", "No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
       breaks = "",
       adj = "",
       agg = "reference"),
     ordered = TRUE,
     comment = "",
-    modified = "2024-01-29 18:56:24.076094"),
+    modified = "2024-09-16 12:25:41.416176"),
 
   elpay__elefp = list(
     RECS = list(
-      groups = c(2, 1, 3, 3),
+      groups = c(2, 1, 1, 3),
       levels = c("Household is responsible for paying for all electricity used in this home", "All electricity used in this home is included in the rent or condo fee", "Some is paid by the household, some is included in the rent or condo fee", "Other"),
       breaks = "",
       adj = ""),
@@ -75,42 +60,59 @@ list(
       levels = c("Included in rent or in condo fee", "No charge or electricity not used", "Valid monthly electricity cost in ELEP"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 18:56:51.995781"),
+    modified = "2024-09-16 12:25:41.416252"),
 
   employhh__wkhp = list(
     RECS = list(
-      groups = c(3, 2, 1, 1),
+      groups = c(1, 2, 3, 3),
       levels = c("Employed full-time", "Employed part-time", "Retired", "Not employed"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 1:3,
+      groups = 3:1,
       levels = c("Less than 1", "[1 to 20)", "20 or more"),
       breaks = c(1, 20),
       adj = "",
       agg = "reference"),
     ordered = TRUE,
     comment = "",
-    modified = "2024-01-29 18:57:23.024393"),
+    modified = "2024-09-16 12:27:00.770242"),
+
+  fopay__fulfp = list(
+    RECS = list(
+      groups = c(3, 1, 1, 2, 2),
+      levels = c("Household is responsible for paying for all fuel oil used in this home", "All fuel oil used in this home is included in the rent or condo fee", "Some is paid by the household, some is included in the rent or condo fee", "Other", "Do not use fuel oil"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1:3,
+      levels = c("Included in rent or in condo fee", "No charge or fuel other than gas or electricity not used", "Valid annual fuel cost in FULP"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2024-09-16 12:25:41.416317"),
 
   fuelheat__hfl = list(
     RECS = list(
       groups = 1:7,
-      levels = c("Electricity", "Natural gas from underground pipes", "Propane (bottled gas)", "Fuel oil", "Wood or pellets", "Other", "Do not use space heating"),
+      levels = c("No space heating", "Electricity", "Natural gas from underground pipes", "Propane (bottled gas)", "Fuel oil", "Wood or pellets", "Other"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(2, 3, 1, 4, 6, 5, 6, 6, 7),
+      groups = c(3, 4, 2, 5, 7, 6, 7, 7, 1),
       levels = c("Utility gas", "Bottled, tank, or LP gas", "Electricity", "Fuel oil, kerosene, etc.", "Coal or coke", "Wood", "Solar energy", "Other fuel", "No fuel used"),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 18:57:51.623671"),
+    modified = "2024-09-16 12:25:41.416377"),
 
   hhage__agep = list(
     RECS = list(
@@ -120,13 +122,13 @@ list(
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 38, Mean: 38.9, Max: 96",
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
       breaks = "",
       adj = "",
       agg = "reference"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 18:58:03.926065"),
+    modified = "2024-09-16 12:25:41.416439"),
 
   hhsex__sex = list(
     RECS = list(
@@ -142,7 +144,7 @@ list(
       agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 18:58:18.687431"),
+    modified = "2024-09-16 12:25:41.416497"),
 
   householder_race__rac1p = list(
     RECS = list(
@@ -158,7 +160,7 @@ list(
       agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 18:59:09.080719"),
+    modified = "2024-09-16 12:25:41.416556"),
 
   internet__access = list(
     RECS = list(
@@ -174,7 +176,7 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 18:59:29.140289"),
+    modified = "2024-09-16 12:25:41.416612"),
 
   kownrent__ten = list(
     RECS = list(
@@ -190,7 +192,7 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 18:59:43.596624"),
+    modified = "2024-09-16 12:25:41.416671"),
 
   moneypy__hincp = list(
     RECS = list(
@@ -200,29 +202,30 @@ list(
       adj = ""),
     ACS = list(
       groups = 1:16,
-      levels = c("Less than 5000", "[5000 to 7500)", "[7500 to 10000)", "[10000 to 12500)", "[12500 to 15000)", "[15000 to 20000)", "[20000 to 25000)", "[25000 to 30000)", "[30000 to 35000)", "[35000 to 40000)", "[40000 to 50000)", "[50000 to 60000)", "[60000 to 75000)", "[75000 to 100000)", "[100000 to 150000)", "150000 or more"),
-      breaks = c(5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 100000, 150000),
-      adj = "",
+      levels = c("Less than 5000", "[5000 to 7500)", "[7500 to 10000)", "[10000 to 12500)", "[12500 to 15000)", "[15000 to 20000)", "[20000 to 25000)", "[25000 to 30000)", "[30000 to 35000)", "[35000 to 40000)", "[40000 to 50000)", "[50000 to 60000)", "[60000 to 75000)", "[75000 to 1e+05)", "[1e+05 to 150000)", "150000 or more"),
+      breaks = c(5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 1e+05, 150000),
+      adj = "hincp * 1.03",
       agg = ""),
     ordered = TRUE,
-    comment = "",
-    modified = "2024-01-29 19:00:15.680624"),
+    comment = "Adjusted hincp for inflation to 2020 dollars from 2018 prior to binning.",
+    modified = "2024-09-16 12:28:26.265558"),
 
   ngpay__gasfp = list(
     RECS = list(
-      groups = c(1, 2, 3, 3, 3),
+      groups = c(1, 2, 2, 3, 3),
       levels = c("Household is responsible for paying for all natural gas used in this home", "All natural gas used in this home is included in the rent or condo fee", "Some is paid by the household, some is included in the rent or condo fee", "Other", "Do not use natural gas"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(3, 2, 3, 1),
-      levels = c("Included in rent or in condo fee", "Included in electricity payment", "No charge or gas not used", "Valid monthly gas cost in GASP"),
+      groups = c(1, 2, 3, 1),
+      levels = c("Included in electricity payment", "Included in rent or in condo fee", "No charge or gas not used", "Valid monthly gas cost in GASP"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 19:00:41.101565"),
+    modified = "2024-09-16 12:25:41.416728"),
 
   nhsldmem__np = list(
     RECS = list(
@@ -232,13 +235,14 @@ list(
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 1, Median: 2, Mean: 2.48, Max: 20",
+      levels = "Min: 1, Median: 2, Mean: 2.49, Max: 20",
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 19:00:50.812909"),
+    modified = "2024-09-16 12:25:41.416785"),
 
   numadult1__agep = list(
     RECS = list(
@@ -247,14 +251,14 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(0, 1, 0),
-      levels = c("Less than 18", "[18 to 65)", "65 or more"),
-      breaks = c(18, 65),
-      adj = "",
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "agep >= 18 & agep <=64",
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 19:01:09.781002"),
+    modified = "2024-09-16 12:25:41.416843"),
 
   numadult2__agep = list(
     RECS = list(
@@ -263,14 +267,14 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 0:1,
-      levels = c("Less than 65", "65 or more"),
-      breaks = 65,
-      adj = "",
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "agep >= 65",
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 19:01:24.503157"),
+    modified = "2024-09-16 12:25:41.416901"),
 
   numchild__agep = list(
     RECS = list(
@@ -279,14 +283,14 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 1:0,
-      levels = c("Less than 18", "18 or more"),
-      breaks = 18,
-      adj = "",
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "agep <= 17",
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 19:01:37.239943"),
+    modified = "2024-09-16 12:25:41.416957"),
 
   numfrig__refr = list(
     RECS = list(
@@ -302,14 +306,14 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2024-01-29 19:01:51.830889"),
+    modified = "2024-09-16 12:28:44.755897"),
 
-  numtablet__tablet = list(
+  numlaptop__laptop = list(
     RECS = list(
       groups = 1:2,
       levels = c("Less than 1", "1 or more"),
       breaks = 1,
-      adj = ""),
+      adj = "numlaptop + desktop"),
     ACS = list(
       groups = 2:1,
       levels = c("Yes", "No"),
@@ -317,8 +321,8 @@ list(
       adj = "",
       agg = ""),
     ordered = TRUE,
-    comment = "",
-    modified = "2024-01-29 19:02:06.426687"),
+    comment = "Added numlaptop and desktop together to match ACS laptop variable definition.",
+    modified = "2024-09-16 12:29:19.633678"),
 
   sdescent__hisp = list(
     RECS = list(
@@ -334,7 +338,7 @@ list(
       agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 19:02:26.030587"),
+    modified = "2024-09-16 12:25:41.417012"),
 
   totrooms__rmsp = list(
     RECS = list(
@@ -344,13 +348,13 @@ list(
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 1, Median: 6, Mean: 5.9, Max: 19",
+      levels = "Min: 1, Median: 6, Mean: 5.87, Max: 19",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 19:02:40.930664"),
+    modified = "2024-09-16 12:25:41.417081"),
 
   typehuq__bld = list(
     RECS = list(
@@ -366,7 +370,7 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 19:03:05.18247"),
+    modified = "2024-09-16 12:25:41.417139"),
 
   yearmaderange__ybl = list(
     RECS = list(
@@ -382,5 +386,5 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2024-01-29 19:03:37.157957")
+    modified = "2024-09-16 12:30:14.579485")
 )

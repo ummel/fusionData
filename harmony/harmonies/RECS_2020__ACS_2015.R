@@ -11,42 +11,28 @@ list(
       levels = "Min: 0, Median: 3, Mean: 2.744, Max: 8",
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 17:13:06.243281"),
+    modified = "2024-09-12 13:14:56.360046"),
 
   cooktop__stov = list(
     RECS = list(
       groups = 1:2,
       levels = c("Less than 1", "1 or more"),
       breaks = 1,
-      adj = ""),
+      adj = "cooktop + range"),
     ACS = list(
       groups = 2:1,
       levels = c("Yes", "No"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = TRUE,
     comment = "",
-    modified = "2024-01-29 17:13:28.075074"),
-
-  desktop__laptop = list(
-    RECS = list(
-      groups = 1:2,
-      levels = c("Less than 1", "1 or more"),
-      breaks = 1,
-      adj = ""),
-    ACS = list(
-      groups = 2:1,
-      levels = c("Yes", "No"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = TRUE,
-    comment = "",
-    modified = "2024-01-29 17:13:55.941801"),
+    modified = "2024-09-04 13:46:39.234098"),
 
   education__schl = list(
     RECS = list(
@@ -64,9 +50,9 @@ list(
     comment = "",
     modified = "2024-01-29 17:15:14.834695"),
 
-    elpay__elefp = list(
+  elpay__elefp = list(
     RECS = list(
-      groups = c(2, 1, 3, 3),
+      groups = c(2, 1, 1, 3),
       levels = c("Household is responsible for paying for all electricity used in this home", "All electricity used in this home is included in the rent or condo fee", "Some is paid by the household, some is included in the rent or condo fee", "Other"),
       breaks = "",
       adj = ""),
@@ -79,7 +65,7 @@ list(
     ),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 17:19:07.489839"),
+    modified = "2024-09-04 13:26:24.649799"),
 
   employhh__wkhp = list(
     RECS = list(
@@ -97,21 +83,37 @@ list(
     comment = "",
     modified = "2024-01-29 17:20:00.94349"),
 
-  fuelheat__hfl = list(
+  fopay__fulfp = list(
     RECS = list(
-      groups = 1:7,
-      levels = c("Electricity", "Natural gas from underground pipes", "Propane (bottled gas)", "Fuel oil", "Wood or pellets", "Other", "Do not use space heating"),
+      groups = c(3, 1, 1, 2, 2),
+      levels = c("Household is responsible for paying for all fuel oil used in this home", "All fuel oil used in this home is included in the rent or condo fee", "Some is paid by the household, some is included in the rent or condo fee", "Other", "Do not use fuel oil"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(2, 3, 1, 4, 6, 5, 6, 6, 7),
+      groups = 1:3,
+      levels = c("Included in rent or in condo fee", "No charge or fuel other than gas or electricity not used", "Valid annual fuel cost in FULP"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2024-09-04 13:41:43.867829"),
+
+  fuelheat__hfl = list(
+    RECS = list(
+      groups = 1:7,
+      levels = c("No space heating", "Electricity", "Natural gas from underground pipes", "Propane (bottled gas)", "Fuel oil", "Wood or pellets", "Other"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(3, 4, 2, 5, 7, 6, 7, 7, 1),
       levels = c("Utility gas", "Bottled, tank, or LP gas", "Electricity", "Fuel oil, kerosene, etc.", "Coal or coke", "Wood", "Solar energy", "Other fuel", "No fuel used"),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 17:21:05.736262"),
+    modified = "2024-09-11 13:13:51.759746"),
 
   hhage__agep = list(
     RECS = list(
@@ -127,7 +129,7 @@ list(
       agg = "reference"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 17:21:41.983194"),
+    modified = "2024-09-12 13:14:21.775947"),
 
   hhsex__sex = list(
     RECS = list(
@@ -202,28 +204,30 @@ list(
     ACS = list(
       groups = 1:16,
       levels = c("Less than 5000", "[5000 to 7500)", "[7500 to 10000)", "[10000 to 12500)", "[12500 to 15000)", "[15000 to 20000)", "[20000 to 25000)", "[25000 to 30000)", "[30000 to 35000)", "[35000 to 40000)", "[40000 to 50000)", "[50000 to 60000)", "[60000 to 75000)", "[75000 to 100000)", "[100000 to 150000)", "150000 or more"),
-      breaks = c(5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 100000, 150000),
-      adj = "",
-      agg = ""),
+      breaks = c(5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 1e+05, 150000),
+      adj = "hincp * 1.092",
+      agg = logical(0)
+    ),
     ordered = TRUE,
-    comment = "",
-    modified = "2024-01-29 17:24:51.065183"),
+    comment = "Adjusted hincp for inflation to 2020 dollars from 2015 prior to binning.",
+    modified = "2024-09-11 12:52:37.421515"),
 
   ngpay__gasfp = list(
     RECS = list(
-      groups = c(1, 2, 3, 3, 3),
+      groups = c(1, 2, 2, 3, 3),
       levels = c("Household is responsible for paying for all natural gas used in this home", "All natural gas used in this home is included in the rent or condo fee", "Some is paid by the household, some is included in the rent or condo fee", "Other", "Do not use natural gas"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(3, 2, 3, 1),
+      groups = c(1, 2, 3, 1),
       levels = c("Included in electricity payment", "Included in rent or in condo fee", "No charge or gas not used", "Valid monthly gas cost in GASP"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = FALSE,
     comment = "",
-    modified = "2024-01-29 17:27:41.314122"),
+    modified = "2024-09-04 13:30:59.045654"),
 
   nhsldmem__np = list(
     RECS = list(
@@ -236,10 +240,11 @@ list(
       levels = "Min: 1, Median: 2, Mean: 2.49, Max: 20",
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = logical(0)
+    ),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 17:27:59.223418"),
+    modified = "2024-09-12 13:15:59.405907"),
 
   numadult1__agep = list(
     RECS = list(
@@ -248,14 +253,14 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(0, 1, 0),
-      levels = c("Less than 18", "[18 to 64)", "64 or more"),
-      breaks = c(18, 64),
-      adj = "",
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "agep >= 18 & agep <=64",
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 17:29:13.039172"),
+    modified = "2024-09-11 13:25:34.351301"),
 
   numadult2__agep = list(
     RECS = list(
@@ -264,14 +269,14 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 0:1,
-      levels = c("Less than 65", "65 or more"),
-      breaks = 65,
-      adj = "",
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "agep >= 65",
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 17:30:22.570505"),
+    modified = "2024-09-11 13:27:28.965209"),
 
   numchild__agep = list(
     RECS = list(
@@ -280,14 +285,14 @@ list(
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 1:0,
-      levels = c("Less than 18", "18 or more"),
-      breaks = 18,
-      adj = "",
+      groups = 1,
+      levels = "Min: 0, Median: 37, Mean: 38.3, Max: 97",
+      breaks = "",
+      adj = "agep <= 17",
       agg = "sum"),
     ordered = "",
     comment = "",
-    modified = "2024-01-29 17:30:48.953357"),
+    modified = "2024-09-11 13:28:46.163363"),
 
   numfrig__refr = list(
     RECS = list(
@@ -304,6 +309,23 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2024-01-29 17:31:16.221814"),
+
+  numlaptop__laptop = list(
+    RECS = list(
+      groups = 1:2,
+      levels = c("Less than 1", "1 or more"),
+      breaks = 1,
+      adj = "numlaptop + desktop"),
+    ACS = list(
+      groups = 2:1,
+      levels = c("Yes", "No"),
+      breaks = "",
+      adj = "",
+      agg = logical(0)
+    ),
+    ordered = TRUE,
+    comment = "Added numlaptop and desktop together to match ACS laptop variable definition.",
+    modified = "2024-09-11 12:53:49.000802"),
 
   numtablet__handheld = list(
     RECS = list(

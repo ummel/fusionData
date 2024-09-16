@@ -64,17 +64,17 @@ assemble <- function(x,
   # Respondent type
   respondent <- ifelse("pid" %in% did, "person", "household")
 
-  # Names of harmonized variables
-  #hvars <- attr(x$harmonized, "harmonized.vars")
-
   # Names of the location variables ("loc..*")
   lvars <- attr(x$location, "location.vars")
+
+  # Names of the recipient geographic variables
+  gtarget <- attr(x$harmonized[[2]], "geo.vars")
 
   #-----
 
   # Identify spatial variables and datasets available in 'geo_predictors.fst'
   geo <- fst::fst("geo-processed/geo_predictors.fst")
-  gvars <- setdiff(names(geo), c('state', 'puma10', 'vintage'))
+  gvars <- setdiff(names(geo), c(gtarget, 'vintage'))
   gsets <- unique(map_chr(strsplit(gvars, "..", fixed = TRUE), 1L))
 
   #-----
@@ -116,7 +116,7 @@ assemble <- function(x,
   rvars <- grep("^rep_\\d+$", dnames, value = TRUE)
 
   # Identify the fusion variables
-  disallowed <- unique(c(did, rvars, "pid", "weight", "state", "puma10", attr(x$location, "intersection.vars")))  # Variables that are not feasible fusion candidates
+  disallowed <- unique(c(did, rvars, "pid", "weight", gtarget, attr(x$location, "intersection.vars")))  # Variables that are not feasible fusion candidates
   employed <- attr(x$harmonized[[donor]], "employed.vars")  # Donor variables used in harmonization
 
   # If no fusion variables specified, return a plausible set
@@ -250,8 +250,8 @@ assemble <- function(x,
 
   # Merge recipient microdata components: harmonized variables and location variables
   rout <- x$harmonized[[recipient]] %>%
-    select(-any_of(drop)) %>%  # Remove harmonized predictors to be dropped
-    left_join(x$location[[recipient]], by = rid[1])
+    select(-any_of(drop)) %>%   # Remove harmonized predictors to be dropped
+    left_join(x$location[[recipient]], by = c(rid, gtarget))
 
   rm(x)
   gc()
@@ -269,18 +269,19 @@ assemble <- function(x,
     gvintage <- geo[["vintage"]]
 
     # Preferred order of "valid" vintage values, based on 'window'
-    valid <- (svintage - window):(svintage + window)
+    #valid <- (svintage - window):(svintage + window)
+    valid <- suppressWarnings(na.omit(unique(as.integer(levels(gvintage)))))  # Remove 'window' argument; uses closest available vintage
     delta <- valid - svintage
-    delta <- abs(delta + ifelse(delta < 0, 0.1, 0))
+    delta <- abs(delta + ifelse(delta < 0, 0.1, 0))  # Prioritizes older data in case of tie in closeness to 'svintage'
     valid <- c('always', valid[order(delta)])
 
     # Loop through 'valid' vintages and return preferred available data
-    j <- setdiff(gvars[gsets %in% datasets], c("state", "puma10", "vintage"))
-    out <- list(distinct(geo[c("state", "puma10")]))
+    j <- setdiff(gvars[gsets %in% datasets], c(gtarget, "vintage"))
+    out <- list(distinct(geo[gtarget]))
     for (i in valid) {
       ind <- gvintage == i
       if (any(ind)) {
-        g <- geo[ind, c('state', 'puma10', j)]
+        g <- geo[ind, c(gtarget, j)]
         g <- g[, colSums(!is.na(g)) > 0]
         if (ncol(g) > 2) {
           j <- setdiff(j, names(g))
@@ -290,11 +291,11 @@ assemble <- function(x,
       if (length(j) == 0) break()
     }
 
-    # Merge all vintage subsets on 'state' and 'puma10'
-    out <- Reduce(function(...) merge(..., by = c('state', 'puma10'), all.x = TRUE), compact(out))
+    # Merge all vintage subsets on state and PUMA
+    out <- Reduce(function(...) merge(..., by = gtarget, all.x = TRUE), compact(out))
 
     # Order columns sensibly
-    out <- out[c('state', 'puma10', intersect(gvars, names(out)))]
+    out <- out[c(gtarget, intersect(gvars, names(out)))]
 
     # Remove columns with no variation
     keep <- !sapply(out, novary)
@@ -306,6 +307,9 @@ assemble <- function(x,
 
   #-----
 
+  # 9/11/24: Force use of spatial predictors from time period of the DONOR. This ensures that the spatial predictors consist of a single vintage.
+  # Useful in case where there is time discrepancy between donor and recipients. We want to force the spatial predictors to be those closest to the donor vintage.
+
   # Merge requested spatial predictors
   if (spatial.datasets[1] != "none") {
 
@@ -314,14 +318,17 @@ assemble <- function(x,
     # Donor spatial predictors
     dgeo <- loadSpatial(gsets, donor)
 
+    # Impute missing values (too slow)
+    #test <- fusionModel::impute(dgeo, ignore = "puma10")
+
     # Recipient spatial predictors
-    rgeo <- loadSpatial(gsets, recipient)
+    #rgeo <- loadSpatial(gsets, recipient)
 
     # Restrict to common spatial predictors
-    mvars <- c('state', 'puma10')
-    svars <- setdiff(intersect(names(dgeo), names(rgeo)), mvars)
-    dgeo <- dgeo[c(mvars, svars)]
-    rgeo <- rgeo[c(mvars, svars)]
+    # mvars <- c('state', 'puma10')
+    # svars <- setdiff(intersect(names(dgeo), names(rgeo)), mvars)
+    # dgeo <- dgeo[c(mvars, svars)]
+    # rgeo <- rgeo[c(mvars, svars)]
 
     #-----
 
@@ -358,28 +365,29 @@ assemble <- function(x,
 
       #---
 
-      # Recipient PCA results
-
-      # Impute NA's in recipient
-      rgeo.num <- rgeo[ind]
-      na.cols <- names(which(sapply(rgeo.num, anyNA)))
-      rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace(.x, list = is.na(.x), values = median(.x, na.rm = TRUE)))
-
-      # PCA output with updated column names
-      rpca <- predict(pca.fit, newdata = rgeo.num)[, 1:k]
-      colnames(rpca) <- colnames(dpca)
+      # # Recipient PCA results
+      #
+      # # Impute NA's in recipient
+      # rgeo.num <- rgeo[ind]
+      # na.cols <- names(which(sapply(rgeo.num, anyNA)))
+      # rgeo.num[na.cols] <- map(rgeo.num[na.cols], ~ replace(.x, list = is.na(.x), values = median(.x, na.rm = TRUE)))
+      #
+      # # PCA output with updated column names
+      # rpca <- predict(pca.fit, newdata = rgeo.num)[, 1:k]
+      # colnames(rpca) <- colnames(dpca)
 
       #---
 
       # Update 'dgeo' and 'rgeo' with PCA results
       dgeo <- cbind(dgeo[!ind], dpca)
-      rgeo <- cbind(rgeo[!ind], rpca)
+      #rgeo <- cbind(rgeo[!ind], rpca)
 
       # Update 'svars' object
       svars <- setdiff(names(dgeo), mvars)
 
       # Clean up
-      rm(dgeo.num, rgeo.num, dpca, rpca, pca.fit)
+      #rm(dgeo.num, rgeo.num, dpca, rpca, pca.fit)
+      rm(dgeo.num, dpca, pca.fit)
       gc()
 
     }
@@ -388,22 +396,25 @@ assemble <- function(x,
 
     # Apply integer scaling to double variables in 'dgeo' and 'rgeo'
     # The scaling median and mad are derived from 'rgeo' and applied to both inputs
-    cat("Applying integer scaling to spatial predictor variables...\n")
-    ind <- sapply(dgeo, is.double) & !names(dgeo) %in% mvars
-    temp <- scale2integer(x = rgeo[ind], y = dgeo[ind], precision = 2)
-    rgeo[ind] <- temp$x
-    dgeo[ind] <- temp$y
-    rm(temp)
+    # cat("Applying integer scaling to spatial predictor variables...\n")
+    # ind <- sapply(dgeo, is.double) & !names(dgeo) %in% mvars
+    # temp <- scale2integer(x = rgeo[ind], y = dgeo[ind], precision = 2)
+    # rgeo[ind] <- temp$x
+    # dgeo[ind] <- temp$y
+    # rm(temp)
 
     #-----
 
-    # Merge spatial data at PUMA level to DONOR
-    cat("Merging spatial predictor variables to the donor...\n")
-    dout <- left_join(dout, dgeo, by = mvars)
+    # No longer necessary to merge, because storing spatial predictors separately
 
-    # Merge spatial data at PUMA level to RECIPIENT
-    cat("Merging spatial predictor variables to the recipient...\n")
-    rout <- left_join(rout, rgeo, by = mvars)
+    # Merge spatial data at PUMA level to DONOR
+    # cat("Merging spatial predictor variables to the donor...\n")
+    # dout <- left_join(dout, dgeo, by = mvars)
+    #
+    # # Merge spatial data at PUMA level to RECIPIENT
+    # cat("Merging spatial predictor variables to the recipient...\n")
+    # #rout <- left_join(rout, rgeo, by = mvars)
+    # rout <- left_join(rout, dgeo, by = mvars)  # Merge the donor spatial predictors
 
   } else {
 
@@ -413,20 +424,53 @@ assemble <- function(x,
 
   #-----
 
-  # Reorder output variables for nicer viewing
-  # Convert numeric 'hvars' in certain cases; see convert2scaled()/convertPercentile() in utils.R
-  # Row-order the results by the identifier variable(s)
+  cat("Converting numeric predictor variables to ranks, when possible...\n")
+
+  # Apply integer scaling to numeric spatial predictords in 'dgeo'
+  # Since only the ranks matter for GBM prediction, this reduces memory required
+  dgeo <- dgeo %>%
+    mutate_if(is.double, data.table::frank, na.last = "keep", ties.method = "dense")
+
+  # If a numeric harmonized predictor variable has more than 100 unique values,
+  #   treat it as continuous, scale it, and convert the scaled values to integer ranks.
+  # This uses robust Z-scores computed on each sample (donor and recipient) to assign the ranks, which makes the predictors less susceptible to distributional shift between the two samples
+  # For example, questions measuring similar concepts (e.g. income) may have different magnitudes, but this scaling ensures that the medians and dispersion around them are treated as equal in the two samples
+  for (v in hvars) {
+    x <- dout[[v]]
+    if (is.numeric(x) & uniqueN(x) > 100) {
+      zvals <- lapply(c('dout', 'rout'), function(i) {
+        w <- get(i)$weight
+        i <- x != 0
+        xmed <- matrixStats::weightedMedian(x[i], w[i], na.rm = TRUE)
+        xmad <- matrixStats::weightedMad(x[i], w[i], na.rm = TRUE)
+        z <- (x - xmed) / xmad
+        z <- signif(z, 3)
+        return(z)
+      })
+      # This replaces original values with equivalent of a dense rank
+      u <- sort(unique(unlist(zvals)))
+      dout[[v]] <- match(zvals[[1]], u)
+      rout[[v]] <- match(zvals[[2]], u)
+    }
+  }
+
+  #-----
 
   cat("Assembling output data frames...\n")
 
+  # Reorder output columns for nicer viewing
+  # Row-order the results by the identifier variable(s)
+
   dout <- dout %>%
-    select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
-    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
+    select(any_of(c(did, "weight", gtarget, fvars, hvars, lvars))) %>%
+    #select(any_of(c(did, "weight", fvars, hvars, lvars, svars, rvars))) %>%
+    #mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
     arrange_at(did)
 
   rout <- rout %>%
-    select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
-    mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
+    select(any_of(c(rid, "weight", gtarget, hvars, lvars))) %>%
+    #select(any_of(c(rid, "weight", hvars, lvars, svars))) %>%
+    #mutate_at(hvars, ~ convert2scaled(x = ., w = weight, min.unique = 100, precision = 3)) %>%
     arrange_at(rid)
 
   #-----
@@ -439,26 +483,35 @@ assemble <- function(x,
   dclass <- lapply(dout[xvars], class)
   rclass <- lapply(rout[xvars], class)
   miss <- !map2_lgl(dclass, rclass, sameClass)
-  if (any(miss)) stop("Incompatible data type for the following predictor variables:\n", paste(names(miss)[miss], collapse = ", "))
+  if (any(miss)) stop("Incompatible data type/class for the following predictor variables:\n", paste(names(miss)[miss], collapse = ", "))
 
   # Check for appropriate levels of factor predictor variables
   fxvars <- names(select_if(dout[xvars], is.factor))
   dlevels <- lapply(dout[fxvars], levels)
   rlevels <- lapply(rout[fxvars], levels)
   miss <- !map2_lgl(dlevels, rlevels, identical)
-  if (any(miss)) stop("Incompatible levels for the following predictor variables\n", paste(names(miss)[miss], collapse = ", "))
+  if (any(miss)) stop("Incompatible levels for the following factor predictor variables\n", paste(names(miss)[miss], collapse = ", "))
 
   #----
 
+  # Convert 'dout', 'rout', and 'dgeo' to data.table keyed on state and PUMA
+  dout <- data.table(dout, key = gtarget)
+  rout <- data.table(rout, key = gtarget)
+  dgeo <- data.table(dgeo, key = gtarget)
+
   # Return as list
-  result <- setNames(list(dout, rout), c(donor, recipient))
+  #result <- setNames(list(dout, rout), c(donor, recipient))
+  result <- setNames(list(dout, rout, dgeo), c(donor, recipient, "spatial"))
 
   # Set attributes for the returned objects
   setattr(result, "fusion.vars", fvars)
   setattr(result, "harmonized.vars", hvars)
   setattr(result, "location.vars", lvars)
-  setattr(result, "spatial.vars", svars)
+  setattr(result, "spatial.vars", setdiff(names(dgeo), gtarget))
+  setattr(result, "merge.vars", gtarget)
   setattr(result, "replicate.vars", rvars)
+  setattr(result, "donor.id", did)
+  setattr(result, "recipient.id", rid)
 
   return(result)
 

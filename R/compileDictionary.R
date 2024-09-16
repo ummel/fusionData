@@ -21,12 +21,16 @@ compileDictionary <- function() {
     mutate(respondent = ifelse(substring(tolower(respondent), 1, 1) == "h", "Household", "Person")) %>%
     rename_with(stringr::str_to_title)
 
+  # Get processed mirodata file sizes on disk (MB)
+  fsize <- prettyNum(file.size(gsub("dictionary.rds", "processed.fst", files)) / 1e6, format = "g", digits = 3)
+
   # Create summary of available surveys
   surveys <- dictionary %>%
     group_by(Survey, Vintage, Respondent) %>%
-    summarize(`Sample size` = format(max(N), big.mark = ","), `No. of variables` = format(n(), big.mark = ","), .groups = 'drop')
+    summarize(`Sample size` = format(max(N), big.mark = ","), `No. of variables` = format(n(), big.mark = ","), .groups = 'drop') %>%
+    mutate(`Size on disk (MB)` = fsize)
 
-  # Remove variable 'N'
+  # Remove variable 'N' from 'dictionary'
   dictionary$N <- NULL
 
   # Save compiled dictionary files to /data

@@ -1,5 +1,6 @@
 library(tidyverse)
 library(RSocrata)
+source("R/utils.R")
 
 # CDC OData URL for the PLACES 2023 dataset
 # This was obtained by going to: https://data.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-Census-Tract-D/cwsq-ngmh
@@ -19,6 +20,7 @@ places <- d %>%
          tract10 = substring(locationid, 6, 11),
          vintage = "2020-2021") %>%  # See note above
   select(state, county10, tract10, vintage, ACCESS2:VISION) %>%
-  rename_with(tolower, ACCESS2:VISION)
+  rename_with(tolower, ACCESS2:VISION) %>%
+  mutate_if(is.numeric, cleanNumeric, tol = 0.001)
 
 saveRDS(places, "geo-processed/CDC-PLACES/CDC-PLACES_2023_processed.rds")

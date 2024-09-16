@@ -67,6 +67,10 @@ harmonize <- function(harmony.file,
   rind <- match(paste(survey[2], rnames), dict.vars)
   rres <- dictionary$Respondent[rind]
 
+  # Geographic variables to retain in ACS recipient: state and PUMA
+  # NOTE: This automatically detects the vintage of the PUMA variable (e.g. puma10, puma20)
+  rgeo <- c('state', dictionary$Variable[grep(paste(survey[2], 'puma'), dict.vars)[1]])
+
   #-----
 
   # Sequentially process donor and/or recipient microdata by 'type' (donor or recipient)
@@ -79,7 +83,8 @@ harmonize <- function(harmony.file,
   for (type in do.types) {
 
     j <- ifelse(type == "donor", 1, 2)
-    vnames <- if (j == 1) dnames else c(rnames, "state", "puma10")
+    #vnames <- if (j == 1) dnames else c(rnames, "state", "puma10")  # NOTE: This is not safe across vintages
+    vnames <- if (j == 1) dnames else c(rnames, rgeo)
     vres <- if (j == 1) dres else rres
 
     # Print message to console
@@ -94,8 +99,12 @@ harmonize <- function(harmony.file,
     dp <- if (length(ppath)) fst::fst(ppath) else NULL
 
     # Identify the household and person identifier columns
-    s <- strsplit(tolower(survey[j]), "_")[[1]][1]
-    hid <- grep(paste0("^", s, ".*_hid$"), names(if (HH) dh else dp), value = TRUE)
+    #s <- strsplit(tolower(survey[j]), "_")[[1]][1]
+    #hid <- grep(paste0("^", s, ".*_hid$"), names(if (HH) dh else dp), value = TRUE)
+
+    # 9/11/24 - Switch to universal naming of 'hid' column (consistent across surveys and years)
+    hid <- "hid"
+    if (!"hid" %in% names(dh)) stop("Couldn't find household ID column ('hid') in donor data")
 
     # "adj" slot values (across all variables)
     # Used only to load necessary variables to evaluate "adj" custom code
@@ -126,8 +135,8 @@ harmonize <- function(harmony.file,
     # Ensure that 'dh' and 'dp' data refer to the same set of households
     if (!is.null(dh) & !is.null(dp)) {
       ids <- intersect(dh[[hid]], dp[[hid]])
-      dh <- filter(dh, dh[[hid]] %in% ids)
-      dp <- filter(dp, dp[[hid]] %in% ids)
+      dh <- dh[dh[[hid]] %in% ids, ]
+      dp <- dp[dp[[hid]] %in% ids, ]
       if (is.factor(dh[[hid]])) {
         dh[[hid]] <- factor(dh[[hid]], levels = sort(unique(dh[[hid]])))
         dp[[hid]] <- factor(dp[[hid]], levels = levels(dh[[hid]]))
@@ -226,8 +235,10 @@ harmonize <- function(harmony.file,
 
         # Aggregate person-level 'x' up to household level using specified method in h$agg (or default)
         if (h$agg == "reference") {
+
           ind <- which(dp[[vrel]])
           x <- x[ind]
+
         } else {
 
           # Aggregate 'x' for each household using h$agg as the aggregator function
@@ -285,13 +296,16 @@ harmonize <- function(harmony.file,
     other <- list(
       if (HH) dh[[hid]] else dp[[hid]],
       if (!HH) dp[["pid"]] else NULL,
-      if (HH) dh$weight else {if (is.null(dh)) dp$weight else dh$weight[hh.rep]},  # Not entirely sure this is correct when respondent = "person" (should test)
-      if (HH) dh$state else dh$state[hh.rep],
-      if (HH) dh$puma10 else dh$puma10[hh.rep]
+      if (HH) dh$weight else {if (is.null(dh)) dp$weight else dh$weight[hh.rep]}  # Not entirely sure this is correct when respondent = "person" (should test)
     ) %>%
-      setNames(c(hid, "pid", "weight", "state", "puma10")) %>%
+      setNames(c(hid, "pid", "weight")) %>%
       compact() %>%
       as.data.frame()
+
+    # Add the 'rgeo' geographic variables (state and PUMA) for recipient only
+    if (type == "recipient") {
+      other <- cbind(other, if (HH) dh[rgeo] else dp[rgeo])
+    }
 
     # Safety check
     stopifnot(nrow(out) == nrow(other))
@@ -302,7 +316,8 @@ harmonize <- function(harmony.file,
     # Add attributes to the output data frame
     setattr(out, "survey", survey[j])
     setattr(out, "identifier", c(hid, intersect(names(out), "pid")))
-    setattr(out, "employed.vars", setdiff(c(names(dh), names(dp)), c(hid, "pid", "weight")))  # Variables used to construct harmonies
+    setattr(out, "employed.vars", setdiff(c(names(dh), names(dp)), c(hid, "pid", "weight", rgeo)))  # Variables used to construct harmonies
+    if (type == "recipient") setattr(out, "geo.vars", rgeo)  # State and PUMA variables in ACS recipient
 
     # Assign data frame to final 'result' list
     result[[type]] <- out
