@@ -22,23 +22,29 @@ processACScodebook <- function(dictionary.file) {
 
   #----------
 
-  # Detext if file is .csv or .txt
+  # Detect if the original/native dictionary file is .csv, .txt, or .pdf
   suffix <- str_sub(dictionary.file, start = -4)
-  stopifnot(suffix %in% c(".csv", ".txt"))
-  csv <- suffix == ".csv"
+  stopifnot(suffix %in% c(".csv", ".txt", ".pdf"))
 
   # Either read the .csv file or pre-process the .txt file
-  dictionary <- if (csv) {
+  ddata <- if (suffix == ".csv") {
     read.csv(dictionary.file, header = FALSE, na.strings = "") %>%
       setNames(c('record', 'var', 'type', 'length', 'value', 'value2', 'label')) %>%
       select(var, value, value2, label)
   } else {
-    convertTXTdictionary(dictionary.file)
+    if (suffix == ".txt") {
+      convertTXTdictionary(dictionary.file)
+    } else {
+      # When file is PDF, must convert to text first and then pass result to convertTXTdictionary()
+      x <- pdftools::pdf_text(dictionary.file)
+      x <- trimws(strsplit(paste(x, collapse = ""), split = "\n")[[1]])
+      convertTXTdictionary(x)
+    }
   }
 
   #----------
 
-  codebook <- dictionary %>%
+  codebook <- ddata %>%
 
     distinct() %>%   # Eliminate duplicate entries (i.e. one each for household and person-records)
 
@@ -55,10 +61,12 @@ processACScodebook <- function(dictionary.file) {
                      value = if (all(.x$asis)) {.x$value[-1]} else {if (!any(.x$miss)) {NA} else {c(.x$value[.x$miss], if (any(.x$rng)) {NULL} else {.x$value[!.x$miss][-1]})}},
                      label = if (all(.x$asis)) {.x$label[-1]} else {if (!any(.x$miss)) {NA} else {c(.x$label[.x$miss], if (any(.x$rng)) {NULL} else {.x$label[!.x$miss][-1]})}})) %>%
 
+    mutate_if(is.character, str_squish) %>%  # Remove any unnecessary white space
     filter(
       !(str_sub(var, 1, 3) == "RAC" & label %in% c("Yes", "No")),  # Remove Yes/No race recode variables, since race information captured in RAC1P
-      !grepl("allocation flag", tolower(desc), fixed = TRUE),  # Remove allocation flag variables
-      !grepl("eligibility coverage edit", desc, fixed = TRUE),  # Remove healt insurance coverage edit variables (not necessary)
+      !grepl("allocation flag", tolower(desc), fixed = TRUE),  # Remove allocation flag variables (after 2008)
+      !grepl("allocation$", tolower(desc)),  # Remove allocation flag variables (2008 and earlier)
+      !grepl("eligibility coverage edit", desc, fixed = TRUE),  # Remove health insurance coverage edit variables (not necessary)
       !grepl("See 'Employment Status Recode' (ESR)", desc, fixed = TRUE),  # Remove detailed employment questions since 'ESR' variable captures this information
       !grepl("^MLP.", var)  # Remove veteran period of service recodes (all information contained in 'VPS')
     ) %>%
@@ -66,9 +74,10 @@ processACScodebook <- function(dictionary.file) {
     # Second attempt to remove allocation flag variables
     # This is necessary, because text formatting bugs in .txt dictionary files can result in the allocation flag text going to "value" instead of "desc"
     group_by(var) %>%
-    mutate(alloc_flag = any(grepl("allocation flag", tolower(value), fixed = TRUE))) %>%
+    mutate(alloc_flag1 = any(grepl("allocation flag", tolower(value), fixed = TRUE)), # After 2008
+           alloc_flag2 = any(grepl("allocation$", tolower(value)))) %>%  # 2008 and earlier
     ungroup() %>%
-    filter(!alloc_flag) %>%
+    filter(!alloc_flag1, !alloc_flag2) %>%
 
     # Second attempt to remove race recode variables
     # This is necessary, because text formatting bugs in .txt dictionary files can result in the race recode text going to "value" instead of "desc"
@@ -89,7 +98,15 @@ processACScodebook <- function(dictionary.file) {
       desc = gsub("\\s*\\([^\\)]+\\)", "", desc),  # Remove parenthetical text in description
       desc = gsub("recode", "", desc),  # Remove word 'recode' as it doesn't seem necessary (might induce confusion)
       desc = gsub("HH", "household", desc),  # Replace 'HH' with 'household' to avoid confusion
-      desc = ifelse(var == "RMSP", "Number of rooms, excluding bathrooms", desc),  # Helpful for RMSP variable to note that it excludes bathrooms in room count
+      desc = ifelse(var %in% c("RMS", "RMSP"), "Number of rooms, excluding bathrooms", desc),  # Helpful for RMS/RMSP variable to note that it excludes bathrooms in room count
+      desc = gsub("write-in", "", desc, fixed = TRUE),  # Remove "write-in" (unnecessary); appears to only affect year of naturalization variable
+      desc = gsub("english", "English", desc),  # Upper case for English language
+      desc = ifelse(desc == "VA", "VA health care", desc),  # Clearer than "VA" only
+      desc = ifelse(desc == "Indian health service", "Indian Health Service", desc),
+      desc = gsub(" puma ", " PUMA ", desc),
+      desc = gsub(" soc codes", " SOC codes", desc),
+      desc = gsub(" naics codes", " NAICS codes", desc),
+      desc = gsub(" ind codes", " IND codes", desc),
       desc = capFirst(desc)
     ) %>%
 
@@ -100,7 +117,7 @@ processACScodebook <- function(dictionary.file) {
       label = gsub("//", "/", label, fixed = TRUE),  # Manual text error fix-ups
       label = ifelse(str_sub(label, 1, 3) == "N/A", parText(label), label),   # For N/A labels, replace with parenthetical text
       label = gsub(" FT", " full-time", label, fixed = TRUE),
-      label = gsub("NILF ", "Not in labor force ", label, fixed = TRUE),
+      label = gsub("NILF ", "Not-in-labor-force ", label, fixed = TRUE),
       label = gsub("<", "less than", label, fixed = TRUE),
       noedit = grepl("/[0-9]", label) | is.na(label),
       label = ifelse(noedit, label, map_chr(strsplit(label, split = "/"), ~ paste(capFirst(.x[!tolower(.x) %in% c("gq", "vacant")]), collapse = " / "))),
@@ -110,11 +127,94 @@ processACScodebook <- function(dictionary.file) {
       label = capFirst(label)
     ) %>%
 
+    # Manual removal of variables with unnecessary or redundant information
+    filter(!var %in% c("RT", "DECADE", "SRNT", "SVAL", "OCPIP", "GRPIP", "DRIVESP", "DRATX", "SPORDER", "WAOB", "MRGX", "SMX")) %>%
+
+    # Known, manual fix-ups to codebook that appear to be relevant across survey years
+    mutate(
+      label = ifelse(is.na(value) & var %in% c("BROADBND", "DIALUP", "HISPEED", "DSL", "FIBEROP", "MODEM", "OTHSVCEX", "SATELLITE"), "No paid access to the internet", label),
+      label = ifelse(is.na(value) & var == "CPLT", "No couple present", label),  # Manual edit: codebook appears to be wrong
+      label = ifelse(is.na(value) & var == "RNTM", "No", label),  # Non-renting units cannot have meals included in rent
+      label = ifelse(is.na(value) & var == "LANP", "GQ/Vacant", label)  # Original label dropped because it is in parentheses
+    ) %>%
+
     add_count(var) %>%
     mutate(label = ifelse(n == 1 & is.na(value) & !is.na(label), 0, label)) %>%
     mutate_if(is.character, str_squish) %>%
     distinct() %>%   # Final check to eliminate duplicate entries
     select(var, desc, value, label, adj)
+
+  #-----
+
+  # # Universal renaming of specific variables across ACS vintages
+  # # Convert instances of newer variable name (e.g. TAXAMT) in 'codebook' to the earlier name (TAXP) for consistency over time
+  # # Should be limited to cases where the underlying concept/question is the same; OK if the factor levels differ across vintages
+  # # Prior to 2018, the property tax variable was "TAXP". More recent name is "TAXAMT".
+  # # Prior to 2008, the property value variable was "VAL". More recent name is "VALP".
+  # # Prior to 2020, the HU/GQ identifier "TYPE". More recent name is "TYPEHUGQ".
+  # # Prior to 2020, the internet access was "ACCESS". More recent name is "ACCESSINET".
+  # # Prior to 2021, the year built was "YBL". More recent name is "YRBLT".
+  # varnames <- list(
+  #   TAXAMT = "TAXP",
+  #   VALP = "VAL",
+  #   TYPEHUGQ = "TYPE",  # The TYPE variable is eventually dropped since there is no variation; renaming retained for consistency
+  #   ACCESSINET = "ACCESS",
+  #   YRBLT = "YBL"
+  # )
+  #
+  # codebook$var0 <- NA  # 'var0' retains the original name of the variable so that it can be changed in the microdata later
+  # for (v in names(varnames)) {
+  #   i <- which(codebook$var == v)
+  #   codebook$var0[i] <- v
+  #   codebook$var[i] <- varnames[[v]]
+  # }
+
+  #-----
+
+  # Known manual edits to ACS variable descriptions/definitions
+
+  vardefs <- list(
+    DIVISION = "Census division",
+    REGION = "Census region",
+    NP = "Number of people in household",
+    FS = "Food stamp recipient in household",
+    HHT2 = "Household/family type, including cohabiting",
+    MRGP = "Payment on first mortgage, monthly",
+    SMP = "Payment on all second and junior mortgages and home equity loans, monthly",
+    TEL = "Telephone service",
+    FINCP = "Family income in the past 12 months",
+    HINCP = "Household income in the past 12 months",
+    CONP = "Condo fee, monthly",
+    ELEP = "Electricity cost last month",
+    FULP = "Fuel cost (oil, kerosene, wood, etc.) in the past 12 months",
+    GASP = "Gas cost (pipeline, bottled, or tank) last month",
+    GRNTP = "Gross rent including utilites, monthly",  # https://www.census.gov/quickfacts/fact/note/US/HSG860221
+    INSP = "Home insurance, annual",
+    MHP = "Mobile home cost (site rent, fees, etc.), annual",
+    RNTP = "Contract rent, monthly",
+    TAXP = "Real estate taxes, annual",
+    TAXAMT = "Real estate taxes, annual",
+    VAL = "Property value reported by owner, zero for renter-occupied units",
+    VALP = "Property value reported by owner, zero for renter-occupied units",
+    WATP = "Water and sewer cost in the past 12 months",
+    HFL = "Primary heating fuel",
+    TEN = "Housing tenure",
+    DSL = "DSL service",
+    RELP = "Relationship to reference person",
+    RELSHIPP = "Relationship to reference person",
+    RAC1P = "Race, detail level 1",
+    RAC2P = "Race, detail level 2",
+    RAC3P = "Race, detail level 3"
+  )
+
+  codebook$custom_desc <- FALSE
+  for (v in names(vardefs)) {
+    i <- codebook$var == v
+    codebook$desc[i] <- vardefs[[v]]
+    codebook$custom_desc[i] <- TRUE
+  }
+
+  #-----
 
   return(codebook)
 
@@ -127,9 +227,13 @@ processACScodebook <- function(dictionary.file) {
 # Example input
 #file <- "survey-raw/ACS/2016/PUMSDataDict16.txt"
 
-convertTXTdictionary <- function(file) {
+convertTXTdictionary <- function(input) {
 
-  d <- readLines(file)
+  if (file.exists(input[[1]])) {
+    d <- readLines(input, warn = FALSE)
+  } else {
+    d <- input
+  }
 
   # First line (guess start point based on "RT" variable being first)
   start <- which(substring(d, 1, 2) == "RT")[1]
@@ -178,7 +282,7 @@ convertTXTdictionary <- function(file) {
   k <- which(substring(temp, 1, 1) == ".")
   d[k] <- substring(temp[k], first = 2)
   for (i in rev(k)) d[i - 1] <- paste(d[i - 1], d[i])
-  d <- d[-k]
+  if (length(k)) d <- d[-k]
 
   #-----
 
@@ -204,7 +308,19 @@ convertTXTdictionary <- function(file) {
   #-----
 
   # Identify indices in 'd' that are the start of a variable entry
+  # This works for the codebook structure in some years, but not all
   ind <- which(map_lgl(d, ~ grepl("[A-Z]+", .x[1]) & length(.x) == 2 & !is.na(suppressWarnings(as.numeric(.x[2])))))
+
+  # An alternative approach if the first call to 'ind' does not return any indices
+  if (!length(ind)) {
+    blanks <- which(lengths(d) == 0)  # Blank lines
+    capletter <- which(map_lgl(d, ~ grepl("^[A-Z]+", .x[1])))  # Lines starting with a capital letter
+    capword <- which(map_lgl(d, ~ word(.x[1], start = 1, end = 1) == toupper(word(.x[1], start = 1, end = 1))))  # Lines starting with an all-caps word
+    ind <- intersect(intersect(blanks + 1, capletter), capword)  # Assumes new variable entry denoted by an all-caps word following a blank line
+    ind <- setdiff(ind, blanks - 1)  # Removes single rows of capitalized words with a following blank
+  }
+
+  #-----
 
   # Function to parse text within each variable entry
   #i <- 21  # CONP
@@ -255,6 +371,10 @@ convertTXTdictionary <- function(file) {
 
   # Parse all variables entries and assemble as data frame
   result <- map_dfr(seq_along(ind), parseEntry)
+
+  # For 'var' (variable name) column; extract only the first word (the upper case variable identifier)
+  result$var <- word(result$var, start = 1, end = 1)
+
   return(result)
 
 }
