@@ -110,8 +110,8 @@ betterAbbreviate <- function(x) {
 
 #-------------------
 
-# Function returns TRUE if 'x' has only one non-NA value
-novary <- function(x) data.table::uniqueN(na.omit(x)) == 1
+# Function returns TRUE if 'x' has only one non-NA value OR is entirely NA
+novary <- function(x) data.table::uniqueN(x, na.rm = TRUE) <= 1
 
 #-------------------
 
@@ -409,4 +409,24 @@ if.else <- function(test, yes, no) {
     if (all(ou %in% yl)) out <- factor(out, levels = intersect(yl, ou), ordered = is.ordered(yes))
   }
   return(out)
+}
+
+#-------------------
+
+# Much faster version of table() and can accommodate weights
+# Returns number of NA observations if na.rm = FALSE (default); i.e. equivalent to table(..., useNA = 'always')
+# https://stackoverflow.com/questions/17374651/find-the-n-most-common-values-in-a-vector
+table2 <- function(x, w = NULL, na.rm = FALSE) {
+  require(data.table)
+  stopifnot(is.atomic(x))
+  if (is.null(w)) {
+    ds <- setDT(list(x = x), key = "x")
+    ds <- ds[, .N, by = "x"]
+  } else {
+    stopifnot(is.numeric(w) & length(w) == length(x))
+    ds <- setDT(list(x = x, w = w), key = "x")
+    ds <- ds[, .(N = sum(w)), by = "x"]
+  }
+  if (na.rm) ds <- na.omit(ds)
+  return(setNames(ds$N, ds$x))
 }

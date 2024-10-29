@@ -76,7 +76,26 @@ prepare <- function(donor,
 
   #----
 
+  # NEW 10/9/24: Combine 'harmonized' and 'location.data' into
+  # single object with all information needed for the 'train' and 'predict' final data outputs
+
+  key.vars <- intersect(names(location.data[[1]]), c('hid', 'pid', 'state', 'puma00', 'puma10', 'puma20'))
+
+  D <- harmonized[[1]] %>%
+    merge(location.data[[1]]) %>%
+    select(-weight_adjustment) %>%   # TEMPORARY -- to remove eventually
+    select(any_of(key.vars), weight, everything()) %>%
+    as.data.table(key = key.vars)
+
+  R <- harmonized[[2]] %>%
+    merge(location.data[[2]], by = key.vars) %>%  # This is slow -- should be improved by eventual code cleanup
+    select(any_of(key.vars), everything()) %>%
+    as.data.table(key = key.vars)
+
+  #----
+
   # Return output list
-  return(list(harmonized = harmonized, location = location.data))
+  #return(list(harmonized = harmonized, location = location.data))
+  return(list(donor = D, recipient = R))
 
 }

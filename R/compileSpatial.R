@@ -14,6 +14,9 @@
 
 compileSpatial <- function() {
 
+  # Variables in geo_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
+  gtarget <- c("state", "puma10")
+
   # Identify all of the *processed.rds files available in /geo-processed
   flist <- list.files(path = "geo-processed", pattern = "_processed.rds$", recursive = TRUE, full.names = FALSE)
 
@@ -23,12 +26,78 @@ compileSpatial <- function() {
   # Print message to console
   cat("Identified", length(flist), "processed.rds spatial data files across", length(spatial.dsets), "spatial datasets:\n", paste(spatial.dsets, collapse = ", "), "\n")
 
+  #---
+
   # Summarize each spatial dataset (in parallel, if possible)
+  # NOTE: Should this be done once for each dataset when it is created in /geo-processed? To prevent re-generating unnecessarily?
   cat("Summarizing spatial datasets...\n")
   result <- pbapply::pblapply(spatial.dsets, summarizeSpatialDataset, cl = max(1L, parallel::detectCores() - 1L))
 
   # Troubleshooting; identify which spatial dataset is giving trouble
   #for (v in spatial.dsets) summarizeSpatialDataset(v)
+
+  #---
+
+  # Extract spatial variable metadata
+  temp <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), result)
+
+  # Vintages available for each spatial predictor
+  var.vintages <- temp %>%
+    map(~ as.character(sort(unique(result$vintage[!is.na(.x)]))))
+
+  # Variable summaries
+  var.values <- temp %>%
+    map_chr(~ if (is.numeric(.x)) {numFormat(x = na.omit(.x))} else {fctFormat(.x)})
+
+  # Basic spatial predictor dictionary
+  spatial <- labelled::var_label(temp) %>%
+    tibble::enframe(name = "predictor", value = "variable_rds") %>%
+    mutate(variable_rds = as.character(variable_rds),
+           vintage = as.character(var.vintages),
+           values = var.values,
+           type = map_chr(temp, vctrs::vec_ptype_abbr)) %>%
+    filter(!predictor %in% c("state", "puma10", "vintage"))
+
+  # Save spatial dictionary to disk
+  usethis::use_data(spatial, overwrite = TRUE)
+  rm(temp)
+
+  #---
+
+  # Expand each dataset temporally before merging
+  # EXPLAIN...
+
+  # Get the maximum vintage range across all spatial datasets
+  years <- unlist(map(result, ~ unique(.$vintage)))
+  years <- seq(min(years), max(years))
+
+  expandVintage <- function(d) {
+
+    vrng <- range(d$vintage)
+
+    front <- d %>%
+      filter(vintage == vrng[1]) %>%
+      mutate(vintage = list(years[years <= vrng[1]])) %>%
+      tidyr::unnest(vintage)
+
+    back <- d %>%
+      filter(vintage == vrng[2]) %>%
+      mutate(vintage = list(years[years >= vrng[2]])) %>%
+      tidyr::unnest(vintage)
+
+    middle <- d %>%
+      filter(!vintage %in% vrng)
+
+    rbind(front, middle, back) %>%
+      distinct() %>%
+      mutate(vintage = as.character(vintage)) %>%
+      data.table(key = c(gtarget, "vintage"))
+
+  }
+
+  result <- map(result, expandVintage)
+
+  #---
 
   # Merge the individual data tables in 'result' (on keyed variables set by summarizeSpatialDataset)
   result <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), result)
@@ -41,42 +110,30 @@ compileSpatial <- function() {
   # Coerce character variables to unordered factor
   # Any truly ordered factors should be made so in the upstream script that generates the associated "*_processed.rds" file
   # Extract the var_labels so they can be reassigned after factor coercion (dropped by coercion step)
-  vlabs <- labelled::var_label(result)
-  result <- mutate_if(result, is.character, factor)
-  result <- labelled::set_variable_labels(result, .labels = vlabs)
+  # vlabs <- labelled::var_label(result)
+  # result <- mutate_if(result, is.character, factor)
+  # result <- labelled::set_variable_labels(result, .labels = vlabs)
 
   # Remove columns with large number of levels (>30; HARD CODED!)
   # This helps prevent factor variables producing excessive dummy variables in train() and fuse()
-  keep <- map_lgl(result, ~ length(levels(.x)) <= 30)
-  keep[c('state', 'puma10', 'vintage')] <- TRUE
-  result <- result[, ..keep]
+  # keep <- map_lgl(result, ~ length(levels(.x)) <= 30)
+  # keep[c('state', 'puma10', 'vintage')] <- TRUE
+  # result <- result[, ..keep]
 
   # Ensure 'result' is sorted properly
-  setorder(result, state, puma10, vintage)
+  #setorder(result, state, puma10, vintage)
 
   #-----
 
-  # Extract spatial variable metadata
+  # Could impute -- takes awhile. Not a ton of missing values
+  #result <- fusionModel::impute(data = result, ignore = "puma10")
 
-  # Vintages available for each spatial predictor
-  var.vintages <- result %>%
-    map(~ as.character(sort(unique(result$vintage[!is.na(.x)]))))
-
-  # Variable summaries
-  var.values <- result %>%
-    map_chr(~ if (is.numeric(.x)) {numFormat(x = na.omit(.x))} else {fctFormat(.x)})
-
-  # Basic spatial predictor dictionary
-  spatial <- labelled::var_label(result) %>%
-    tibble::enframe(name = "predictor", value = "variable_rds") %>%
-    mutate(variable_rds = as.character(variable_rds),
-           vintage = as.character(var.vintages),
-           values = var.values,
-           type = map_chr(result, vctrs::vec_ptype_abbr)) %>%
-    filter(!predictor %in% c("state", "puma10", "vintage"))
-
-  # Save spatial dictionary to disk
-  usethis::use_data(spatial, overwrite = TRUE)
+  # Convert numeric values to integer ranks, when possible
+  # mutate_of() will ignore 'vintage' grouping variable
+  result <- result %>%
+    group_by(vintage) %>%
+    mutate_if(is.numeric, frank, ties.method = "dense", na.last = "keep") %>%
+    setDT(key = c(gtarget, "vintage"))
 
   #-----
 
@@ -87,7 +144,7 @@ compileSpatial <- function() {
 
   # Save final result to disk
   cat("Writing 'geo_predictors.fst' to disk...\n")
-  fst::write_fst(result, path = "geo-processed/geo_predictors.fst", compress = 100)
+  fst::write_fst(result, path = "geo-processed/geo_predictors.fst", compress = 80)
 
 }
 
@@ -99,6 +156,9 @@ compileSpatial <- function() {
 
 # Underlying function to process a specified dataset
 summarizeSpatialDataset <- function(dataset) {
+
+  # Variables in geo_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
+  gtarget <- c("state", "puma10")
 
   # Check for valid 'dataset' argument
   stopifnot(dataset %in% basename(list.dirs("geo-processed", recursive = FALSE)))
@@ -142,9 +202,6 @@ summarizeSpatialDataset <- function(dataset) {
 
   #---
 
-  # Variables in geo_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
-  gtarget <- c("state", "puma10")
-
   # The PUMA-related weight variable in 'pcord' (i.e. housing unit count)
   gw <- "puma_weight"
 
@@ -182,26 +239,28 @@ summarizeSpatialDataset <- function(dataset) {
       if (is.numeric(x)) {
         weighted.mean(x, w, na.rm = TRUE)
       } else {
-        tab <- stats::xtabs(w ~ x)
-        out <- names(sort(tab, decreasing = TRUE))[1]
-        ifelse(is.logical(x), as.logical(out), out)
+        tab <- table2(x, w)
+        m <- names(sort(tab, decreasing = TRUE))[1]  # Modal value
+        m <- ifelse(m == "NA", NA, m)
+        ifelse(is.logical(x), as.logical(m), m)
       }
     }
 
     # Calculate weighted mean for each summary variable at the PUMA-vintage level
-    d[, lapply(.SD, sumFun, w = W), by = c(gtarget, "vintage"), .SDcols = sumvars] %>%
-      mutate_at(intvars, ~ as.integer(round(.x))) %>%
-      mutate_if(is.double, cleanNumeric, tol = 0.001)
+    d[, lapply(.SD, sumFun, w = W), by = c(gtarget, "vintage"), .SDcols = sumvars]
+    #mutate_at(intvars, ~ as.integer(round(.x))) %>%
+    #mutate_if(is.double, cleanNumeric, tol = 0.001)
 
   }
 
   # Apply summarizePUMA() to each individual data frame in 'data'
   data <- lapply(data, summarizePUMA)
 
-  # Testing with 'vintage' set to a range
-  #data[[1]]$vintage[1:5] <- "1980-1985"
-
   #---
+
+  # Replace 'always' vintage values with maximum range starting from year 2000 and ending in current year (e.g. 2000-2024)
+  allowed.years <- 2000:(as.integer(format(Sys.Date(), "%Y")) - 1)
+  data <- map(data, ~ mutate(., vintage = ifelse(vintage == "always", paste(range(allowed.years), collapse = "-"), vintage)))
 
   # Parse any 'vintage' values that express a year range (e.g. "2015-2020")
   expandRange <- function(d) {
@@ -211,7 +270,8 @@ summarizeSpatialDataset <- function(dataset) {
       d$vintage <- v[match(d$vintage, V)]  # This is rather slow...
       d <- tidyr::unnest(d, vintage)
     }
-    d$vintage <- as.character(d$vintage)  # Force 'vintage' to be character (even if input is un-expanded integer)
+    #d$vintage <- as.character(d$vintage)  # Force 'vintage' to be character (even if input is un-expanded integer)
+    d$vintage <- as.integer(d$vintage)
     return(d)
   }
 
@@ -264,8 +324,43 @@ summarizeSpatialDataset <- function(dataset) {
   # Assemble final data.table result
   # Pre-keyed for subsequent merges
   result <- result %>%
-    mutate(vintage = as.character(vintage)) %>%
+    filter(vintage %in% allowed.years) %>%   # !!! Restricts the vintages that will be returned (i.e. 2000 or later)
+    mutate_if(is.character, as.factor) %>% # Necessary? Should really be done closer to the source data
+    mutate(vintage = as.character(vintage)) %>% # Necessary?
     data.table(key = c(gtarget, "vintage"))
+
+  #-----
+
+  # # TO DO: Interpolate missing values temporally, by 'gtarget', if possible
+  # interpolate_vector <- function(x, v) {
+  #   if (any(is.finite(x))) {
+  #     if (novary(x)) {
+  #       rep(unique(na.omit(x)), length(v))
+  #     } else {
+  #       if (is.numeric(x)) {
+  #         approx(v, x, xout = v, rule = 2)$y
+  #       } else {
+  #         tab <- table2(x, na.rm = TRUE)
+  #         m <- names(sort(tab, decreasing = TRUE))[1]  # Modal value
+  #         x[is.na(x)] <- ifelse(is.logical(x), as.logical(m), m)
+  #         x
+  #       }
+  #     }
+  #   } else {
+  #     x
+  #   }
+  # }
+  #
+  # d <- filter(result, state == "01", puma10 == "00100") %>%
+  #   select(-state, -puma10)
+  #
+  # interpolate_block <- function(d) {
+  #   mutate_at(d, -1L, interpolate_vector, v = d$vintage)
+  # }
+  #
+  # test <- temp[, interpolate_block(.SD), by = gtarget]
+
+  #-----
 
   return(result)
 

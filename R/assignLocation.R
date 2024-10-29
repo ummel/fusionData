@@ -11,11 +11,11 @@
 assignLocation <- function(harmonized, ncores) {
 
   # Legacy argument that should eventually be removed...
-  m = 1
-  collapse = FALSE
+  m <- 1
+  collapse <- FALSE
 
-  # Variables in geolink defining the "target" geography (i.e. uniquely-identified PUMA's)
-  # Automatically detected from 'harmonized' object
+  # Variables in geo_concordance.fst defining the "target" geography (i.e. uniquely-identified PUMA's)
+  # Automatically detected from 'harmonized' object produced by harmonize()
   gtarget <- attr(harmonized[[2]], "geo.vars")
 
   # The PUMA-related weight variable in 'glink' (i.e. housing unit count)
@@ -33,7 +33,7 @@ assignLocation <- function(harmonized, ncores) {
 
   #-----
 
-  # Soft load the geolink.fst file
+  # Soft load the geo_concordance.fst file
   glink <- fst::fst("geo-processed/concordance/geo_concordance.fst")
 
   # Soft load the specified donor survey processed .fst file
@@ -72,10 +72,15 @@ assignLocation <- function(harmonized, ncores) {
     set(D, j = v, value = factor(D[[v]], levels = levels(glink[[v]]), ordered = is.ordered(glink[[v]])))
   }
 
-  # Which geographic intersection variables should be returned as "loc.." variables in output results?
-  # This is restricted to 'gdonor' variables with no missing values in the donor microdata
-  gkeep <- names(which(!sapply(D[, ..gdonor], anyNA)))
-  gkeep <- setdiff(gkeep, gtarget)  # Excludes state and PUMA, if they happen to be in the donor data
+  # # Which geographic intersection variables should be returned as "loc.." variables in output results?
+  # # This is restricted to 'gdonor' variables with no missing values in the donor microdata
+  # gkeep <- names(which(!sapply(D[, ..gdonor], anyNA)))
+  # gkeep <- setdiff(gkeep, gtarget)  # Excludes state and PUMA, if they happen to be in the donor data
+
+  # Restricted to 'gdonor' variables with no missing values AND all national values/levels are present in the donor microdata
+  # Excludes from 'gkeep' any variables that are not fully represented in the donor data
+  gkeep <- sapply(gdonor, function(v) !anyNA(D[[v]]) & all(glink[[v]] %in% D[[v]]))
+  gkeep <- names(gkeep)[gkeep]
 
   #---
 
@@ -228,8 +233,8 @@ assignLocation <- function(harmonized, ncores) {
   # If there are any duplicated column names in 'D'; remove one of them
   # This can occur for geographic variables common to both donor and recipient (e.g. "state")
   # Using 'fromLast = TRUE' removes the first occurrence (i.e. the donor entry), though any duplicate variables *should* be identical
-  #keep <- !duplicated(names(D), fromLast = TRUE)
-  #D <- D[, ..keep]
+  keep <- !duplicated(names(D), fromLast = TRUE)
+  D <- D[, ..keep]
 
   # Calculate 'weight_adjustment' column
   # When 'D' is merged with microdata, the household "weight" is multiplied by "weight_adjustment" to arrive at correct total sample weight
@@ -252,8 +257,6 @@ assignLocation <- function(harmonized, ncores) {
   #---
 
   cat("Assigning location variables to recipient observations...\n")
-
-  # NOTE: Originally, this code block referred to the 'gdonor' variables, but this was switched to 'gkeep' for simplicity and to avoid dealing with NA's for some geographic variables in donor microdata
 
   # Assign 'gkeep' variables to each recipient household
   # There is no guarantee that PUMA's are uniquely identified by the 'gdonor' variables
@@ -292,9 +295,21 @@ assignLocation <- function(harmonized, ncores) {
 
   # Rename the 'gkeep' variables to include the "loc.." prefix
   # This identifies them as spatial variables, but "loc" is reserved for variables that are actually known and not imputed
-  lvars <- paste0("loc..", gkeep)
-  setnames(D, old = match(gkeep, names(D)), new = lvars)
-  setnames(R, old = match(gkeep, names(R)), new = lvars)
+  # This code is more complicates than original setnames(...) in order to safely account for location ('gkeep') variables that are also in 'gtarget'
+  # In that case, the 'gtarget' variables are kept as-is, and an identical loc.. version added
+  for (v in gkeep) {
+    set(D, j = paste0("loc..", v), value = D[[v]])
+    set(R, j = paste0("loc..", v), value = R[[v]])
+    if (!v %in% gtarget) {
+      set(D, j = v, value = NULL)
+      set(R, j = v, value = NULL)
+    }
+  }
+
+  # OLD: not safe
+  # lvars <- paste0("loc..", gkeep)
+  # setnames(D, old = match(gkeep, names(D)), new = lvars)
+  # setnames(R, old = match(gkeep, names(R)), new = lvars)
 
   # Set ID variables names back to originals
   setnames(D, old = did, new = did0)
@@ -304,7 +319,7 @@ assignLocation <- function(harmonized, ncores) {
   # Assign attribute indicating the "location" variables ('loc..')
   result <- list(D, R)
   names(result) <- names(harmonized)
-  setattr(result, "location.vars", lvars)
+  setattr(result, "location.vars", paste0("loc..", gkeep))
   setattr(result, "intersection.vars", gdonor)
   return(result)
 

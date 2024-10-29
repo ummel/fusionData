@@ -3,7 +3,7 @@
 
 # Expected absolute error/delta if proportions drawn randomly
 # The expected error increases with 'n' but appears to have asymptotic value of 2/3
-nseq <- c(1:10, 20, 30, 50, 100)
+nseq <- c(1:25, 30, 40, 50, 100)
 null.delta <- sapply(nseq, function(n) {
   out <- replicate(10e3, {
     x <- runif(n); x <- x / sum(x)
@@ -14,6 +14,10 @@ null.delta <- sapply(nseq, function(n) {
 }) %>%
   pmin(2 / 3) %>%
   sort()
+
+plot(nseq, null.delta, type = "b")
+
+plot(log(nseq), log(1 + null.delta), type = "b")
 
 # Fit a linear approximation function
 nullDelta <- approxfun(x = nseq,

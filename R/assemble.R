@@ -426,7 +426,7 @@ assemble <- function(x,
 
   cat("Converting numeric predictor variables to ranks, when possible...\n")
 
-  # Apply integer scaling to numeric spatial predictords in 'dgeo'
+  # Apply integer scaling to numeric spatial predictors in 'dgeo'
   # Since only the ranks matter for GBM prediction, this reduces memory required
   dgeo <- dgeo %>%
     mutate_if(is.double, data.table::frank, na.last = "keep", ties.method = "dense")

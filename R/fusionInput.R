@@ -81,18 +81,14 @@
 # source("R/utils.R")
 
 # # RECS
-# donor = "RECS_2015"
 # donor = "RECS_2020"
-# recipient = "ACS_2015"
 # respondent = "household"
+# acs_year = 2016
 # note = NULL
-# fuse = c("btung", "btuel", "cooltype","scalee","scaleg",'scaleb','noheatng', "btufo", "btulp", "noacbroke","noacel","noheatel",'noheatbroke','noheatbulk','coldma','hotma')
-# force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division")
-# agg_fun = NULL
-# agg_adj = NULL
 # test_mode = TRUE
 # ncores = 2
 
+# Deprecated...
 #
 # CEI
 # donor = "CEI_2015-2019"
@@ -104,7 +100,7 @@
 # upload = FALSE
 # ncores = 2
 
-# ASEC TEST
+# ASEC TEST -- NOTE: retained for examples of add_adj and agg_fun custom mods
 # test_mode = TRUE
 # donor = "ASEC_2019"
 # recipient = "ACS_2019"
@@ -126,36 +122,28 @@
 #-----
 
 fusionInput <- function(donor,
-                        recipient,
                         respondent,
-                        fuse = NULL,
-                        force = NULL,
+                        acs_year,
                         note = NULL,
-                        agg_fun = NULL,
-                        agg_adj = NULL,
                         test_mode = TRUE,
                         ncores = getOption("fusionData.cores")) {
 
-  # 'ask' for user input from console
-  ask <- interactive()
-
   # Respondent identifier ("H" or "P")
   rtype <- substring(toupper(respondent), 1, 1)
-  respondent = ifelse(rtype == "H", "household", "person")
-  donor <- toupper(donor)
-  recipient <- toupper(recipient)
+  respondent <- ifelse(rtype == "H", "household", "person")
 
   # Check input arguments
   stopifnot({
     is.character(donor)
-    is.character(recipient)
+    #is.character(recipient)
+    acs_year >= 2005 & acs_year %% 1 == 0
     rtype %in% c("H", "P")
-    is.null(fuse) | is.character(fuse) | is.list(fuse)
-    is.null(force) | is.character(force)
+    # is.null(fuse) | is.character(fuse) | is.list(fuse)
+    # is.null(force) | is.character(force)
     is.null(note) | is.character(note)
     is.logical(test_mode)
-    all(names(agg_adj) %in% fuse) & all(sapply(agg_adj, inherits, what = "formula"))
-    all(names(agg_fun) %in% fuse) & all(sapply(agg_fun, function(x) is.function(get(x))))
+    # all(names(agg_adj) %in% fuse) & all(sapply(agg_adj, inherits, what = "formula"))
+    # all(names(agg_fun) %in% fuse) & all(sapply(agg_fun, function(x) is.function(get(x))))
     ncores > 0 & ncores %% 1 == 0
   })
 
@@ -176,7 +164,7 @@ fusionInput <- function(donor,
   #-----
 
   # Check validity of the working directory path
-  # Also check if "/fusionData" is part of the path, as this is required
+  # Checks if "/fusionData" is part of the path, as this is required
   input <- full.path(getwd())
   b <- strsplit(input, .Platform$file.sep, fixed = TRUE)[[1]]
   i <- which(b == "fusionData")
@@ -190,7 +178,7 @@ fusionInput <- function(donor,
   cat(R.version.string, "\n")
   cat("Platform:", R.Version()$platform, "\n")
   cat("fusionData v", as.character(utils::packageVersion("fusionData")), "\n", sep = "")
-  cat("fusionModel v", as.character(utils::packageVersion("fusionModel")), "\n\n", sep = "")
+  #cat("fusionModel v", as.character(utils::packageVersion("fusionModel")), "\n\n", sep = "")
 
   # Print the original function arguments
   # Excludes 'note', if present, since it is printed separately to log, below
@@ -203,129 +191,134 @@ fusionInput <- function(donor,
   # Write 'note' argument to log file (and console), if requested
   if (!is.null(note)) cat("User-supplied note:\n", note, "\n\n")
 
-  # Directory in /fusionData where /input results will be saved
+  # Directory in /fusionData where results will be saved
   # This is automatically constructed from 'donor' and 'recipient', assuming recipient is ACS-based
-  acs.vintage <- substring(recipient, 5)
-  dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs.vintage, rtype, "input")
-  cat("Result files will be saved to:\n", dir, "\n\n")
-  if (dir.exists(dir)) {
-    cat("The local /input directory already exists.\n")
-  } else {
+  donor <- toupper(donor)
+  dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs_year)
+  #dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs_year, rtype, "input")
+  cat("Files will be saved to:\n", dir, "\n\n")
+  if (!dir.exists(dir)) {
     dir.create(dir, recursive = TRUE)
-    cat("The local /input directory was created.\n")
+    cat("The directory was created.\n")
   }
 
   # Update 'stub' to include file name information
-  stub <- file.path(dir, paste(donor, acs.vintage, rtype, sep = "_"))
+  stub <- file.path(dir, paste(donor, acs_year, rtype, sep = "_"))
 
   #-----
 
-  cat("\n|=== Check for custom pre-processing script ===|\n\n")
-
-  # Check if there is a "(00)" custom .R script that needs to be run
-  cus0 <- list.files(dir, pattern = "(00).*\\.R$", full.names = TRUE)
-  if (length(cus0) == 1) {
-    cat("Detected custom .R pre-processing script:\n")
-    cat(basename(cus0), "\n")
-    ok <- if (ask) readline("Do you want to execute this script? (Y/N) ") else "Y"
-    if (toupper(substring(ok, 1, 1)) == "Y") {
-      cat("source()-ing:", basename(cus0), "\n")
-      cat("(Only comments are printed)\n\n")
-      source(cus0, echo = FALSE, local = TRUE)
-      cmts <- grep("^\\s*#", readLines(cus0), value = TRUE)  # Extract and print comments
-      cat(cmts, sep = "\n")
-    } else {
-      cat("Script not executed.\n")
-    }
-  } else {
-    cat("None found.\n")
-  }
+  # cat("\n|=== Check for custom pre-processing script ===|\n\n")
+  #
+  # # Check if there is a "(00)" custom .R script that needs to be run
+  # cus0 <- list.files(dir, pattern = "(00).*\\.R$", full.names = TRUE)
+  # if (length(cus0) == 1) {
+  #   cat("Detected custom .R pre-processing script:\n")
+  #   cat(basename(cus0), "\n")
+  #   ok <- if (ask) readline("Do you want to execute this script? (Y/N) ") else "Y"
+  #   if (toupper(substring(ok, 1, 1)) == "Y") {
+  #     cat("source()-ing:", basename(cus0), "\n")
+  #     cat("(Only comments are printed)\n\n")
+  #     source(cus0, echo = FALSE, local = TRUE)
+  #     cmts <- grep("^\\s*#", readLines(cus0), value = TRUE)  # Extract and print comments
+  #     cat(cmts, sep = "\n")
+  #   } else {
+  #     cat("Script not executed.\n")
+  #   }
+  # } else {
+  #   cat("None found.\n")
+  # }
 
   #-----
 
   cat("\n|=== prepare() microdata ===|\n\n")
 
   # Prepare and assemble data inputs
-  prep <- fusionData::prepare(donor = donor,
-                              recipient = recipient,
+  data <- fusionData::prepare(donor = donor,
+                              recipient = paste0("ACS_", acs_year),
                               respondent = respondent)
 
   #-----
 
-  cat("\n|=== assemble() microdata ===|\n\n")
+  # 10/9/24: This is no longer necessary, since fusionOutput() will load the fusion variables
+  # directly from donor microdata. Any custom scripts can be inserted into the fusionOuptut code
+
+  #cat("\n|=== assemble() microdata ===|\n\n")
 
   # Specify fusion variables to be retained in harmonization results
-  data <- fusionData::assemble(x = prep,
-                               fusion.variables = unlist(fuse),
-                               spatial.datasets = "all",
-                               window = 2,
-                               pca = NULL,
-                               replicates = FALSE,
-                               agg_adj = agg_adj,
-                               agg_fun = agg_fun)
+  # data <- fusionData::assemble(x = prep,
+  #                              fusion.variables = unlist(fuse),
+  #                              spatial.datasets = "all",
+  #                              window = 2,
+  #                              pca = NULL,
+  #                              replicates = FALSE,
+  #                              agg_adj = agg_adj,
+  #                              agg_fun = agg_fun)
 
   # If NULL, update 'fuse' to reflect variables returned by 'assemble'
   # Relevant in case ALL available fusion variables are selected automatically
   #if (is.null(fuse)) fuse <- attr(data, "fusion.vars")
 
   # Better/safer?
-  fuse <- attr(data, "fusion.vars")
+  #fuse <- attr(data, "fusion.vars")
 
-  rm(prep)
-
-  #-----
-
-  cat("\n|=== Check for custom .R scripts ===|\n\n")
-
-  # Check if there are any "(XX)" custom .R scripts that needs to be run
-  cus <- list.files(dir, pattern = "^\\(\\d{2}\\).*\\.R$", full.names = TRUE)
-  cus <- setdiff(cus, cus0)
-  if (length(cus) > 0) {
-    cat("Detected custom .R processing script(s):\n")
-    cat(paste(basename(cus), collapse = "\n"), "\n")
-    ok <- if (ask) readline("Do you want to execute these script(s)? (Y/N) ") else "Y"
-    if (toupper(substring(ok, 1, 1)) == "Y") {
-      for (r in cus) {
-        cat("\nsource()-ing:", basename(r), "\n")
-        cat("(Only comments are printed)\n\n")
-        source(r, echo = FALSE, local = TRUE)
-        cmts <- grep("^\\s*#", readLines(r), value = TRUE)  # Extract and print comments
-        cat(cmts, sep = "\n")
-      }
-    } else {
-      cat("Script(s) not executed.\n")
-    }
-  } else {
-    cat("None found.\n")
-  }
+  #rm(prep)
 
   #-----
 
-  # Recompile the attribute vectors for harmonized, and location variables
-  # This is done to ensure the attributes are compatible with 'data', in case custom processing altered things along the way
-  temp <- intersect(names(data[[1]]), names(data[[2]]))
-  temp <- setdiff(temp, c("hid", "pid", "weight", "state", "puma00", "puma10", "puma10"))
-  attr(data, "harmonized.vars") <- grep("..", temp, fixed = TRUE, invert = TRUE, value = TRUE)
-  attr(data, "location.vars") <- grep("^loc\\.\\.", temp, value = TRUE)
+  # cat("\n|=== Check for custom .R scripts ===|\n\n")
+  #
+  # # Check if there are any "(XX)" custom .R scripts that needs to be run
+  # cus <- list.files(dir, pattern = "^\\(\\d{2}\\).*\\.R$", full.names = TRUE)
+  # cus <- setdiff(cus, cus0)
+  # if (length(cus) > 0) {
+  #   cat("Detected custom .R processing script(s):\n")
+  #   cat(paste(basename(cus), collapse = "\n"), "\n")
+  #   ok <- if (ask) readline("Do you want to execute these script(s)? (Y/N) ") else "Y"
+  #   if (toupper(substring(ok, 1, 1)) == "Y") {
+  #     for (r in cus) {
+  #       cat("\nsource()-ing:", basename(r), "\n")
+  #       cat("(Only comments are printed)\n\n")
+  #       source(r, echo = FALSE, local = TRUE)
+  #       cmts <- grep("^\\s*#", readLines(r), value = TRUE)  # Extract and print comments
+  #       cat(cmts, sep = "\n")
+  #     }
+  #   } else {
+  #     cat("Script(s) not executed.\n")
+  #   }
+  # } else {
+  #   cat("None found.\n")
+  # }
 
-  # Extract variable names
-  harm.vars <- attr(data, "harmonized.vars")
-  loc.vars <- attr(data, "location.vars")
-  spatial.vars <- attr(data, "spatial.vars")
-  merge.vars <- attr(data, "merge.vars")
-  did <- attr(data, "donor.id")
-  rid <- attr(data, "recipient.id")
+  #-----
+
+  # # Recompile the attribute vectors for harmonized, and location variables
+  # # This is done to ensure the attributes are compatible with 'data', in case custom processing altered things along the way
+  # temp <- intersect(names(data[[1]]), names(data[[2]]))
+  # temp <- setdiff(temp, c("hid", "pid", "weight", "state", "puma00", "puma10", "puma20"))
+  # attr(data, "harmonized.vars") <- grep("..", temp, fixed = TRUE, invert = TRUE, value = TRUE)
+  # attr(data, "location.vars") <- grep("^loc\\.\\.", temp, value = TRUE)
+  #
+  # # Extract variable names
+  # harm.vars <- attr(data, "harmonized.vars")
+  # loc.vars <- attr(data, "location.vars")
+  # spatial.vars <- attr(data, "spatial.vars")
+  # merge.vars <- attr(data, "merge.vars")
+  # did <- attr(data, "donor.id")
+  # rid <- attr(data, "recipient.id")
 
   #-----
 
   # Check/compare observed proportions in donor and recipient microdata for the categorical harmonized variables
 
-  cat("\n|=== Check categorical harmonized variables ===|\n\n")
+  # TO DO: Move this up into prepare() or similar?
+
+  cat("\n|=== Check categorical predictor variables ===|\n\n")
 
   # TO DO: Could wrap this into stand-alone function
   fxvars <- data[[1]] %>%
     slice(1L) %>%
-    select(all_of(harm.vars)) %>%
+    #select(all_of(harm.vars)) %>%
+    select(-any_of(key(data[[1]])), -weight) %>%
     select_if(is.factor) %>%
     names()
 
@@ -356,7 +349,7 @@ fusionInput <- function(donor,
     cat("Similarity scores for", length(fxvars), "categorical harmonized variables:\n")
     print(check, n = Inf)
 
-    if (ask) {
+    #if (ask) {
       cat("\nShould any of the categorical harmonized variables be excluded?\n")
       answer <- readline(prompt = "Enter vector of row numbers to exclude or leave blank to retain all: ")
       answer <- eval(parse(text = answer))
@@ -368,10 +361,10 @@ fusionInput <- function(donor,
         data[[1]] <- select(data[[1]], -all_of(drop))
         data[[2]] <- select(data[[2]], -all_of(drop))
       }
-      setattr(data, "harmonized.vars", setdiff(harm.vars, drop))  # Update attribute in 'data'
-    } else {
-      cat("Retaining all categorical harmonized variables.\n")
-    }
+      #setattr(data, "harmonized.vars", setdiff(harm.vars, drop))  # Update attribute in 'data'
+    # } else {
+    #   cat("Retaining all categorical harmonized variables.\n")
+    # }
     rm(d1, d2, check)
 
   } else {
@@ -382,169 +375,174 @@ fusionInput <- function(donor,
 
   # Determine if any location variables should be dropped before proceeding
 
-  cat("\n|=== Check location variables ===|\n\n")
-
-  # Determine number of levels associated with each location variable
-  loc.levels <- data[[1]] %>%
-    select(all_of(loc.vars)) %>%
-    map(levels) %>%
-    lengths()
-
-  # Detect and extract the representative location variable specified in 'force'
-  rvar <- intersect(loc.vars, paste0("loc..", force))
-
-  if (length(rvar) > 0) {
-
-    # Are there location variables we may want to consider dropping?
-    loc.drop <- loc.levels[loc.levels > max(loc.levels[rvar])]
-    loc.drop <- tibble::enframe(loc.drop, name = "Location variable", "Number of levels")
-
-    # Ask user to decide which location variables to drop (if any)
-    if (nrow(loc.drop) > 0) {
-      cat("The representative location variable '", rvar, "' has ", loc.levels[rvar], " levels.\n", sep = "")
-      cat("The following location variables have been flagged for possible exclusion:\n")
-      print(loc.drop, n = Inf)
-      if (ask) {
-        cat("\nShould any of these location variables be excluded?\n")
-        answer <- readline(prompt = "Enter vector of row numbers to exclude or leave blank to retain all: ")
-        answer <- eval(parse(text = answer))
-        drop <- loc.drop[[1]][answer]
-        if (length(drop) == 0) {
-          cat("Retaining all location variables\n")
-        } else {
-          cat("Removing following location variables:\n", paste(drop, collapse = ", "), "\n")
-          data[[1]] <- select(data[[1]], -all_of(drop))
-          data[[2]] <- select(data[[2]], -all_of(drop))
-        }
-      } else {
-        cat("Retaining all location variables.\n")
-      }
-    } else {
-      cat("No issues detected.\n")
-    }
-  } else {
-    cat("Check skipped: Did not detect any location variables in 'force'.\n")
-  }
+  # cat("\n|=== Check location variables ===|\n\n")
+  #
+  # # Determine number of levels associated with each location variable
+  # loc.levels <- data[[1]] %>%
+  #   select(all_of(loc.vars)) %>%
+  #   map(levels) %>%
+  #   lengths()
+  #
+  # # Detect and extract the representative location variable specified in 'force'
+  # rvar <- intersect(loc.vars, paste0("loc..", force))
+  #
+  # if (length(rvar) > 0) {
+  #
+  #   # Are there location variables we may want to consider dropping?
+  #   loc.drop <- loc.levels[loc.levels > max(loc.levels[rvar])]
+  #   loc.drop <- tibble::enframe(loc.drop, name = "Location variable", "Number of levels")
+  #
+  #   # Ask user to decide which location variables to drop (if any)
+  #   if (nrow(loc.drop) > 0) {
+  #     cat("The representative location variable '", rvar, "' has ", loc.levels[rvar], " levels.\n", sep = "")
+  #     cat("The following location variables have been flagged for possible exclusion:\n")
+  #     print(loc.drop, n = Inf)
+  #     if (ask) {
+  #       cat("\nShould any of these location variables be excluded?\n")
+  #       answer <- readline(prompt = "Enter vector of row numbers to exclude or leave blank to retain all: ")
+  #       answer <- eval(parse(text = answer))
+  #       drop <- loc.drop[[1]][answer]
+  #       if (length(drop) == 0) {
+  #         cat("Retaining all location variables\n")
+  #       } else {
+  #         cat("Removing following location variables:\n", paste(drop, collapse = ", "), "\n")
+  #         data[[1]] <- select(data[[1]], -all_of(drop))
+  #         data[[2]] <- select(data[[2]], -all_of(drop))
+  #       }
+  #     } else {
+  #       cat("Retaining all location variables.\n")
+  #     }
+  #   } else {
+  #     cat("No issues detected.\n")
+  #   }
+  # } else {
+  #   cat("Check skipped: Did not detect any location variables in 'force'.\n")
+  # }
 
   #-----
 
-  cat("\n|=== Check fusion and predictor variables ===|\n\n")
+  #cat("\n|=== Check fusion and predictor variables ===|\n\n")
 
   # Identify the variables to be fused ('fuse')
-  if (!all(unlist(fuse) %in% names(data[[1]]))) stop("Some of the 'fuse' variables are not in the donor microdata")
-  cat("Identified ", length(unlist(fuse)), " fusion variables (", sum(lengths(fuse) > 1), " blocks):\n", sep = "")
-  print(fuse)
+  # if (!all(unlist(fuse) %in% names(data[[1]]))) stop("Some of the 'fuse' variables are not in the donor microdata")
+  # cat("Identified ", length(unlist(fuse)), " fusion variables (", sum(lengths(fuse) > 1), " blocks):\n", sep = "")
+  # print(fuse)
 
   # Identify the predictor variables ('pred.vars')
   #pred.vars <- setdiff(intersect(names(data[[1]]), names(data[[2]])), c("weight", fuse))
-  pred.vars <- c('state', harm.vars, loc.vars,  spatial.vars)
-  cat("\nIdentified", length(attr(data, "harmonized.vars")), "harmonized respondent-level variables,", length(loc.vars) + 1, "location variables, and", length(spatial.vars), "spatial predictors\n")
+  #pred.vars <- c('state', harm.vars, loc.vars,  spatial.vars)
+  harm.vars <- grep("__", names(data[[1]]), fixed = TRUE, value = TRUE)
+  loc.vars <- grep("loc..", names(data[[1]]), fixed = TRUE, value = TRUE)
+  #cat("\nIdentified", length(attr(data, "harmonized.vars")), "harmonized respondent-level variables,", length(loc.vars) + 1, "location variables, and", length(spatial.vars), "spatial predictors\n")
+  cat("\nThere are", length(harm.vars), "harmonized respondent-level predictors and", length(loc.vars), "location predictors\n")
 
   # Identify the 'xforce' predictor variables
-  if (!is.null(force)) {
-    xforce <- lapply(force, function(x) {
-      grep(paste0("^", x, "__"), attr(data, "harmonized.vars"), value = TRUE)
-    }) %>%
-      purrr::compact() %>%
-      unlist() %>%
-      c(rvar) # Add the previously identified representative geographic variable
-    cat("\nIdentified", length(xforce), "predictors to force inclusion and use for validation:\n")
-    print(xforce)
-  } else {
-    xforce <- NULL
-  }
+  # if (!is.null(force)) {
+  #   xforce <- lapply(force, function(x) {
+  #     grep(paste0("^", x, "__"), attr(data, "harmonized.vars"), value = TRUE)
+  #   }) %>%
+  #     purrr::compact() %>%
+  #     unlist() %>%
+  #     c(rvar) # Add the previously identified representative geographic variable
+  #   cat("\nIdentified", length(xforce), "predictors to force inclusion and use for validation:\n")
+  #   print(xforce)
+  # } else {
+  #   xforce <- NULL
+  # }
 
   # Make sure the variables look OK before proceeding
-  ok <- if (ask) readline(prompt = "Does everything look OK at this point? (Y/N): ") else "Y"
-  if (toupper(substring(ok, 1, 1)) != "Y") stop("Stopped at request of user.")
+  # ok <- if (ask) readline(prompt = "Does everything look OK at this point? (Y/N): ") else "Y"
+  # if (toupper(substring(ok, 1, 1)) != "Y") stop("Stopped at request of user.")
 
   #-----
 
-  cat("\n|=== Run fusionModel::prepXY() ===|\n\n")
-
-  # Determine fusion order and subset of 'pred.vars' to use with each fusion variable/block
-  n0 <- nrow(data[[1]])
-  pfrac <- min(1, ifelse(test_mode, 5e3, max(10e3, n0 * 0.1)) / n0)
-  prep.xy <- fusionModel::prepXY(data = merge(data[[1]], data$spatial, all.x = TRUE),
-                                 y = fuse,
-                                 x = pred.vars,
-                                 weight = "weight",
-                                 cor_thresh = 0.025,
-                                 lasso_thresh = 0.975,
-                                 xmax = 100,
-                                 xforce = xforce,
-                                 fraction = pfrac,
-                                 cores = ncores)
-
-  # Save output from prepXY()
-  xfile <- paste(stub, "prep.rds", sep = "_")
-  saveRDS(prep.xy, file = xfile)
-  fsize <- signif(file.size(xfile) / 1e6, 3)
-  cat("\nResults of prepXY() saved to:", paste0(basename(xfile), " (", fsize, " MB)"), "\n")
+  # cat("\n|=== Run fusionModel::prepXY() ===|\n\n")
+  #
+  # # Determine fusion order and subset of 'pred.vars' to use with each fusion variable/block
+  # n0 <- nrow(data[[1]])
+  # pfrac <- min(1, ifelse(test_mode, 5e3, max(10e3, n0 * 0.1)) / n0)
+  # prep.xy <- fusionModel::prepXY(data = merge(data[[1]], data$spatial, all.x = TRUE),
+  #                                y = fuse,
+  #                                x = pred.vars,
+  #                                weight = "weight",
+  #                                cor_thresh = 0.025,
+  #                                lasso_thresh = 0.975,
+  #                                xmax = 100,
+  #                                xforce = xforce,
+  #                                fraction = pfrac,
+  #                                cores = ncores)
+  #
+  # # Save output from prepXY()
+  # xfile <- paste(stub, "prep.rds", sep = "_")
+  # saveRDS(prep.xy, file = xfile)
+  # fsize <- signif(file.size(xfile) / 1e6, 3)
+  # cat("\nResults of prepXY() saved to:", paste0(basename(xfile), " (", fsize, " MB)"), "\n")
 
   #-----
 
-  cat("\n|=== Write input data to disk ===|\n\n")
+  cat("\n|=== Write fusion input files to disk ===|\n\n")
 
   # Update 'pred.vars' to the subset of predictors retained in 'prep.xy'
-  pred.vars <- attr(prep.xy, "xpredictors")
+  #pred.vars <- attr(prep.xy, "xpredictors")
 
   # Save training data to disk
-  cat("Writing training microdata...\n")
-  tfile <- paste(stub, "train.fst", sep = "_")
+  cat("Writing harmonized donor microdata...\n")
+  dfile <- paste(stub, "donor.fst", sep = "_")
   n0 <- nrow(data[[1]])
   if (test_mode) data[[1]] <- slice(data[[1]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
 
-  # Don't need to include the ID variable ('did')
+  # Note: "hid" and "pid" variables included on-disk, if present
   data[[1]] %>%
-    select(any_of(c("weight", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
-    fst::write_fst(path = tfile, compress = 100)
+    #select(any_of(c("weight", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
+    #select(any_of(c("hid", "pid", "weight", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
+    fst::write_fst(path = dfile, compress = 100)
 
-  fsize <- signif(file.size(tfile) / 1e6, 3)
+  fsize <- signif(file.size(dfile) / 1e6, 3)
   fsize.true <- signif(fsize * n0 / nrow(data[[1]]), 2)
   data[[1]] <- NA
   invisible(gc())
-  cat("Training microdata saved to:", paste0(basename(tfile), " (", fsize, " MB)"), "\n")
-  if (test_mode & fsize.true > fsize) cat("Test mode: saved partial training data. Expected production file size is ~", fsize.true, "MB\n")
+  cat("Harmonized donor microdata saved to:", paste0(basename(dfile), " (", fsize, " MB)"), "\n")
+  if (test_mode & fsize.true > fsize) cat("TEST mode: Saved partial donor data. Expected production file size is ~", fsize.true, "MB\n")
 
   # Save prediction data to disk
-  cat("\nWriting prediction microdata...\n")
-  pfile <- paste(stub, "predict.fst", sep = "_")
+  cat("\nWriting harmonized ACS microdata...\n")
+  rfile <- paste(stub, "recipient.fst", sep = "_")
   n0 <- nrow(data[[2]])
   if (test_mode) data[[2]] <- slice(data[[2]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
 
   data[[2]] %>%
-    select(any_of(c(rid, "pid", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
-    fst::write_fst(path = pfile, compress = 100)
+    #select(any_of(c(rid, "pid", merge.vars, unlist(prep.xy$y), pred.vars))) %>%
+    select(-weight) %>%
+    fst::write_fst(path = rfile, compress = 100)
 
-  fsize <- signif(file.size(pfile) / 1e6, 3)
+  fsize <- signif(file.size(rfile) / 1e6, 3)
   fsize.true <- signif(fsize * n0 / nrow(data[[2]]), 3)
   invisible(gc())
-  cat("Prediction microdata saved to:", paste0(basename(pfile), " (", fsize, " MB)"), "\n")
-  if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
+  cat("Harmonized ACS microdata saved to:", paste0(basename(rfile), " (", fsize, " MB)"), "\n")
+  if (test_mode & fsize.true > fsize) cat("TEST mode: Saved partial recipient data. Expected production file size is ~", fsize.true, "MB\n" )
 
-  # Save spatial predictors data to disk
-  cat("\nWriting spatial predictors...\n")
-  sfile <- paste(stub, "spatial.fst", sep = "_")
-  # n0 <- nrow(data[[3]])
-  # if (test_mode) data[[2]] <- slice(data[[2]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
-
-  data[[3]] %>%
-    select(any_of(c(merge.vars, pred.vars))) %>%
-    fst::write_fst(path = sfile, compress = 100)
-
-  fsize <- signif(file.size(sfile) / 1e6, 3)
-  fsize.true <- signif(fsize * n0 / nrow(data[[3]]), 3)
-  rm(data)
-  invisible(gc())
-  cat("Spatial predictors saved to:", paste0(basename(pfile), " (", fsize, " MB)"), "\n")
-  #if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
+  # # Save spatial predictors data to disk
+  # cat("\nWriting spatial predictors...\n")
+  # sfile <- paste(stub, "spatial.fst", sep = "_")
+  # # n0 <- nrow(data[[3]])
+  # # if (test_mode) data[[2]] <- slice(data[[2]], 1:min(10e3, n0))  # Save only slice of full data in test mode.
+  #
+  # data[[3]] %>%
+  #   select(any_of(c(merge.vars, pred.vars))) %>%
+  #   fst::write_fst(path = sfile, compress = 100)
+  #
+  # fsize <- signif(file.size(sfile) / 1e6, 3)
+  # fsize.true <- signif(fsize * n0 / nrow(data[[3]]), 3)
+  # rm(data)
+  # invisible(gc())
+  # cat("Spatial predictors saved to:", paste0(basename(rfile), " (", fsize, " MB)"), "\n")
+  # #if (test_mode & fsize.true > fsize) cat("Test mode: Saved partial prediction data; expected production file size is ~", fsize.true, "MB\n" )
 
   #-----
 
   # cat("\n|=== Upload /input files to Google Drive ===|\n\n")
   # if (ask) {
-  #   uploadFiles(files = c(xfile, tfile, pfile), ask = TRUE)
+  #   uploadFiles(files = c(xfile, dfile, rfile), ask = TRUE)
   # } else {
   #   cat("Non-interactive session: skipping upload to Google Drive\n")
   # }
@@ -558,8 +556,8 @@ fusionInput <- function(donor,
   cat("Total processing time:", signif(as.numeric(tout), 3), attr(tout, "units"), "\n", sep = " ")
 
   # Finish logging and copy log file to /input
-  log.path <- file.path(dir, paste(donor, acs.vintage, rtype, "inputlog.txt", sep = "_"))
-  cat("\nLog file saved to:\n", log.path)
+  log.path <- file.path(dir, paste(donor, acs_year, rtype, "inputlog.txt", sep = "_"))
+  cat("\nLog file saved to:\n", log.path, "\n")
   sink(type = "output")
   close(log.txt)
   invisible(file.copy(from = log.temp, to = log.path, overwrite = TRUE))

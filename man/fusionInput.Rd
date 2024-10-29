@@ -6,13 +6,9 @@
 \usage{
 fusionInput(
   donor,
-  recipient,
   respondent,
-  fuse = NULL,
-  force = NULL,
+  acs_year,
   note = NULL,
-  agg_fun = NULL,
-  agg_adj = NULL,
   test_mode = TRUE,
   ncores = getOption("fusionData.cores")
 )
@@ -20,23 +16,23 @@ fusionInput(
 \arguments{
 \item{donor}{Character. Donor survey identifier (e.g. \code{"RECS_2015"}).}
 
-\item{recipient}{Character. Recipient (ACS) survey identifier (e.g. \code{"ACS_2015"}).}
-
 \item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
+
+\item{note}{Character. Optional note supplied by user. Inserted in the log file for reference.}
+
+\item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).}
+
+\item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
+
+\item{recipient}{Character. Recipient (ACS) survey identifier (e.g. \code{"ACS_2015"}).}
 
 \item{fuse}{Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process (it is preferable to specify explicitly, though).}
 
 \item{force}{Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.}
 
-\item{note}{Character. Optional note supplied by user. Inserted in the log file for reference.}
-
 \item{agg_fun}{List. Optional override of default aggregation function for person-level \code{fuse} variables when \code{respondent = "household"}. Passed to \code{\link{assemble}} internally. See Details.}
 
 \item{agg_adj}{List. Optional pre-aggregation adjustment code to apply to person-level \code{fuse} variables when \code{respondent = "household"}. Passed to \code{\link{assemble}} internally. See Details.}
-
-\item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).}
-
-\item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
 }
 \value{
 Invisibly returns path to local directory where files were saved. Messages printed to console noting progress. Resulting \code{/input} data files are saved to appropriate local directory and (optionally) to remote Google Drive storage. Also saves a .txt log file alongside data files that records console output from \code{fusionInput}.
