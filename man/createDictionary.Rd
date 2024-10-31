@@ -4,7 +4,7 @@
 \alias{createDictionary}
 \title{Generate data dictionary from survey microdata}
 \usage{
-createDictionary(data, survey, vintage, respondent)
+createDictionary(data, survey, vintage, respondent, custom = FALSE)
 }
 \arguments{
 \item{data}{Data frame. Survey microdata with variable descriptions stored in columns via \code{\link[labelled]{var_label}}.}

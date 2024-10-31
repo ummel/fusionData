@@ -69,7 +69,8 @@ server <- function(input, output) {
                   rownames = FALSE,
                   filter = "top",
                   options = list(scrollX = TRUE,
-                                 dom = 'tipr',  # See here: https://datatables.net/reference/option/dom
+                                 dom = 'tipr',  # NOTE: Has been deprecated. See here: https://datatables.net/reference/option/dom
+                                 searchHighlight = TRUE,
                                  pageLength = 25))
   )
 }

@@ -612,6 +612,7 @@ processACSmicrodata <- function(year, respondent) {
                                              respondent = ifelse(hus, "H", "P"))
 
   # Save dictionary to disk (.rds)
+  cat("Saving dictionary to disk\n")
   fname <- paste0("ACS_", year, ifelse(hus, "_H", "_P"), "_dictionary.rds")
   saveRDS(object = dictionary,
           file = file.path("survey-processed/ACS", year, fname))

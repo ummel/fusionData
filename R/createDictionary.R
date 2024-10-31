@@ -12,7 +12,7 @@
 #'
 #' @export
 
-createDictionary <- function(data, survey, vintage, respondent) {
+createDictionary <- function(data, survey, vintage, respondent, custom = FALSE) {
 
   # Check for valid inputs
   stopifnot(exprs = {
@@ -22,14 +22,14 @@ createDictionary <- function(data, survey, vintage, respondent) {
     substring(tolower(respondent), 1, 1) %in% c("h", "p")
   })
 
-  if (is.data.table(data)) data <- as.data.frame(data)
+  data <- as.data.frame(data)
 
   # Check that number of unique households/individuals matches number of rows in 'data'
   #hid <- grep(paste0("^", tolower(survey), ".*_hid$"), names(data), value = TRUE)
-  hid <- "hid"
-  pid <- intersect(names(data), "pid")
+  # hid <- "hid"
+  # pid <- intersect(names(data), "pid")
   row.check <- data %>%
-    select(all_of(c(hid, pid))) %>%
+    select(any_of(c('hid', 'pid'))) %>%
     distinct() %>%
     nrow()
   if (row.check != nrow(data)) stop("There are ", row.check, " unique households/individuals but ", nrow(data), " rows in 'data'; check for duplicates or other errors...")
@@ -37,9 +37,8 @@ createDictionary <- function(data, survey, vintage, respondent) {
   # Check for complete variable labels/descriptions
   v <- compact(labelled::var_label(data))
   miss <- setdiff(names(data), names(v))
-  if (length(miss) > 0) {
-    stop("The following columns are missing labels (see ?labelled::var_label): ", paste(miss, collapse = ", "))
-  }
+  if (custom) miss <- setdiff(miss, c('year', 'hid', 'pid'))
+  if (length(miss)) stop("The following columns are missing labels (see ?labelled::var_label): ", paste(miss, collapse = ", "))
 
   # Household-level data?
   hh <- substring(tolower(respondent), 1, 1) == "h"
@@ -49,10 +48,11 @@ createDictionary <- function(data, survey, vintage, respondent) {
   W <- if ("weight" %in% names(data)) data$weight / mean(data$weight) else rep(1L, nrow(data))
 
   # Variable summaries
+  if (custom) data <- select(data, -any_of(c('year', 'hid', 'pid')))
   var.values <- data %>%
     select(-matches("^rep_\\d+$")) %>%  # Remove replicate weights
     #select(-matches(paste0("^", tolower(survey), ".*_hid$"), -any_of(c("pid", "weight")))) %>%  # Remove ID and primary weight variables
-    map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = W)} else {fctFormat(.x)})
+    map_chr(~ if (is.numeric(.x)) {numFormat(x = .x, w = W)} else {catFormat(.x)})
 
   # Variables to include in dictionary
   nm <- names(var.values)
@@ -66,7 +66,8 @@ createDictionary <- function(data, survey, vintage, respondent) {
     description = unlist(labelled::var_label(data[nm], unlist = TRUE)),
     values = var.values,
     type = map_chr(data[nm], vctrs::vec_ptype_abbr),
-    n = as.integer(colSums(!is.na(data[nm])))
+    n = as.integer(colSums(!is.na(data[nm]))),
+    custom = custom
   ) %>%
     arrange(variable)
 

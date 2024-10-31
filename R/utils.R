@@ -231,9 +231,11 @@ numFormat <- function(x, w = NULL) {
 
 #-------------------
 
-# Function returning summary string for factor variable
-fctFormat <- function(x) {
-  paste(paste0("[", levels(x), "]"), collapse = ", ")
+# Function returning summary string for a categorical variable (character, factor or logical)
+catFormat <- function(x) {
+  stopifnot(!is.numeric(x))
+  if (is.character(x)) x <- factor(x)
+  if (is.logical(x)) "[TRUE], [FALSE]" else paste(paste0("[", levels(x), "]"), collapse = ", ")
 }
 
 #-------------------

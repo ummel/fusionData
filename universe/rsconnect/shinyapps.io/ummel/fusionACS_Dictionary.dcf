@@ -1,11 +1,11 @@
 name: fusionACS_Dictionary
-title: fusionACS_Dictionary
+title: universe
 username: ummel
 account: ummel
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6571224
-bundleId: 9066761
+bundleId: 9297740
 url: https://ummel.shinyapps.io/fusionACS_Dictionary/
 version: 1
 asMultiple: FALSE

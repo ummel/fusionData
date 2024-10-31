@@ -22,7 +22,10 @@ compileDictionary <- function() {
     rename_with(stringr::str_to_title)
 
   # Get processed mirodata file sizes on disk (MB)
-  fsize <- prettyNum(file.size(gsub("dictionary.rds", "processed.fst", files)) / 1e6, format = "g", digits = 3)
+  # This incudes .processed.fst and (if present) custom.fst files
+  fsize.processed <- file.size(gsub("dictionary.rds", "processed.fst", files))
+  fsize.custom <- file.size(gsub("dictionary.rds", "custom.fst", files))
+  fsize <- prettyNum(rowSums(cbind(fsize.processed, fsize.custom), na.rm = TRUE) / 1e6, format = "g", digits = 3)
 
   # Create summary of available surveys
   surveys <- dictionary %>%
