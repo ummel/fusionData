@@ -47,7 +47,7 @@ compileSpatial <- function() {
 
   # Variable summaries
   var.values <- temp %>%
-    map_chr(~ if (is.numeric(.x)) {numFormat(x = na.omit(.x))} else {fctFormat(.x)})
+    map_chr(~ if (is.numeric(.x)) {numFormat(x = na.omit(.x))} else {catFormat(.x)})
 
   # Basic spatial predictor dictionary
   spatial <- labelled::var_label(temp) %>%
@@ -140,7 +140,7 @@ compileSpatial <- function() {
   # Variable summaries
   # var.values <- result %>%
   #   select(-any_of(c(gtarget, 'vintage'))) %>%  # Remove geo target variables and vintage
-  #   map_chr(~ if (is.numeric(.x)) {numFormat(x = .x)} else {fctFormat(.x)})
+  #   map_chr(~ if (is.numeric(.x)) {numFormat(x = .x)} else {catFormat(.x)})
 
   # Save final result to disk
   cat("Writing 'geo_predictors.fst' to disk...\n")

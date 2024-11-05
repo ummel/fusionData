@@ -51,6 +51,6 @@ fhfa <- fhfa %>%
   ungroup() %>%
   select(state, county10, tract10, year, hpi_real:hpi_relchg) %>%
   rename(vintage = year) %>%
-  mutate_if(is.numeric, cleanNumeric, tol = 0.001)
+  mutate_if(is.double, cleanNumeric, tol = 0.001)
 
 saveRDS(fhfa, "geo-processed/FHFA/FHFA_processed.rds")

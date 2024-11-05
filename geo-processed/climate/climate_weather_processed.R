@@ -1,4 +1,5 @@
 library(tidyverse)
+library(data.table)
 source("R/utils.R")
 
 # Fast if/else drop-in used in code below
@@ -7,8 +8,33 @@ fif <- data.table::fifelse
 #---
 
 # Load the raw daily data (2000-2020) from Spangler et al. (2022)
-# NOTE: This was only downloaded temporarily, because the file was very large
-d <- readRDS("geo-raw/climate/Heatvars_County_2000-2020_v1.2.rds")
+# Keith Spangler provided additional data for 2021-2023 (but not UTCI); see email 10/26/24
+#d <- readRDS("geo-raw/climate/Heatvars_County_2000-2020_v1.2.rds")
+heat.rds <- list.files("geo-raw/climate", pattern = ".rds", full.names = TRUE)
+d <- lapply(heat.rds, readRDS) %>%
+  rbindlist() %>%
+  mutate(month = factor(data.table::month(Date)))
+
+#---
+
+# Impute missing UTCI values via linear model with WBGT and month as predictors
+# NOTE: Coud become unnecessary if raw data for 2021-2023 is eventually updates to include UTCI values
+
+temp <- d %>%
+  select(month, starts_with('WBGT'), starts_with('UTCI')) %>%
+  filter(!is.na(UTCImin_C), !is.na(WBGTmin_C)) %>%
+  slice_sample(n = 1e6)
+
+for (v in c('UTCImin_C', 'UTCImax_C', 'UTCImean_C')) {
+  fobj <- formula(paste(v, "~ month:WBGTmin_C + month:WBGTmax_C + month:WBGTmean_C"))
+  fit <- lm(fobj, data = temp) # UTCI linear model as function of month and WBGT
+  m <- which(is.na(d[[v]]))  # Missing values
+  set(d, i = m, j = v, value = predict(fit, newdata = d[m]))
+}
+
+rm(temp)
+
+#---
 
 # Create desired time and space identifying variables
 # Set observations to NA when the associated data quality flag is > 1
@@ -70,9 +96,9 @@ state.codes <- readRDS("geo-raw/miscellaneous/Geographic entities to merge on st
 # Data download (updated regularly): https://www.ncei.noaa.gov/pub/data/cirs/climdiv/
 # Data dictionary: https://www.ncei.noaa.gov/pub/data/cirs/climdiv/county-readme.txt
 # Note that the url ending date updates regularly...
-cdd <- read.table("https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-cddccy-v1.0.0-20240906")  # CDD
-hdd <- read.table("https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-hddccy-v1.0.0-20240906")  # HDD
-precip <- read.table("https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-pcpncy-v1.0.0-20240906")  # Precipitation
+cdd <- read.table("https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-cddccy-v1.0.0-20241021")  # CDD
+hdd <- read.table("https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-hddccy-v1.0.0-20241021")  # HDD
+precip <- read.table("https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-pcpncy-v1.0.0-20241021")  # Precipitation
 
 climdiv <- rbind(cdd, hdd, precip) %>%
   mutate(V1 = str_pad(V1, width = 11, pad = 0),
@@ -121,6 +147,8 @@ processStationData <- function(file_csv, state_fips) {
     na.omit()
 }
 
+# TO DO: Update station data file for more recent years!!!
+
 # Data for Hawaii (Honolulu)
 # Use weather station data for Honolulu Airport for all counties in Hawaii
 hi <- processStationData("geo-raw/climate/Honolulu Weather Station Data.csv", "15")
@@ -144,7 +172,9 @@ out <- climdiv %>%
   left_join(stress, by = join_by(state, county10, year)) %>%
   filter(year >= 1999)  # Alaska station data goes back to 1999
 
-# Linear regression models to impute degree days using conventional/ambient degree days, precip, and climate zone
+#---
+
+# Linear regression models to impute degree days and number of extreme days using conventional/ambient degree days, precip, and climate zone
 fit.hdd <- lm(hdd_utci ~ hdd + hdd:iecc_zone + precip:iecc_zone + year:iecc_zone, data = out)
 fit.cdd <- lm(cdd_utci ~ cdd + cdd:iecc_zone + precip:iecc_zone + year:iecc_zone, data = out)
 fit.strongheat <- lm(strongheat_utci ~ hdd + hdd:iecc_zone + precip:iecc_zone + year:iecc_zone, data = out)
@@ -165,7 +195,7 @@ weather <- out %>%
   arrange(state, county10, year) %>%
   rename(vintage = year) %>%
   select(-iecc_zone) %>%
-  mutate_if(is.numeric, cleanNumeric, tol = 0.001)
+  mutate_if(is.double, cleanNumeric, tol = 0.001)
 
 # Long-term mean values (climate normals)
 wvars <- setdiff(names(weather), c('state', 'county10', 'vintage'))
@@ -174,7 +204,7 @@ climate <- weather %>%
   summarize(across(all_of(wvars), mean, .names = "{.col}_normal"), .groups = "drop") %>%
   mutate(vintage = "always") %>%
   select(state, county10, vintage, everything()) %>%
-  mutate_if(is.numeric, cleanNumeric, tol = 0.001)
+  mutate_if(is.double, cleanNumeric, tol = 0.001)
 
 # Check correlations
 # cor(weather$cdd, weather$cdd_utci)

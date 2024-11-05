@@ -1,7 +1,12 @@
 # Function to "clean" a numeric vector by reducing to significant digits and converting to integer, if possible
-cleanNumeric <- function(x, convert = TRUE, tol = 0.001, minimize = FALSE, threshold = 0.99) {
-  x <- signifDigits(x, tol = tol, minimize = minimize)
-  if (convert) x <- convertInteger(x, threshold = threshold)
+# If the input can be immediately coerced to integer, it is and returned as such
+# Otherwise, the number of digits is reduced and integer coercion attempted one final time
+cleanNumeric <- function(x, tol = 0.001, minimize = FALSE, threshold = 0.999) {
+  x <- convertInteger(x, threshold = 1)  # This coerces to integer, if possible
+  if (is.double(x)) {
+    x <- signifDigits(x, tol = tol, minimize = minimize)
+    x <- convertInteger(x, threshold = threshold)
+  }
   return(x)
 }
 
