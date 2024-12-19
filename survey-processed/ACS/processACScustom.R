@@ -5,20 +5,27 @@ source("R/utils.R")
 processACScustom <- function(year) {
 
   # List of custom functions provided in /custom
-  flist <- list.files("survey-processed/ACS/custom", pattern = ".R$")
+  # If none provided, use all
+  # if (missing(flist)) {
+  #   flist <- list.files("survey-processed/ACS/custom", pattern = ".R$", full.names = TRUE)
+  # } else {
+  #   stopifnot(all(file.exists(flist)))
+  # }
+  flist <- list.files("survey-processed/ACS/custom", pattern = ".R$", full.names = TRUE)
 
-  # Do processing for each custom function in 'flist'
+  # Do processing for each custom function/.R scipt in 'flist'
   out <- lapply(flist, function(fun) {
 
     # Load the custom function and run if for 'year'
-    source(file.path("survey-processed/ACS/custom", fun))
-    f <- get(sub(".R$", "", fun))
+    source(fun)
+    f <- get(sub(".R$", "", basename(fun)))
     a <- names(formals(f))
     if (length(a) != 1 | a[1] != "year") stop("The custom function ", custom, "() must have 'year' as its lone argument", sep = "")
     cat("Processing custom function in", fun, "for year", year, "\n")
     out <- f(year = year)  # Apply custom function for 'year'
     out$year <- as.integer(year)  # Ensures 'year' is present in output
     if (!'hid' %in% names(out)) stop("Custom function must return 'hid' variable in result")
+    if (anyNA(out)) stop("NA values are not allowed in the custom function output")
     out <- arrange(out, across(any_of(c('hid', 'pid')))) # Ensure consistent row ordering for checks below
 
     # Determine if function output is person- or household-level
@@ -43,12 +50,13 @@ processACScustom <- function(year) {
     if (length(miss)) stop("The following custom variables are not defined/labelled:", paste(miss, collapse = ", "), "\n")
     out %>%
       mutate_if(is.factor, safeCharacters) %>%
-      mutate_if(is.numeric, convertInteger, threshold = 1) %>%
       mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
       labelled::set_variable_labels(.labels = labs, .strict = FALSE) %>%
       arrange(across(any_of(c('hid', 'pid'))))
 
   })
+
+  #---
 
   # Combine/merge variables across different custom functions
   # Recursive merge of person-level and household-level custom variables
@@ -73,6 +81,7 @@ processACScustom <- function(year) {
       cat("Saving dictionary to disk\n")
       fname <- file.path("survey-processed/ACS", year, paste("ACS", year, toupper(i), "dictionary.rds", sep = "_"))
       vars <- names(fst::fst(sub("dictionary.rds", "processed.fst", fname)))  # Non-custom variables in the processed ACS microdata
+      #vars <- setdiff(readRDS(fname)$variable, dict$variable)  # Variables in dictionary OTHER than those in 'dict' o
       readRDS(fname) %>%
         filter(variable %in% vars) %>%  # This ensures that only the non-custom variables are retained before appending the custom variables
         mutate(custom = FALSE) %>%  # Ensures the non-custom/original variables are marked as such

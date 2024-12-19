@@ -49,11 +49,15 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 # Checks if maximum value is coercible to 32-bit integer; see ?integer "Details"
 # If the fraction of integer-coercible values exceeds 'threshold', then non-integer values are coerced to integer
 convertInteger <- function(x, threshold = 0.99) {
-  ok32 <- max(x, na.rm = TRUE) <= .Machine$integer.max
-  if (ok32) {
-    chk <- x[!is.na(x)] %% 1 == 0
-    if (sum(chk) / length(chk) >= threshold) {
-      x <- as.integer(round(x))
+  if (collapse::allNA(x)) {
+    x <- as.logical(x)
+  } else {
+    ok32 <- max(x, na.rm = TRUE) <= .Machine$integer.max
+    if (ok32) {
+      chk <- x[!is.na(x)] %% 1 == 0
+      if (sum(chk) / length(chk) >= threshold) {
+        x <- as.integer(round(x))
+      }
     }
   }
   return(x)

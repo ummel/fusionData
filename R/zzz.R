@@ -14,9 +14,9 @@
 #' @rawNamespace import(shinyjs, except = c(html, runExample, alert))
 #' @rawNamespace import(matrixStats, except = c(count))
 #' @rawNamespace import(shiny, except = c(dataTableOutput, renderDataTable, validate))
-#' @rawNamespace import(matrixStats, except = c(count))
 #' @rawNamespace import(stats, except = c(filter, lag))
 #' @rawNamespace import(data.table, except = c(first, last, between, transpose))
+#' @rawNamespace import(collapse, except = c(D, fdroplevels, replace_na))
 NULL
 
 #-----
