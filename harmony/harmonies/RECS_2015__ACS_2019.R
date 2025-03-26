@@ -63,20 +63,37 @@ list(
     comment = "",
     modified = "2021-07-03 06:37:22"),
 
-  fuelheat__hfl = list(
+  employhh__wkhp = list(
     RECS = list(
-      groups = 1:7,
-      levels = c("Do not use space heating", "Electricity", "Fuel oil/kerosene", "Natural gas from underground pipes", "Propane (bottled gas)", "Some other fuel", "Wood (cordwood or pellets)"),
+      groups = 1:3,
+      levels = c("Employed full-time", "Employed part-time", "Not employed/retired"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(5, 6, 2, 3, 1, 6, 6, 4, 7),
-      levels = c("Bottled, tank, or LP gas", "Coal or coke", "Electricity", "Fuel oil, kerosene, etc.", "No fuel used", "Other fuel", "Solar energy", "Utility gas", "Wood"),
+      groups = 3:1,
+      levels = c("Less than 1", "[1 to 20)", "20 or more"),
+      breaks = c(1, 20),
+      adj = "",
+      agg = "reference"),
+    ordered = TRUE,
+    comment = "",
+    modified = "2025-03-03 17:13:25.643996"),
+
+  fuelheat__hfl = list(
+    RECS = list(
+      groups = 1:7,
+      levels = c("No space heating", "Natural gas from underground pipes", "Propane (bottled gas)", "Fuel oil/kerosene", "Electricity", "Wood (cordwood or pellets)", "Some other fuel"),
       breaks = "",
       adj = ""),
+    ACS = list(
+      groups = c(2, 3, 5, 4, 7, 6, 7, 7, 1),
+      levels = c("Utility gas", "Bottled, tank, or LP gas", "Electricity", "Fuel oil, kerosene, etc.", "Coal or coke", "Wood", "Solar energy", "Other fuel", "No fuel used"),
+      breaks = "",
+      adj = "",
+      agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2021-06-10 10:00:33"),
+    modified = "2025-03-03 17:43:35.506776"),
 
   hhage__agep = list(
     RECS = list(
@@ -109,6 +126,22 @@ list(
     ordered = FALSE,
     comment = "",
     modified = "2021-06-10 12:07:32"),
+
+  householder_race__rac1p = list(
+    RECS = list(
+      groups = 1:6,
+      levels = c("White Alone", "Black or African/American Alone", "American Indian or Alaska Native Alone", "Asian Alone", "Native Hawaiian or Other Pacific Islander Alone", "2 or More Races Selected"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(1, 2, 3, 3, 3, 4, 5, 6, 6),
+      levels = c("White alone", "Black or African American alone", "American Indian alone", "Alaska Native alone", "American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races", "Asian alone", "Native Hawaiian and Other Pacific Islander alone", "Some Other Race alone", "Two or More Races"),
+      breaks = "",
+      adj = "",
+      agg = "reference"),
+    ordered = FALSE,
+    comment = "",
+    modified = "2025-03-03 17:16:07.603977"),
 
   internet__access = list(
     RECS = list(
@@ -151,11 +184,12 @@ list(
       groups = 1:8,
       levels = c("Less than 20000", "[20000 to 40000)", "[40000 to 60000)", "[60000 to 80000)", "[80000 to 1e+05)", "[1e+05 to 120000)", "[120000 to 140000)", "140000 or more"),
       breaks = c(20000, 40000, 60000, 80000, 1e+05, 120000, 140000),
-      adj = "hincp * 0.93",
-      agg = ""),
+      adj = "hincp / 1.073",
+      agg = logical(0)
+    ),
     ordered = TRUE,
-    comment = "",
-    modified = "2021-06-17 10:23:35"),
+    comment = "Deflate 'hincp' to 2015 dollars.",
+    modified = "2025-03-03 17:10:22.913649"),
 
   ngpay__gasfp = list(
     RECS = list(
@@ -205,6 +239,22 @@ list(
     comment = "",
     modified = "2021-06-17 10:25:06"),
 
+  numchild__agep = list(
+    RECS = list(
+      groups = 1,
+      levels = "Min: 0, Median: 0, Mean: 0.594, Max: 10",
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = 1,
+      levels = "Min: 0, Median: 38, Mean: 39.1, Max: 96",
+      breaks = "",
+      adj = "agep <= 17",
+      agg = "sum"),
+    ordered = "",
+    comment = "",
+    modified = "2025-03-03 17:16:56.210043"),
+
   numfrig__refr = list(
     RECS = list(
       groups = 1:2,
@@ -251,6 +301,22 @@ list(
     ordered = TRUE,
     comment = "",
     modified = "2021-07-03 06:27:43"),
+
+  occupyyrange__mv = list(
+    RECS = list(
+      groups = c(1, 1, 1, 1, 1, 2, 3, 4),
+      levels = c("Before 1950", "1950 to 1959", "1960 to 1969", "1970 to 1979", "1980 to 1989", "1990 to 1999", "2000 to 2009", "2010 to 2015"),
+      breaks = "",
+      adj = ""),
+    ACS = list(
+      groups = c(4, 4, 4, 4, 3, 2, 1),
+      levels = c("12 months or less", "13 to 23 months", "2 to 4 years", "5 to 9 years", "10 to 19 years", "20 to 29 years", "30 years or more"),
+      breaks = "",
+      adj = "",
+      agg = ""),
+    ordered = FALSE,
+    comment = "",
+    modified = "2025-03-03 17:18:15.766575"),
 
   sdescent__hisp = list(
     RECS = list(
