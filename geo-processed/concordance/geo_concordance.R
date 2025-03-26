@@ -71,8 +71,9 @@ names(vlabs) <- y
 d <- d %>%
   mutate_at(vars(starts_with('county')), ~ substring(.x, 3, 5)) %>%
   mutate_at(vars(starts_with('tract')), ~ sub(".", "", .x, fixed = TRUE)) %>%
-  mutate_at(vars(starts_with('cbsatype')), ~ ifelse(substring(.x, 1, 3) == "Met", "Metro", "Micro")) %>%
-  mutate_at(vars(starts_with('sdbesttype')),toupper) %>%
+  mutate_at(vars(starts_with('cbsatype')), ~ ifelse(.x == " ", "None", substring(.x, 1, 3))) %>%
+  mutate_at(vars(starts_with('cbsatype')), ~ ifelse(.x != "None", paste0(.x, "ro"), .x)) %>%
+  mutate_at(vars(starts_with('sdbesttype')), toupper) %>%
   mutate_all(~ ifelse(grepl("^[9]*$", .x), NA, .x)) %>%   # Replace all "999", etc. (all nines) with NA
   mutate(hus10 = replace_na(hus10, 0L))
 
@@ -105,7 +106,7 @@ stopifnot({
 data(bg_centroids, package = "fusionData")
 
 # Shapefile of climate division boundaries
-climdiv <- st_read("geo-raw/climate/CONUS_CLIMATE_DIVISIONS/GIS.OFFICIAL_CLIM_DIVISIONS.shp") %>%
+climdiv <- st_read("geo-raw/climate/CONUS_CLIMATE_DIVISIONS.shp/GIS.OFFICIAL_CLIM_DIVISIONS.shp") %>%
   st_make_valid() %>%
   mutate(climate_division = str_pad(CLIMDIV, width = 4, pad = 0)) %>%
   select(climate_division) %>%
@@ -157,35 +158,35 @@ stopifnot(!anyNA(climdiv))
 # DEFINE CUSTOM VARIABLES
 # These are geographic variables used within specific donor surveys
 
-## ASEC ----
+# # NOT USED FOR ASEC
+# ## ASEC ----
+#
+# # Include CPS-ASEC county codes - not identified for each observation
+# asec <- readRDS("geo-processed/ASEC/asec_county.rds")
+#
+# # rename to be consistent with the processed H data
+# asec <- asec %>%
+#   mutate(asec_county = county) %>%
+#   rename(county14 = county) %>%
+#   filter(county14 != "County not identified")
 
-# Include CPS-ASEC county codes - not identified for each observation
-asec <- readRDS("geo-processed/ASEC/asec_county.rds")
-
-# rename to be consistent with the processed H data
-asec <- asec %>%
-  mutate(asec_county = county) %>%
-  rename(county14 = county) %>%
-  filter(county14 != "County not identified")
-
-## RECS ----
+## RECS 2015 ----
 
 # RECS 'recs_iecc_zone' variable
 # This links raw IECC codes to those used in RECS 2009 and 2015
-recs.iecc <- tibble(
+recs15.iecc <- tibble(
   iecc_zone = c("1A*", "2A*", "2B", "2B*", "3A", "3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
-  recs_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK"),
-) %>%
-  mutate(recs_iecc_zone = paste0("IECC climate zone", ifelse(grepl("-", recs_iecc_zone), "s ", " "), recs_iecc_zone))
+  recs15_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK"),
+)
 
-recs.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
-  mutate(recs_ba_zone = ifelse(ba_zone %in% c('Cold', 'Very Cold'), 'Cold/Very Cold', ba_zone),
-         recs_ba_zone = ifelse(recs_ba_zone %in% c('Hot-Dry', 'Mixed-Dry'), 'Hot-Dry/Mixed-Dry', recs_ba_zone)) %>%
-  left_join(recs.iecc, by = "iecc_zone") %>%
-  select(state, county10, starts_with("recs_")) %>%
-  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS IECC climate zone", "RECS Building American climate zone"))
+recs15.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
+  mutate(recs15_ba_zone = ifelse(ba_zone %in% c('Cold', 'Very Cold'), 'Cold/Very Cold', ba_zone),
+         recs15_ba_zone = ifelse(recs15_ba_zone %in% c('Hot-Dry', 'Mixed-Dry'), 'Hot-Dry/Mixed-Dry', recs15_ba_zone)) %>%
+  left_join(recs15.iecc, by = "iecc_zone") %>%
+  select(state, county10, starts_with("recs15_")) %>%
+  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2015 IECC climate zone", "RECS 2015 Building America climate zone"))
 
-#----------
+## RECS 2020 ----
 
 # This links raw IECC codes to those used in RECS 2020
 recs20.iecc <- tibble(
@@ -197,16 +198,16 @@ recs20.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %
   mutate(recs20_ba_zone = ifelse(ba_zone == 'Very Cold', 'Very-Cold', ba_zone)) %>%
   left_join(recs20.iecc, by = "iecc_zone") %>%
   select(state, county10, starts_with("recs20_")) %>%
-  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2020 IECC climate zone", "RECS 2020 Building American climate zone"))
+  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2020 IECC climate zone", "RECS 2020 Building America climate zone"))
 
 #----------
 
 # Merge various datasets
 result <- geocorr %>%
   left_join(state.merge, by = "state") %>%
-  left_join(recs.climate, by = c("state", "county10")) %>%
+  left_join(recs15.climate, by = c("state", "county10")) %>%
   left_join(recs20.climate, by = c("state", "county10")) %>%
-  #left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%  # FIX THIS!!!
+  left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
   #left_join(asec, by = c("state", "county14")) %>%  # FIX THIS!!!
   # mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
   #        asec_division = if_else(!str_detect(recs_division, "Mountain"), recs_division, "Mountain")) %>%
