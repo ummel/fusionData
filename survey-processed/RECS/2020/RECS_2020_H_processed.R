@@ -92,36 +92,6 @@ for (v in names(d)) {
 
 #---
 
-# mutate(label = ifelse(grepl("\\d+\\s*-\\s*\\d+",value) & !grepl("Not applicable",value) ,desc,NA),
-#        label = ifelse(var == 'STORIES'|var == 'SIZEOFGARAGE'|var == 'TYPEGLASS'|var == 'NGPAY'| var == 'TYPEHUQ'|var == 'EMPLOYHH'|
-#                         var == 'SIZRFRI1'|var == 'AGEFRI1'|var == 'SIZRFRI2'|var == 'SIZFREEZ'|var == 'TVONWD1'|var == 'TVONWD2'| var == 'MONEYPY',NA,label))
-#
-# #Split codebook into 2
-# codebook_a1 <- codebook %>% filter (type =='Num' | var == 'UATYP10') %>% filter(is.na(label)) %>%
-#   separate(value, c("value", "label"), sep="^\\s*\\S+\\K\\s+")
-#
-# codebook_a2 <- codebook %>% filter (type =='Num' | var == 'UATYPE10') %>% filter(!is.na(label))
-#
-# codebook_b <- codebook %>% filter (type !='Num' & var != 'UATYP10') %>% mutate(label = value)
-#
-# codebook1 <- rbind(codebook_a1,codebook_a2,codebook_b)
-# stopifnot(nrow(codebook1) == nrow(codebook))
-# rm(codebook_a1,codebook_a2,codebook_b)
-#
-# codebook <- codebook1 %>%
-#   mutate(
-#     label = ifelse(grepl("^Don.t know$", label) | grepl("Refused", label), NA, label)  # Set label to NA if value is "Don't know" or "Refused" (these observations are to be imputed eventually)
-#   ) %>%
-#   mutate_all(trimws)
-#
-# new_rows <- list(
-#   data.frame(var = 'MEDICALDEV', desc = "Any medical devices used at home", label = ("Not applicable"), value = NA, type = 'Num'),
-#   data.frame(var = 'EVCHRGHOME', desc = "Any medical devices used at home", label = ("Not applicable"), value = NA, type = 'Num'))
-#
-# codebook <- bind_rows(codebook,new_rows)
-
-#-----
-
 # Variables with "Not applicable" values
 # These are the variables for which suitable replacement values must be specified below
 nap.vars <- d %>%
@@ -223,13 +193,7 @@ nap.values <- list(
   USEDEHUM = "No dehumidifier",
   TYPETHERM = "Does not have thermostat for heating or cooling",
   HEATCNTL = "No heat control",
-  TEMPHOME = "No space heating",
-  TEMPGONE = "No space heating",
-  TEMPNITE = "No space heating",
   COOLCNTL = "No cool control",
-  TEMPHOMEAC = "No air conditioning",
-  TEMPGONEAC = "No air conditioning",
-  TEMPNITEAC = "No air conditioning",
   H2OAPT = "Not an apartment",
   H2OMAIN = "Not a single family home",
   WHEATBKT = "No",
@@ -307,7 +271,11 @@ nap.values <- list(
   # and the variable should be treated as an ordered factor.
   TEMPHOME = "No space heating",
   TEMPGONE = "No space heating",
-  TEMPNITE = "No space heating"
+  TEMPNITE = "No space heating",
+  TEMPHOMEAC = "No air conditioning",
+  TEMPGONEAC = "No air conditioning",
+  TEMPNITEAC = "No air conditioning"
+
 )
 
 # Identify variables in 'nap.vars' not specified in 'nap.values
