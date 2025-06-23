@@ -5,7 +5,7 @@ processCodebook <- function(survey_years) {
     map_dfr(readRDS) %>%
     mutate(var = tolower(var)) %>%
     group_by(var, value) %>%
-    slice(1) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   # Clean up the codebook

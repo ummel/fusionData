@@ -6,23 +6,16 @@ library(lubridate)
 library(rpart)
 library(xts)
 source("R/utils.R")
-source("R/createDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
 
 # Code to summarize trip level data at the household level
 # Uses selected numeric variables from the processed trip-level file 
-
-setwd("/Users/karthikakkiraju/Documents/FusionData/")
 colClean <- function(x){ colnames(x) <- gsub("\\.", "_", colnames(x)); x } 
-
 
 codebook_t <- fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_codebook.fst")
 
-
-#This will be merged with the person level data and then later summarized at the household level
+#Trip file will be summarized at the household level
 nhts_h <-  fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_processed.fst") %>%
-                  select(c('nhts_2017_hid','nonhhcnt','numontrp','numtrans','pubtrans',
+                  select(c('hid','nonhhcnt','numontrp','numtrans','pubtrans',
                        'trpmiles','tregrtm','tracctm','trphhacc','trpmilad','trptrans','tdwknd',
                        'trphhveh','trvlcmin','trwaittm','vehtype','vmt_mile','whytrp1s','whyto','weight')) %>%
   
@@ -71,76 +64,69 @@ nhts_h <-  fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_processe
         trptrans = ifelse(trptrans %in% c("Taxi / limo (including Uber / Lyft)","Rental car (Including Zipcar / Car2Go)"),
                       "rideshare/rental", as.character(trptrans)))
 
-
-#Summarize numeric trip variables by trip type at the household level
-
-nhts_h_s1 <- nhts_h %>% select(whytrp2s, nhts_2017_hid,which(sapply(., is.numeric))) %>% drop_na() %>%
-            group_by(nhts_2017_hid,whytrp2s) %>% 
+#Sum numeric trip variables by trip type at the household level
+nhts_h_s1 <- nhts_h %>% select(whytrp2s,hid,which(sapply(., is.numeric))) %>% drop_na() %>%
+            group_by(hid,whytrp2s) %>% 
             summarise(
-              trpmilad = weighted.mean(trpmilad,weight,na.rm = TRUE),
-              trpmiles = weighted.mean(trpmiles,weight,na.rm = TRUE),
-              vmt_mile = weighted.mean(vmt_mile,weight,na.rm = TRUE),
-              trwaittm = weighted.mean(trwaittm,weight,na.rm = TRUE),
-              numtrans = weighted.mean(numtrans,weight,na.rm = TRUE),
-              tregrtm = weighted.mean(tregrtm,weight,na.rm = TRUE),
-              trvlcmin = weighted.mean(trvlcmin,weight,na.rm = TRUE)
-            )
+              trpmilad = sum(trpmilad,na.rm = TRUE),
+              trpmiles = sum(trpmiles,na.rm = TRUE),
+              vmt_mile = sum(vmt_mile,na.rm = TRUE),
+              trwaittm = sum(trwaittm,na.rm = TRUE),
+              numtrans = sum(numtrans,na.rm = TRUE),
+              tregrtm =  sum(tregrtm,na.rm = TRUE),
+              trvlcmin = sum(trvlcmin,na.rm = TRUE))
 
-nhts_h_s1_res <-  reshape(getanID(nhts_h_s1, c('nhts_2017_hid','whytrp2s')), 
-                        timevar="whytrp2s",idvar=c("nhts_2017_hid"),direction="wide") 
+nhts_h_s1_res <-  reshape(getanID(nhts_h_s1, c('hid','whytrp2s')), 
+                        timevar="whytrp2s",idvar=c("hid"),direction="wide") 
 
 #Summarize numeric trip variables at the household level overall 
-nhts_h_s2 <- nhts_h %>% select(nhts_2017_hid,weight,which(sapply(., is.numeric))) %>%
-                      group_by(nhts_2017_hid) %>% 
+nhts_h_s2 <- nhts_h %>% select(hid,weight,which(sapply(., is.numeric))) %>%
+                      group_by(hid) %>% 
                       summarise(
-                        trpmilad = weighted.mean(trpmilad,weight,na.rm = TRUE),
-                        trpmiles = weighted.mean(trpmiles,weight,na.rm = TRUE),
-                        vmt_mile = weighted.mean(vmt_mile,weight,na.rm = TRUE),
-                        trwaittm = weighted.mean(trwaittm,weight,na.rm = TRUE),
-                        numtrans = weighted.mean(numtrans,weight,na.rm = TRUE),
-                        tregrtm = weighted.mean(tregrtm,weight,na.rm = TRUE),
-                        trvlcmin = weighted.mean(trvlcmin,weight,na.rm = TRUE))
+                        trpmilad = sum(trpmilad,na.rm = TRUE),
+                        trpmiles = sum(trpmiles,na.rm = TRUE),
+                        vmt_mile = sum(vmt_mile,na.rm = TRUE),
+                        trwaittm = sum(trwaittm,na.rm = TRUE),
+                        numtrans = sum(numtrans,na.rm = TRUE),
+                        tregrtm =  sum(tregrtm,na.rm = TRUE),
+                        trvlcmin = sum(trvlcmin,na.rm = TRUE))
 
 
 #Summarize trip trans by triptype
-nhts_p_c1 <- nhts_h %>% select(nhts_2017_hid,whytrp2s, trptrans) %>%
-  group_by(nhts_2017_hid,whytrp2s) %>% 
+nhts_p_c1 <- nhts_h %>% select(hid,whytrp2s, trptrans) %>%
+  group_by(hid,whytrp2s) %>% 
   mutate(
     count = n(),
     trptrans_ = ifelse(trptrans == lag(trptrans), trptrans, "mixed")) %>% 
   filter (trptrans_ == "mixed" | count == "1") %>% 
   mutate(
     trptrans_ = ifelse(count == "1", trptrans, trptrans_))  %>%  
-  select(nhts_2017_hid,whytrp2s,trptrans_)  %>%  
+  select(hid,whytrp2s,trptrans_)  %>%  
   unique()  %>% 
   dplyr::rename(trptrans = trptrans_) %>% 
   ungroup()
 
-nhts_p_c1_res <- reshape(getanID(nhts_p_c1, c('nhts_2017_hid','whytrp2s')), 
-                         timevar="whytrp2s",idvar=c("nhts_2017_hid"),direction="wide") %>%
+nhts_p_c1_res <- reshape(getanID(nhts_p_c1, c('hid','whytrp2s')), 
+                         timevar="whytrp2s",idvar=c("hid"),direction="wide") %>%
                  mutate_all(~ifelse(is.na(.), "No trip", .))
 
-
 #Count number of trips by trip type 
-#nhts_h_count <- nhts_h %>% select(whytrp2s, nhts_2017_hid,which(sapply(., is.numeric))) %>%
- #               group_by(nhts_2017_hid,whytrp2s) %>% 
-  #              dplyr::count(whytrp2s) %>% 
-   #             dplyr::rename(tripnum = n) 
+nhts_h_count <- nhts_h %>% select(whytrp2s, hid,which(sapply(., is.numeric))) %>%
+                group_by(hid,whytrp2s) %>% 
+               dplyr::count(whytrp2s) %>% 
+               dplyr::rename(tripnum = n) 
   
-#nhts_h_trp_count_res <-  reshape(getanID(nhts_h_count, c('nhts_2017_hid','whytrp2s')), 
- #                       timevar="whytrp2s",idvar=c("nhts_2017_hid"),direction="wide") 
-
+nhts_h_trp_count_res <-  reshape(getanID(nhts_h_count, c('hid','whytrp2s')), 
+                       timevar="whytrp2s",idvar=c("hid"),direction="wide")
 
 #Merging the summarized files 
-d <- merge(nhts_h_s1_res,nhts_h_s2 ,by = c('nhts_2017_hid'), all = T) %>%
-    merge(nhts_p_c1_res,by = c('nhts_2017_hid'), all = T) %>%
+d <- merge(nhts_h_s1_res,nhts_h_s2 ,by = c('hid'), all = T) %>%
+    merge(nhts_p_c1_res,by = c('hid'), all = T) %>%
+  merge(nhts_h_trp_count_res,by = c('hid'), all = T) %>%
     colClean()   %>%
    rename_with(tolower)   %>%
-  mutate_at(vars(starts_with("trptrans_")), ~ifelse(is.na(.), "No trip", .))
-
-#Replace NA with 0 for all variables
-#Need to reconsider changing variables to categoricals to avoid the 0's or use a flag
-d[is.na(d)] <- 0 
+  mutate_at(vars(starts_with("trptrans_")), ~ifelse(is.na(.), "No trip", .))  %>%
+  mutate_all(~ replace(., is.na(.), 0)) #Replace NA with 0 for all variables
 
 #----------------
 #Create new codebook entries  for numeric variables
@@ -197,7 +183,7 @@ label = gsub("Public or commuter bus|Amtrak / Commuter rail|Subway / elevated / 
 label = gsub("Taxi / limo (including Uber / Lyft)","rideshare/rental",label),
 label = gsub("rental car (including zipcar / personal2go)","rideshare/rental",label)) %>%
  
-   filter(var %in% c('nhts_2017_hid','pid','numtrans','trpmiles','tregrtm','tracctm','trpmilad','trptrans',
+   filter(var %in% c('hid','pid','numtrans','trpmiles','tregrtm','tracctm','trpmilad','trptrans',
                     'trvlcmin','trwaittm','vehtype','vmt_mile','whytrp1s')) %>%
   
   
@@ -223,7 +209,7 @@ codebook_t <- codebook_t %>%
 codebook <- left_join(codebook_d,codebook_t, by = 'var') %>% 
             distinct()  %>% 
   mutate(
-    desc = ifelse(var == 'nhts_2017_hid',"Household Identifier",desc),
+    desc = ifelse(var == 'hid',"Household Identifier",desc),
     desc = ifelse(var == 'pid',"Household Person Identifier",desc),
    # desc = ifelse(var == 'nonhhcnt',"Total number of non-household members on trip",desc),
   #  desc = ifelse(var == 'numontrp',"Total number of people on trip including respondent",desc),
@@ -237,35 +223,32 @@ codebook <- left_join(codebook_d,codebook_t, by = 'var') %>%
     desc = ifelse(var == 'trwaittm',"Total transit wait time in minutes",desc),
     desc = ifelse(var == 'vmt_mile',"Total trip distance in miles for personally driven vehicle trips, derived from route geometry returned by Google Maps API",desc),
     
-  #  desc = ifelse(var == 'tripnum_home',"Total number of home trips",desc),
-  #  desc = ifelse(var == 'tripnum_school',"Total number of school trips",desc),
-  #  desc = ifelse(var == 'tripnum_work',"Total number of work trips",desc),
-  #  desc = ifelse(var == 'tripnum_social',"Total number of social trips",desc),
-   # desc = ifelse(var == 'tripnum_medical',"Total number of medical trips",desc),
-  #  desc = ifelse(var == 'tripnum_somethingelse',"Total number of something else trips",desc),
-  #  desc = ifelse(var == 'tripnum_shopping',"Total number of shopping trips",desc),
-   # desc = ifelse(var == 'tripnum_meals',"Total number of meals trips",desc),
-  #  desc = ifelse(var == 'tripnum_transport',"Total number of transport trips",desc),
-    desc = ifelse(var == 'trptrans_care',"trip mode derived for care type",desc),
-  #  desc = ifelse(var == 'tripnum_care',"total number of care trips",desc),
-   # desc = ifelse(var == 'tripnum_other',"total number of other trips",desc),
-    desc = ifelse(var == 'nonhhcnt_care',"number of non-household members on trip for care type",desc),
-    desc = ifelse(var == 'numontrp_care',"number of people on trip including respondent for care type",desc),
-    desc = ifelse(var == 'numtrans_care',"count of transfers for care type",desc),
-    desc = ifelse(var == 'tracctm_care',"trip time to transit station in minutes for care type",desc),
-    desc = ifelse(var == 'tregrtm_care',"time to destination from transit in minutes  for care type",desc),
+    desc = ifelse(var == 'tripnum_home',"Total number of home trips",desc),
+    desc = ifelse(var == 'tripnum_school',"Total number of school trips",desc),
+    desc = ifelse(var == 'tripnum_work',"Total number of work trips",desc),
+    desc = ifelse(var == 'tripnum_social',"Total number of social trips",desc),
+    desc = ifelse(var == 'tripnum_medical',"Total number of medical trips",desc),
+    desc = ifelse(var == 'tripnum_somethingelse',"Total number of something else trips",desc),
+    desc = ifelse(var == 'tripnum_shopping',"Total number of shopping trips",desc),
+    desc = ifelse(var == 'tripnum_meals',"Total number of meals trips",desc),
+    desc = ifelse(var == 'tripnum_transport',"Total number of transport trips",desc),
+    desc = ifelse(var == 'trptrans_care',"Total trip mode derived for care type",desc),
+    desc = ifelse(var == 'tripnum_care',"Total number of care trips",desc),
+    desc = ifelse(var == 'tripnum_other',"Total  number of other trips",desc),
+    desc = ifelse(var == 'nonhhcnt_care',"Total number of non-household members on trip for care type",desc),
+    desc = ifelse(var == 'numontrp_care',"Total number of people on trip including respondent for care type",desc),
+    desc = ifelse(var == 'numtrans_care',"Total count of transfers for care type",desc),
+    desc = ifelse(var == 'tracctm_care',"Total trip time to transit station in minutes for care type",desc),
+    desc = ifelse(var == 'tregrtm_care',"Total time to destination from transit in minutes  for care type",desc),
     desc = ifelse(var == 'trphhacc_care',"count of household members on trip for care type",desc),
-    desc = ifelse(var == 'trpmilad_care',"trip distance in miles, adjusted for comparability to past surveys for care type",desc),
-    desc = ifelse(var == 'trpmiles_care',"trip distance in miles, derived from route geometry returned by google maps api, or from reported loop-trip distance for care type",desc),
-    desc = ifelse(var == 'trvlcmin_care',"trip duration in minutes for care type",desc),
-    desc = ifelse(var == 'trwaittm_care',"transit wait time in minutes for care type",desc),
-    desc = ifelse(var == 'vmt_mile_care',"trip distance in miles for personally driven vehicle trips, derived from route geometry returned by google maps api for care type",desc),
+    desc = ifelse(var == 'trpmilad_care',"Total trip distance in miles, adjusted for comparability to past surveys for care type",desc),
+    desc = ifelse(var == 'trpmiles_care',"Total trip distance in miles, derived from route geometry returned by google maps api, or from reported loop-trip distance for care type",desc),
+    desc = ifelse(var == 'trvlcmin_care',"Total trip duration in minutes for care type",desc),
+    desc = ifelse(var == 'trwaittm_care',"Total transit wait time in minutes for care type",desc),
+    desc = ifelse(var == 'vmt_mile_care',"Total trip distance in miles for personally driven vehicle trips, derived from route geometry returned by google maps api for care type",desc),
     label = value) %>% 
     mutate_all(tolower)  %>%
     mutate_all(trimws)  
-
-#Check to make sure all values are in the codebook
-
 
 # Save data to disk (.fst)
 fst::write_fst(x = d, path = "survey-processed/NHTS/2017/NHTS_2017_T_summary.fst", compress = 100)

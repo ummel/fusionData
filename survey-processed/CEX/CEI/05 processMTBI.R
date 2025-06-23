@@ -12,11 +12,12 @@ processMTBI <- function(survey_years, base.year) {
   #---
 
   # Load CPI data and create 'cpi' variable to inflate dollar values to final survey year
-  data(cpi_series, package = "fusionData")
+  #data(cpi_series, package = "fusionData")
+  load('data/cpi_series.rda')
   cpi.adj <- cpi_series %>%
     mutate(base = mean(filter(., year == !!base.year)$cpi),
            cpi = base / cpi) %>%
-    select(year, month, cpi)
+    dplyr::select(year, month, cpi)
 
   #---
 
@@ -46,7 +47,7 @@ processMTBI <- function(survey_years, base.year) {
              coded = COST_ %in% c("T", "U", "V", "W")) %>%  # These are bot/topcode flag values (there are no regular NA's in the MTBI data)
       group_by(cuid, intnum) %>%
       ungroup() %>%
-      select(file, cuid, intnum, month, year, ucc, expname, coded, cost)
+      dplyr::select(file, cuid, intnum, month, year, ucc, expname, coded, cost)
 
     return(d)
 
@@ -70,7 +71,7 @@ processMTBI <- function(survey_years, base.year) {
   # Convert "cost" to positive value for the repaid principal expenditure UCC's (they are negative by default)
   # The repaid principal categories are hard-coded as: "MRTGPP", "MRTGPS", and "VEHPRN"
   d <- d %>%
-    mutate(cost = ifelse(ucc %in% filter(cats, cat %in% c("MRTGPP", "MRTGPS", "VEHPRN"))$ucc, abs(cost), cost))
+    dplyr::mutate(cost = ifelse(ucc %in% filter(cats, cat %in% c("MRTGPP", "MRTGPS", "VEHPRN"))$ucc, abs(cost), cost))
 
   # check <- d %>%
   #   filter(ucc == "910050") %>%
@@ -101,12 +102,12 @@ processMTBI <- function(survey_years, base.year) {
   d <- d %>%
     left_join(cpi.adj, by = c("year", "month")) %>%
     mutate(cost = cost * cpi) %>%   # Adjust for inflation
-    left_join(cats %>% select(ucc, cat, ucc_share), by = "ucc") %>%
-    mutate(cost = cost * ucc_share) %>%  # Multiply raw/original cost by 'ucc_share' to allocate (or adjust) as necessary
+    left_join(cats %>% dplyr::select(ucc, cat, ucc_share), by = "ucc",relationship = "many-to-many") %>%
+    dplyr::mutate(cost = cost * ucc_share) %>%  # Multiply raw/original cost by 'ucc_share' to allocate (or adjust) as necessary
     group_by(cuid) %>%
-    mutate(intrank = dense_rank(intnum)) %>%  # Add dense-ranked version of 'intnum'
+    dplyr::mutate(intrank = dense_rank(intnum)) %>%  # Add dense-ranked version of 'intnum'
     group_by(cuid, intnum) %>%
-    mutate(emonth = weighted.mean(year + month / 12, pmax(0, cost))) %>%  # Assign single reference time to each cuid-intnum combination
+    dplyr::mutate(emonth = weighted.mean(year + month / 12, pmax(0, cost))) %>%  # Assign single reference time to each cuid-intnum combination
     group_by(cuid, intnum, intrank, emonth, cat) %>%
     summarize(cost = sum(cost), .groups = 'drop')   # Aggregate expenditures at CU-level in preparation for making data wide (below)
 
@@ -135,7 +136,7 @@ processMTBI <- function(survey_years, base.year) {
   # These variables are available as predictors when imputing missing values
 
   temp <- d %>%
-    select(-cat, -cost, -intnum) %>%
+    dplyr::select(-cat, -cost, -intnum) %>%
     distinct() %>%
     complete(cuid, intrank, fill = list(emonth = NA)) %>%
     group_by(cuid) %>%

@@ -12,7 +12,7 @@ processFMLI <- function(survey_years, codebook) {
     ) %>%
     rename_with(tolower) %>%
     filter(st_hous != 1, cutenure != 6) %>%  # Removes CU's explicitly identified as student housing, and those that are also classified as such by 'cutenure' (unclear why these two variables are not consistent)
-    select(-newid, -hhid, -st_hous)
+    dplyr::select(-newid, -hhid, -st_hous)
 
   #----------
 
@@ -24,7 +24,7 @@ processFMLI <- function(survey_years, codebook) {
            cuid = as.integer(str_sub(NEWID, 1, -2)),
            intnum = as.integer(str_sub(NEWID, -1, -1))) %>%
     rename_with(tolower) %>%
-    select(-newid, -qyear, -starts_with("samp_un"))
+    dplyr::select(-newid, -qyear, -starts_with("samp_un"))
 
   # Add 'rnt' sourced variables to 'd'
   d <- d %>%
@@ -215,7 +215,7 @@ processFMLI <- function(survey_years, codebook) {
   # Safety check: Flag apparent violations of state-region-division hierarchy
   problems <- d %>%
     mutate(state = str_pad(state, width = 2, pad = "0")) %>%
-    select(cuid, intnum, state, region, division) %>%
+    dplyr::select(cuid, intnum, state, region, division) %>%
     na.omit() %>%
     mutate_all(tolower) %>%
     anti_join(mutate_all(state.hierarchy, tolower), by = c("state", "region", "division"))
@@ -230,11 +230,11 @@ processFMLI <- function(survey_years, codebook) {
     mutate(division = ifelse(!is.na(division2), division2, as.character(division)),
            division = str_to_title(division),
            region = ifelse(!is.na(region2), region2, as.character(region))) %>%
-    select(-division2, -region2) %>%
-    left_join(state.hierarchy %>% select(division, region) %>% distinct(), by = "division", suffix = c("", "2")) %>%
+    dplyr::select(-division2, -region2) %>%
+    left_join(state.hierarchy %>% dplyr::select(division, region) %>% distinct(), by = "division", suffix = c("", "2")) %>%
     mutate(region = ifelse(!is.na(region2), region2, as.character(region)),
            region = str_to_title(region)) %>%
-    select(-region2)
+    dplyr::select(-region2)
 
   # Create the "concordance" geographic variables
   # i.e. create consistency with variables in "geo_concordance.fst"
@@ -251,7 +251,7 @@ processFMLI <- function(survey_years, codebook) {
       #popsize = rev(c("Less than 100 thousand", "100-500 thousand", "0.5-1.0 million", "1-5 million", "More than 5 million"))[as.integer(popsize)],
       #cex_cbsasize = ifelse(ur12 == "R" , "Rural", popsize)
     ) %>%  # Set rural areas to "Rural"; otherwise use CBSA population size classification
-    select(-psu, -bls_urbn, -smsastat, -popsize)
+    dplyr::select(-psu, -bls_urbn, -smsastat, -popsize)
 
   # Visual check on frequency of the resulting geographic intersections
   # test <- d %>%
@@ -271,7 +271,7 @@ processFMLI <- function(survey_years, codebook) {
     mutate(renteqvx = ifelse(is.na(renteqvx), (rendwecq + rendwepq) / 3, renteqvx),  # Monthly rent equivalent
            renteqvx = ifelse(cutenure == "Occupied without payment of cash rent", NA, renteqvx),   # Sets rent-equivalent to zero for cases where the household rents without payment
            renteqvx = ifelse(renteqvx < 100, NA, renteqvx)) %>%   # Hard-coded minimum plausible value
-    select(-rendwecq, -rendwepq)
+    dplyr::select(-rendwecq, -rendwepq)
 
   #----------------
 

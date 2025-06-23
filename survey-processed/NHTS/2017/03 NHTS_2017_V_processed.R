@@ -5,9 +5,6 @@ library(lubridate)
 library(rpart)
 library(xts)
 source("R/utils.R")
-source("R/createDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
 
 #This file is to process vehicle level data
 
@@ -205,38 +202,26 @@ na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-# Select variables that would be imputed
-#y_in <- c("VEHAGE","FUELTYPE","VEHTYPE","GSYRGAL","GSTOTCST","GSCOST")
-#y_ex <- setdiff(names(na.count),y_in)
-
-# Impute NA values in 'd'
-imp <- imputeMissing(data = d,
-                    N = 1,
-                   weight = "WTHHFIN",
-                   y_exclude = c('PERSONID','FEGEMPGA'),
-                   x_exclude = c("HOUSEID", "PERSONID"))
-
-# Replace NA's in 'd' with the imputed values
-d[names(imp)] <- imp
-rm(imp)
-gc()
-
-#anyNA(d)
+# Impute NA values in 'd' and replace NA's in 'd' with the imputed values
+d <- fusionModel::impute(as.data.table(d),
+                         weight = "WTHHFIN",
+                         ignore = c("HOUSEID", "PERSONID"))
 
 #-----
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count  # See which variables have NA's
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
 
 d <- d %>%
     rename(division = CENSUS_D,
          state = HHSTATE,
-         cbsa13 = HH_CBSA 
-         )
+         cbsa13 = HH_CBSA)
 
 
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
-
 gvars <- intersect(gnames, names(d))
 
 # Class new/added geo identifiers as unordered factors
@@ -256,19 +241,16 @@ h.final <- d %>%
   labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
   
   rename(
-    nhts_2017_hid = HOUSEID,
+    hid = HOUSEID,
     weight = WTHHFIN    # Rename ID and weight variables to standardized names
   ) %>%
   
   rename_with(~ gsub("WTTRDFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTTRDFIN")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(nhts_2017_hid, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
-  arrange(nhts_2017_hid)
+  select(hid, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(hid)
 #----------------
 
 # Save data to disk (.fst)
 fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_V_processed.fst", compress = 100)
 fst::write_fst(x = codebook, path = "survey-processed/NHTS/2017/NHTS_2017_V_codebook.fst", compress = 100)
-
-
-

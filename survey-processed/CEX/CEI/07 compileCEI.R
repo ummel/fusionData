@@ -1,7 +1,9 @@
 library(fusionData)
-source("R/detectDependence.R")
-source("R/imputeMissing.R")
-source("R/utils.R")
+library(fusionModel)
+library(rpart.plot)
+library(tidyverse)
+library(fst)
+library(data.table)
 
 #----------
 
@@ -18,6 +20,9 @@ compileCEI <- function(survey_years, base.year) {
   load("survey-processed/CEX/cat_assignment.rda")
 
   # Load the functions used below
+  source("survey-processed/CEX/imputeHeatingFuel.R")
+  source('R/utils.R')
+  
   source("survey-processed/CEX/CEI/02 processCodebook.R")
   source("survey-processed/CEX/CEI/03 processFMLI.R")
   source("survey-processed/CEX/CEI/04 processMEMI.R")
@@ -58,48 +63,58 @@ compileCEI <- function(survey_years, base.year) {
   # NOTE: When filter 'n() >= 2' is included, CU's are restricted to those with at least two completed interviews in 'd'
   #  This appears to result in imputed expenditure means closer to the reported/official BLS means
   # NOTE: 'vehicle_value' can be positive even when 'vehq' is zero, in event that CU has non-standard vehicles (RV's, boats) in OVB for which value is estimated
-
-  h <- h %>%
+  h1 <- h %>%
     group_by(cuid) %>%
     filter(n() >= 2) %>%  # SEE NOTE!
     filter(intnum == max(intnum)) %>%
     ungroup() %>%
     inner_join(expend, by = "cuid") %>%  # Merge expenditures
     left_join(vehvalue, by = "cuid") %>%  # Merge total vehicle value
-    mutate(vehicle_value = ifelse(is.na(vehicle_value) & vehq == 0, 0, vehicle_value))  # Set 'vehicle_value' to NA for CU's without any vehicles
+    mutate(vehicle_value = ifelse(is.na(vehicle_value) & vehq == 0, 0, vehicle_value),
+           division = as.factor(division),
+           region = as.factor(region))  # Set 'vehicle_value' to NA for CU's without any vehicles
 
   #----------------
 
   # Where are the missings?
-  #na <- colSums(is.na(h))
-
+  na.count <- colSums(is.na(h1))
+  na.count <- na.count[na.count > 0]
+  na.count
+  
   # Impute NA values in 'd'
   cat("Imputing missing values...\n")
-  imp <- imputeMissing(data = h,
-                       N = 1,
-                       weight = "finlwt21",
-                       #y_exclude = c("region", "division", "state", "ur12", "cbsa13", "cex_metro", "cex_cbsasize"),
-                       y_exclude = c("state", "ur12", "cbsa13"),  # Allowing region and division to be imputed
-                       x_exclude = c("cuid", "intnum", "^wtrep"),
-                       sequence = map(1:4, ~ grep(paste0("_", .x, "$"), names(h), value = TRUE)))
+
+  # Retain observed combinations of state, division, and region (used post-imputation)
+  h1.geo <- as.data.table(h1) %>%
+    distinct(state, division, region,ur12) %>%
+    na.omit()
+  
+#New implementation using impute()
+h1 <- fusionModel::impute(data = as.data.table(h1),
+             weight = "finlwt21",
+             ignore = c("cuid", "intnum",'cbsa13', grep("^wtrep", colnames(h1), value = TRUE)))
+
+
+# This ensures the state-division-region combinations are legitimate
+# impute() does a good job producing accurate combinations, but this merge-update makes sure of it
+h1[h1.geo, c("division", "region",'ur12') := .(i.division, i.region,i.ur12), on = "state"]
 
   #----------------
-
   # Sum expenditure variables across the 4 periods/interviews
   cat("Aggregating annual expenditures...\n")
-  expend.annual <- h %>%
-    select(-any_of(names(imp))) %>%
-    cbind(select(imp, any_of(names(h)))) %>%
+  expend.annual <- h1 %>%
     select(matches("_[1-4]$"), -starts_with("year_"), -starts_with("month_")) %>%  # Retain only quarterly variables with "_1", etc. endings; exclude "year_*" and "month_*" columns
-    mutate(cuid = h$cuid) %>%
+    mutate(cuid = h1$cuid) %>%
     pivot_longer(cols = -cuid, names_to = c("var", "i"), names_sep = "_") %>%
     group_by(cuid, var) %>%
     summarize(value = sum(value), .groups = 'drop') %>%
     pivot_wider(id_cols = cuid, names_from = var, values_from = value)
 
-  # Safety check
-  stopifnot(nrow(h) == nrow(expend.annual))
-
+  # Safety checks
+  stopifnot({
+    !anyNA(expend.annual)
+    nrow(h1) == nrow(expend.annual)
+  })
   #----------------
 
   # Assemble final PERSON microdata
@@ -112,9 +127,9 @@ compileCEI <- function(survey_years, base.year) {
     mutate(cu_code = relevel(cu_code, "Reference person")) %>%
     addPID(hid = "cuid", refvar = "cu_code") %>%
     labelled::set_variable_labels(.labels = setNames(as.list(codebook$desc), codebook$var), .strict = FALSE) %>%
-    rename(cei_hid = cuid) %>%
+    rename(hid = cuid) %>%
     select(-membno, -intnum, -survey_year) %>%
-    select(cei_hid, pid, everything())
+    select(hid, pid, everything())
 
   #-----
 
@@ -130,12 +145,21 @@ compileCEI <- function(survey_years, base.year) {
   gc()
 
   #----------------
-
+  # Obtain CEI fusion variable names  from fusionacsdata@gmail.com GDrive account
+  # Note that some variables listed in the "Categories" google sheet are, in fact, harmonized and not included in 'fusion.vars'
+  # https://docs.google.com/spreadsheets/d/13GRKkVZXapHtP7oK1WUh0Yu7OQ_9icd17wUGuhX-WRg/edit
+  fusion.vars <- googlesheets4::read_sheet("13GRKkVZXapHtP7oK1WUh0Yu7OQ_9icd17wUGuhX-WRg", sheet = "Category Summary") %>%
+    filter(major != "Other" | cat == "VEHVAL") %>%   # Retain vehicle value but drop remaining "Other" categories
+    mutate(cat = tolower(cat)) %>%
+    pull(cat)
+  
+  # Restrict 'fusion.vars' to only those variables returned by assemble()
+  # This effectively removes variables used for harmonization with ACS
+  fusion.vars <- intersect(fusion.vars, names(h))
+  
   # Assemble final HOUSEHOLD output
   # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost
-  h.final <- h %>%
-    select(-any_of(names(imp))) %>%
-    cbind(select(imp, any_of(names(h)))) %>%
+  h.final <- h1 %>%
     select(-matches("_[1-4]$")) %>%  # Remove any quarterly variables with "_1", etc. endings
     left_join(expend.annual, by = "cuid") %>%
     mutate(
@@ -194,18 +218,55 @@ compileCEI <- function(survey_years, base.year) {
     rename_with(tolower) %>%
     rename_with(~ gsub("wtrep", "rep_", .x, fixed = TRUE), .cols = starts_with("wtrep")) %>%  # Rename replicate weight columns to standardized names
     rename(
-      cei_hid = cuid,
+      hid = cuid,
       weight = finlwt21
     ) %>%
     select(-survey_year, -intnum, -qintrvmo, -qintrvyr) %>%  # Drop these since they are unnecessary
-    select(cei_hid, weight, everything(), -starts_with("rep_"), starts_with("rep_"))  # Reorder columns with replicate weights at the end
+    select(hid, weight, everything(), -starts_with("rep_"), starts_with("rep_")) %>% # Reorder columns with replicate weights at the end
 
+   # All of the fusion.vars at this point are dollar expenditure values
+  # Convert all to integer for better file compression
+  #h <- h %>%
+    mutate_at(fusion.vars, ~ as.integer(round(.x))) %>%
+    
+    # Add custom fusion variables "mortint_share" and "tax_rate" to CEI processed microdata
+    # This is because CEI primary mortgage interest and principal are summed for creation of the 'mrtgip__mortgage' harmonized predictor (total mortgage payment)
+    # i.e. Total mortgage payment is an ACS variable and the CEI P&I component variables are removed by assemble(), but we want still to fuse the percent of the payment that is interest
+    # The tax rate is calculated as before-tax income minus after-tax income, divided by before-tax income (i.e. effective tax rate)
+    # Ultimately, the rate is fused and then multiplied by ACS household income (experimental)
+    
+    mutate(mortgage = mrtgip + mrtgpp,
+           mortint_share = ifelse(mortgage == 0, 0, mrtgip / mortgage),
+           mortint_share = signif(round(mortint_share, 3), 3),
+           tax = fincbtxm - finatxem,  # Before-tax income minus after-tax income
+           tax_rate = ifelse(fincbtxm == 0, 0, tax / fincbtxm),
+           tax_rate = signif(round(tax_rate, 3), 3)) 
+  
   #-----
+  # Impute household primary heating fuel predictor variable for CEI households
+  # This is necessary because the CEI does not contain a primary heating fuel variable, but ACS does and it is critical for utilities simulation
+  # Imputation is done via a LightGBM model fit to RECS 2015 microdata; see imputeHeatingFuel() function and script
+  # The ACS heating fuel variable ('hfl') is then harmonized to match the RECS fuel types imputed to CEI households
+  cei <- h.final
+  temp <- tibble(hid = cei$hid,
+                 hfl = imputeHeatingFuel(cei.h = cei)) %>%
+    mutate(hfl = factor(as.character(hfl)))
 
+  h.final <- h.final %>%
+    left_join(temp, by = "hid") 
+  
+  #-----
+  # Add labes for variables that were created after the processing step
+  labelled::var_label(h.final$mortint_share) <- "Percent of the mortgage payment that is interest"
+  labelled::var_label(h.final$tax_rate) <- "Before-tax income minus after-tax income, divided by before-tax income"
+  labelled::var_label(h.final$hfl) <- "Imputed primary heating fuel"
+   
   # Create dictionary and save to disk
   dictionary <- createDictionary(data = h.final, survey = "CEI", vintage = survey.range, respondent = "H")
   saveRDS(object = dictionary, file = paste0("survey-processed/CEX/CEI/CEI_", survey.range, "_H_dictionary.rds"))
 
+  compileDictionary()
+  
   # Save data to disk (.fst)
   cat("Saving household-level microdata to disk...\n")
   fst::write_fst(x = h.final, paste0("survey-processed/CEX/CEI/CEI_", survey.range, "_H_processed.fst"), compress = 100)

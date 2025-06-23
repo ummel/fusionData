@@ -1,9 +1,7 @@
 library(tidyverse)
 library(fusionData)
-source("R/utils.R")
-source("R/createDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
+library(fusionModel)
+source('R/utils.R')
 
 #-----
 
@@ -273,37 +271,51 @@ d <- d %>% mutate(
                                   "Associate degree in college - academic program", "Associate degree in college - occupational / vocational program", 
                                  "Some college but no degree",
                                     "Bachelor's degree (for example: BA, AB, BS)", "Professional school degree (for example: MD, DDS, DVM, LLB, JD)", 
-                                    "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Doctorate degree (for example: PhD, EdD)"), ordered = T)) 
-
-#exp_vars<-c()
-# selected_vars<-intersect(intersect(labeled_vars,names(d)),
-#                          codebook$var[!codebook$topic%in%
-#                                         c("Interview Status","Geography",
-#                                           "Weighting", "Edit Variables")])
-
-
-
+                                    "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Doctorate degree (for example: PhD, EdD)"), ordered = T))  %>% 
+  filter(Sample == 'National') %>%
+   mutate(
+    SECPARENT  = as.factor(SECPARENT), 
+    FIRPARENT = as.factor(FIRPARENT), 
+    SPOUSE    = as.factor(SPOUSE),
+    MIL       = as.factor(MIL), 
+    PWALK     = as.factor(PWALK), 
+    ENROLL    = as.factor(ENROLL), 
+    PHEAR     = as.factor(PHEAR), 
+    PERRND    = as.factor(PERRND), 
+    PMEMRY    = as.factor(PMEMRY), 
+    MLPE      = as.factor(MLPE), 
+    PSEE      = as.factor(PSEE), 
+    PCARE     = as.factor(PCARE), 
+    MLPCD     = as.factor(MLPCD), 
+    MOVERGRP  = as.factor(MOVERGRP), 
+    INUSYR    = as.factor(INUSYR), 
+    MLPA      = as.factor(MLPA), 
+    MLPB      = as.factor(MLPB), 
+    MLPFG     = as.factor(MLPFG), 
+    MLPH      = as.factor(MLPH), 
+   RACEPI    = as.factor(RACEPI),
+    RACEAS    = as.factor(RACEAS),
+   MLPJ      = as.factor(MLPJ),
+   MLPI     = as.factor(MLPI),
+   MLPFG    = as.factor(MLPFG), 
+   MLPK    = as.factor(MLPK), 
+   MAR       = as.factor(MAR))
+                                                                                                                                                                                                                                                                                                              
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-imp <- imputeMissing(data = d,
-                     N = 1,
-                     max_ncats = 10,
-                  #   weight = "WEIGHT",
-                     #                     x_exclude = setdiff(selected_vars,exp_vars)
-)
 
-# Replace NA's in 'd' with the imputed values
-d[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])] <-
-  imp[setdiff(names(imp),codebook$var[codebook$topic%in%c("Interview Status","Geography","Weighting")])]
-rm(imp)
-gc()
-anyNA(d)
+d <- fusionModel::impute(data = as.data.table(d), ignore = c('PERSONID','REL','Sample',
+                                                     'CONTROL','PLINE'))
 
-# convert all character columns to factors so createDictionary() works
-d <- d %>% mutate_if(is.character, as.factor)
+d <- d %>% 
+      mutate_if(is.character, as.factor) # convert all character columns to factors so createDictionary() works
+
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count  # See which variables have NA's
 
 # check for no rewrite of original variables (all = TRUE)
 #d1[!is.na(d1$PSCSTATUS),]$PSCSTATUS == d[!is.na(d1$PSCSTATUS),]$PSCSTATUS
@@ -314,7 +326,7 @@ d <- d %>% mutate_if(is.character, as.factor)
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes,
 # because labels can be lost when classes are changed
 
-d$PERSONID <- as.factor(d$PERSONID) # treat person id as a factor to prevent it from being mutated
+#d$PERSONID <- as.factor(df$PERSONID) # treat person id as a factor to prevent it from being mutated
 
 p.final <- d  %>% 
   mutate_if(is.factor, safeCharacters) %>%
@@ -324,14 +336,12 @@ p.final <- d  %>%
   mutate(
     PLINE = factor(PLINE)) %>%
   addPID(hid = "CONTROL", refvar = "PLINE") %>%
-  labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
+ labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
   rename(
-    ahs_2019_hid = CONTROL,  # Rename ID and weight variables to standardized names
-  ) %>%
+    hid = CONTROL) %>%
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  dplyr::select(ahs_2019_hid, sample, pid, everything()) %>%   # Reorder columns with replicate weights at the end
-  arrange(ahs_2019_hid,pid) %>% filter(sample == "National")
-
+  dplyr::select(hid, pid, sample, everything()) %>%   # Reorder columns with replicate weights at the end
+  arrange(hid,pid) 
 
 # Create dictionary and save to disk
  dictionary <- createDictionary(data = p.final, survey = "AHS", vintage = 2019, respondent = "P")

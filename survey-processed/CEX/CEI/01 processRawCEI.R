@@ -2,6 +2,8 @@
 # Only the hard-coded variables are retained, so adding a variable to the microdata requires specifying it in the appropriate place below and re-running processRawCEI()
 
 library(fusionData)
+library(tidyverse)
+
 source("R/utils.R")
 
 # Example usage:
@@ -10,7 +12,6 @@ source("R/utils.R")
 # processRawCEI(2017)
 # processRawCEI(2018)
 # processRawCEI(2019)
-
 #----------------------
 
 processRawCEI <- function(survey_year) {

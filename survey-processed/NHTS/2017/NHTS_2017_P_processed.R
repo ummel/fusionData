@@ -4,10 +4,9 @@ library(dplyr)
 library(lubridate) 
 library(rpart)
 library(xts)
+library(fusionModel)
 source("R/utils.R")
-source("R/createDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
+
 
 #This is to process the person level data  
 setwd("/Users/karthikakkiraju/Documents/fusionData")
@@ -103,7 +102,7 @@ as.values <- list(
   LSTTRDAY17 ="No trip",
   MEDCOND6 = "No medical condition",
   NOCONG = 0,
-  OCCAT = "No job catejory",
+  OCCAT = "No job category",
   PAYPROF ="No work for pay",
   PRMACT = "No primary action",
   PUBTIME = 0,
@@ -270,40 +269,29 @@ for (v in names(d)) {
 }
 
 #-----
-
 # Detect structural dependencies
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-
-# Select variables that would be imputed
-#y_in <- c("HOMEOWN","HHFAMINC","PC","SPHONE","CAR","HH_HISP","HH_RACE","WEBUSE17","PRICE","PTRANS","PLACE","WALKS2SAVE","BIKE2SAVE")
-#y_ex <- setdiff(names(na.count),y_in)
-
 ## Impute NA values in 'd'
-imp <- imputeMissing(data = d,
-                    N = 1,
-                   weight = "WTPERFIN",
-                    y_exclude = c("WKSTFIPS"),
-                    x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
+d <- fusionModel::impute(data = as.data.table(d), 
+                          weight = "WTPERFIN",
+            ignore = c('HOUSEID','PERSONID','PROXY','WHOPROXY','WRKTIME'
+                       ),
+            cores = 3)
 
-# Replace NA's in 'd' with the imputed values
-d[names(imp)] <- imp
-rm(imp)
-#gc()
-
-#anyNA(d)
-
-#-----
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count  # See which variables have NA's
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
 
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
-
 gvars <- intersect(gnames, names(d))
+gvars
 
 # Class new/added geo identifiers as unordered factors
 d <- d %>%
@@ -317,22 +305,23 @@ h.final <- d %>%
   mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
+  select(-R_SEX,-R_AGE) %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
   #labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
-  
   rename(
+    R_SEX = R_SEX_IMP,
+    R_AGE = R_AGE_IMP,
     pid = PERSONID,
-    nhts_2017_hid = HOUSEID,
+    hid = HOUSEID,
     weight = WTPERFIN # Rename ID and weight variables to standardized names
   ) %>%
   
   rename_with(~ gsub("WTPERFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTHHFIN")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(nhts_2017_hid, pid, everything()) %>%   # Reorder columns with replicate weights at the end
-  arrange(nhts_2017_hid)
+  select(hid, pid, everything()) %>%   # Reorder columns with replicate weights at the end
+  arrange(hid)
 
 #----------------
-
 # Create dictionary and save to disk
 dictionary <- createDictionary(data = h.final, survey = "NHTS", vintage = 2017, respondent ="P")
 saveRDS(object = dictionary, file = "survey-processed/NHTS/2017/NHTS_2017_P_dictionary.rds")

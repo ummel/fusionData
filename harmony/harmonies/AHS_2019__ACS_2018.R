@@ -3,23 +3,23 @@ list(
   age__agep = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 39, Mean: 39.75, Max: 85",
+      levels = "Min: 0, Median: 39, Mean: 39.9, Max: 85",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 38, Mean: 38.9, Max: 96",
+      levels = "Min: 0, Median: 38, Mean: 39.1, Max: 96",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:31:16"),
+    modified = "2025-05-19 20:55:02.308064"),
 
   bedrooms__bdsp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 3, Mean: 2.8, Max: 5",
+      levels = "Min: 0, Median: 3, Mean: 2.76, Max: 5",
       breaks = "",
       adj = ""),
     ACS = list(
@@ -30,7 +30,7 @@ list(
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:31:31"),
+    modified = "2025-05-19 20:55:02.308202"),
 
   bld__bld = list(
     AHS = list(
@@ -46,39 +46,39 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 18:32:07"),
+    modified = "2025-05-19 20:55:02.308264"),
 
   elecamt__elep = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 110, Mean: 120.8, Max: 450",
+      levels = "Min: 0, Median: 100, Mean: 107, Max: 450",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 120, Mean: 141.7, Max: 650",
+      levels = "Min: 0, Median: 120, Mean: 140.7, Max: 650",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:32:30"),
+    modified = "2025-05-19 20:55:02.308315"),
 
   fincp__fincp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: -5000, Median: 56000, Mean: 81200, Max: 3876000",
+      levels = "Min: -5000, Median: 49000, Mean: 72400, Max: 3876000",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: -16600, Median: 39600, Mean: 67500, Max: 2614000",
+      levels = "Min: -15350, Median: 41400, Mean: 70500, Max: 2940000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:32:43"),
+    modified = "2025-05-19 20:55:02.30837"),
 
   fridge__refr = list(
     AHS = list(
@@ -94,7 +94,7 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:33:00"),
+    modified = "2025-05-19 20:55:02.308433"),
 
   fs__fs = list(
     AHS = list(
@@ -110,40 +110,23 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:33:37"),
+    modified = "2025-05-19 20:55:02.308479"),
 
   gasamt__gasp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 30, Mean: 42.2, Max: 470",
+      levels = "Min: 0, Median: 20, Mean: 37.94, Max: 470",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 4, Mean: 42.35, Max: 640",
+      levels = "Min: 0, Median: 10, Mean: 42.25, Max: 630",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:33:47"),
-
-  grad__schl = list(
-    AHS = list(
-      groups = c(6, 7, 8, 2, 3, 4, 5, 11, 11, 12, 10, 15, 9, 1, 14, 13, 10),
-      levels = c("10th grade", "11th grade", "12th grade, no diploma", "1st, 2nd, 3rd, or 4th grade", "5th or 6th grade", "7th or 8th grade", "9th grade", "Associate degree in college - academic program", "Associate degree in college - occupational / vocational program", "Bachelor's degree (for example: BA, AB, BS)", "Diploma or certificate from a vocational, technical, trade or business school beyond", "Doctorate degree (for example: PhD, EdD)", "High school graduate - high school diploma or equivalent (for example: GED)", "Less than 1st grade", "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Professional school degree (for example: MD, DDS, DVM, LLB, JD)", "Some college but no degree"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 9, 9, 10, 10, 11, 12, 14, 13, 15),
-      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
-      breaks = "",
-      adj = "",
-      agg = logical(0)
-    ),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-12 09:38:39"),
+    modified = "2025-05-19 20:55:02.308518"),
 
   grandhh__npp = list(
     AHS = list(
@@ -159,23 +142,23 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:39:09"),
+    modified = "2025-05-19 20:55:02.308565"),
 
   heatfuel__hfl = list(
     AHS = list(
-      groups = c(3, 1, 2, 4, 4, 5, 6, 7, 8, 9),
+      groups = c(1, 2, 3, 4, 4, 5, 6, 7, 8, 9),
       levels = c("Electricity", "Piped gas", "LP (liquid petroleum) gas", "Fuel oil", "Kerosene or other liquid fuel", "Coal or coke", "Wood", "Solar energy", "Other", "None"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 1:9,
+      groups = c(2, 3, 1, 4, 5, 6, 7, 8, 9),
       levels = c("Utility gas", "Bottled, tank, or LP gas", "Electricity", "Fuel oil, kerosene, etc.", "Coal or coke", "Wood", "Solar energy", "Other fuel", "No fuel used"),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:39:49"),
+    modified = "2025-05-19 20:55:02.308609"),
 
   hhage__agep = list(
     AHS = list(
@@ -185,13 +168,13 @@ list(
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 38, Mean: 38.9, Max: 96",
+      levels = "Min: 0, Median: 38, Mean: 39.1, Max: 96",
       breaks = "",
       adj = "",
       agg = "reference"),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:40:05"),
+    modified = "2025-05-19 20:55:02.308658"),
 
   hhcitshp__cit = list(
     AHS = list(
@@ -207,45 +190,29 @@ list(
       agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:40:35"),
+    modified = "2025-05-19 20:55:02.308708"),
 
   hhgrad__schl = list(
     AHS = list(
-      groups = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 14, 13, 15),
-      levels = c("Less than 1st grade", "1st, 2nd, 3rd, or 4th grade", "5th or 6th grade", "7th or 8th grade", "9th grade", "10th grade", "11th grade", "12th grade", "High school graduate - high school diploma or equivalent (for example: GED)", "Some college but no degree", "Diploma or certificate from a vocational, technical, trade business school beyond high school", "Associate degree in college - occupational / vocational program", "Associate degree in college - academic program", "Bachelor's degree (for example: BA, AB, BS)", "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Professional school degree (for example: MD, DDS, DVM, LLB, JD)", "Doctorate degree (for example: PhD, EdD)"),
+      groups = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12, 13, 14, 15, 16),
+      levels = c("Less than 1st grade", "1st, 2nd, 3rd, or 4th grade", "5th or 6th grade", "7th or 8th grade", "9th grade", "10th grade", "11th grade", "12th grade", "High school graduate - high school diploma or equivalent (for example: GED)", "Some college but no degree", "Diploma or certificate from a vocational, technical, trade business school beyond high school", "Associate degree in college - occupational / vocational program", "Associate degree in college - academic program", "Bachelor's degree (for example: BA, AB, BS)", "Professional school degree (for example: MD, DDS, DVM, LLB, JD)", "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Doctorate degree (for example: PhD, EdD)"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = c(1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 9, 9, 10, 10, 11, 12, 14, 13, 15),
-      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
+      groups = c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 9, 9, 10, 11, 12, 13, 15, 14, 16),
+      levels = c("Less than 3 years old", "No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
       breaks = "",
       adj = "",
       agg = "reference"),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-12 09:36:50"),
-
-  hhinusyr__yoep = list(
-    AHS = list(
-      groups = c(2, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 1),
-      levels = c("1935", "1937", "1938", "1940", "1941", "1942", "1943", "1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "Born in US"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 19, 19, 19, 19),
-      levels = c("Born in the U.S.", "1929 or earlier (Bottom-coded)", "1930 - 1934", "1935 - 1938", "1939 - 1940", "1941 - 1942", "1943 - 1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),
-      breaks = "",
-      adj = "",
-      agg = "reference"),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-12 09:41:52"),
+    modified = "2025-05-19 20:55:02.308752"),
 
   hhmove__mv = list(
     AHS = list(
       groups = 1:7,
-      levels = c("Less than 1988", "[1988 to 1998)", "[1998 to 2010)", "[2010 to 2014)", "[2014 to 2016)", "[2016 to 2017)", "2017 or more"),
-      breaks = c(1988, 1998, 2010, 2014, 2016, 2017),
+      levels = c("Less than 1990", "[1990 to 2000)", "[2000 to 2010)", "[2010 to 2015)", "[2015 to 2017)", "[2017 to 2018)", "2018 or more"),
+      breaks = c(1990, 2000, 2010, 2015, 2017, 2018),
       adj = ""),
     ACS = list(
       groups = 7:1,
@@ -255,12 +222,12 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 18:47:55"),
+    modified = "2025-05-19 20:56:53.808151"),
 
   hhrace__rac1p = list(
     AHS = list(
-      groups = c(1, 2, 3, 4, 5, 7, 6, 7, 7, 6, 7, 7, 6, 7, 7, 7, 7, 7, 7, 7),
-      levels = c("White only", "Black only", "American Indian, Alaska Native only", "Asian only", "Hawaiian, Pacific Islander only", "White / Black", "White / American Indian, Alaska Native", "White / Asian", "White / Hawaiian, Pacific Islander", "Black / American Indian, Alaska Native", "Black / Asian", "Black / Hawaiian, Pacific Islander", "American Indian, Alaska Native / Asian", "Asian / Hawaiian, Pacific Islander", "White / Black / American Indian, Alaska Native", "White / Black / Asian", "White / Asian / Hawaiian, Pacific Islander", "White / Black / American Indian, Alaska Native / Asian", "Other combinations of 2 or 3 races", "Not applicable"),
+      groups = c(1, 2, 3, 4, 5, 7, 6, 7, 6, 7, 7, 6, 7, 7, 7, 7, 7, 7, 7),
+      levels = c("White only", "Black only", "American Indian, Alaska Native only", "Asian only", "Hawaiian, Pacific Islander only", "White / Black", "White / American Indian, Alaska Native", "White / Asian", "White / Hawaiian, Pacific Islander", "Black / American Indian, Alaska Native", "Black / Asian", "Black / Hawaiian, Pacific Islander", "American Indian, Alaska Native / Asian", "Asian / Hawaiian, Pacific Islander", "White / Black / American Indian, Alaska Native", "White / Black / Asian", "White / Asian / Hawaiian, Pacific Islander", "White / Black / American Indian, Alaska Native / Asian", "Other combinations of 2 or 3 races"),
       breaks = "",
       adj = ""),
     ACS = list(
@@ -271,7 +238,7 @@ list(
       agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 23:10:31"),
+    modified = "2025-05-19 20:55:02.308794"),
 
   hhsex__sex = list(
     AHS = list(
@@ -287,7 +254,7 @@ list(
       agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:52:16"),
+    modified = "2025-05-19 20:55:02.308841"),
 
   hincp__hincp = list(
     AHS = list(
@@ -297,46 +264,29 @@ list(
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: -16600, Median: 61800, Mean: 88000, Max: 2614000",
+      levels = "Min: -16420, Median: 55400, Mean: 78500, Max: 2103000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:52:31"),
+    modified = "2025-05-19 20:55:02.30889"),
 
   intp__intp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: -5000, Median: 0, Mean: 1535, Max: 571000",
+      levels = "Min: -5000, Median: 0, Mean: 1570, Max: 571000",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: -3240, Median: 0, Mean: 1798, Max: 360000",
+      levels = "Min: -2626, Median: 0, Mean: 1815, Max: 474000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:52:54"),
-
-  inusyr__yoep = list(
-    AHS = list(
-      groups = c(2, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 1),
-      levels = c("1935", "1937", "1938", "1939", "1940", "1941", "1942", "1943", "1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "Born in US"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 19, 19, 19, 19),
-      levels = c("Born in the U.S.", "1929 or earlier (Bottom-coded)", "1930 - 1934", "1935 - 1938", "1939 - 1940", "1941 - 1942", "1943 - 1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),
-      breaks = "",
-      adj = "",
-      agg = logical(0)
-    ),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-12 09:58:42"),
+    modified = "2025-05-19 20:55:02.308943"),
 
   kitchsink__sink = list(
     AHS = list(
@@ -352,7 +302,7 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:56:26"),
+    modified = "2025-05-19 20:55:02.308982"),
 
   lotsize__acr = list(
     AHS = list(
@@ -368,55 +318,23 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 18:57:11"),
+    modified = "2025-05-19 20:55:02.309019"),
 
   mar__mar = list(
     AHS = list(
-      groups = c(3, 1, 1, 5, 4, 2),
+      groups = c(1, 2, 2, 3, 4, 5),
       levels = c("Divorced", "Married, spouse absent", "Married, spouse present", "Never married", "Separated", "Widowed"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 1:5,
+      groups = c(2, 5, 1, 4, 3),
       levels = c("Married", "Widowed", "Divorced", "Separated", "Never married or under 15 years old"),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 18:57:45"),
-
-  mil__mil = list(
-    AHS = list(
-      groups = 1:3,
-      levels = c("Never served in military", "Now on active duty", "Served on active duty in the past"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 3, 2),
-      levels = c("Never served in the military", "Now on active duty", "On active duty in the past, but not now", "Only on active duty for training in Reserves / National Guard"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = FALSE,
-    comment = "",
-    modified = "2023-09-08 19:27:21"),
-
-  multigen__multg = list(
-    AHS = list(
-      groups = c(1, 2, 2, 2, 2, 2),
-      levels = c("Householder only", "Householder and one younger generation", "Householder and two or more younger generations", "Householder and at least one younger generation, at least one older generation", "Householder and one older generation", "Householder and two or more older generations"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = 1:2,
-      levels = c("No, not a multigenerational household", "Yes, is a multigenerational household"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-08 18:58:17"),
+    modified = "2025-05-19 20:55:02.309069"),
 
   numelders__r65 = list(
     AHS = list(
@@ -432,7 +350,7 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 18:58:49"),
+    modified = "2025-05-19 20:57:18.323679"),
 
   numnonrel__nr = list(
     AHS = list(
@@ -448,23 +366,23 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 18:59:07"),
+    modified = "2025-05-19 20:57:58.186875"),
 
   numpeople__np = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 1, Median: 2, Mean: 2.467, Max: 18",
+      levels = "Min: 0, Median: 2, Mean: 2.193, Max: 18",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 1, Median: 2, Mean: 2.48, Max: 20",
+      levels = "Min: 1, Median: 2, Mean: 2.47, Max: 20",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:59:23"),
+    modified = "2025-05-19 20:55:02.309125"),
 
   numsubfam__psf = list(
     AHS = list(
@@ -480,23 +398,23 @@ list(
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 18:59:40"),
+    modified = "2025-05-19 20:58:30.384489"),
 
   pap__pap = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 26.9, Max: 32700",
+      levels = "Min: 0, Median: 0, Mean: 23.17, Max: 32700",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 29.07, Max: 30400",
+      levels = "Min: 0, Median: 0, Mean: 27.75, Max: 24140",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 18:59:53"),
+    modified = "2025-05-19 20:55:02.309173"),
 
   partner__partner = list(
     AHS = list(
@@ -512,7 +430,7 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 19:00:14"),
+    modified = "2025-05-19 20:55:02.309216"),
 
   pcare__ddrs = list(
     AHS = list(
@@ -525,90 +443,90 @@ list(
       levels = c("Less than 5 years old", "Yes", "No"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 19:00:41"),
+    modified = "2025-05-19 20:55:02.30926"),
 
   phear__dear = list(
     AHS = list(
-      groups = 1:2,
+      groups = 2:1,
       levels = c("No", "Yes"),
       breaks = "",
       adj = ""),
     ACS = list(
-      groups = 2:1,
+      groups = 1:2,
       levels = c("Yes", "No"),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 19:00:58"),
+    modified = "2025-05-19 20:55:02.309304"),
 
   protaxamt__taxamt = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 83, Mean: 191.4, Max: 8300",
+      levels = "Min: 0, Median: 49, Mean: 169.3, Max: 8300",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 975, Mean: 2200, Max: 22500",
+      levels = "Min: 0, Median: 975, Mean: 2243, Max: 22500",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:01:22"),
+    modified = "2025-05-19 20:55:02.309353"),
 
   rent__rntp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 399.6, Max: 11700",
+      levels = "Min: 0, Median: 0, Mean: 401, Max: 11700",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 354, Max: 3900",
+      levels = "Min: 0, Median: 0, Mean: 367, Max: 4000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:01:41"),
+    modified = "2025-05-19 20:55:02.309396"),
 
   retp__retp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 1660, Max: 707000",
+      levels = "Min: 0, Median: 0, Mean: 1740, Max: 707000",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 1956, Max: 194500",
+      levels = "Min: 0, Median: 0, Mean: 2640, Max: 210000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:01:54"),
+    modified = "2025-05-19 20:55:02.30944"),
 
   semp__semp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: -5000, Median: 0, Mean: 2320, Max: 1938000",
+      levels = "Min: -5000, Median: 0, Mean: 2350, Max: 1938000",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: -10130, Median: 0, Mean: 1635, Max: 535000",
+      levels = "Min: -9700, Median: 0, Mean: 1698, Max: 516000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:02:08"),
+    modified = "2025-05-19 20:55:02.309481"),
 
   sex__sex = list(
     AHS = list(
@@ -624,39 +542,39 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 19:02:30"),
+    modified = "2025-05-19 20:55:02.309522"),
 
   ssip__ssip = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 171, Max: 46400",
+      levels = "Min: 0, Median: 0, Mean: 164, Max: 46400",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 225, Max: 27250",
+      levels = "Min: 0, Median: 0, Mean: 217.4, Max: 27700",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:02:43"),
+    modified = "2025-05-19 20:55:02.309565"),
 
   ssp__ssp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 2165, Max: 54000",
+      levels = "Min: 0, Median: 0, Mean: 2210, Max: 54000",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 2383, Max: 38900",
+      levels = "Min: 0, Median: 0, Mean: 2453, Max: 39100",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:03:00"),
+    modified = "2025-05-19 20:55:02.309601"),
 
   tenure__ten = list(
     AHS = list(
@@ -672,37 +590,37 @@ list(
       agg = ""),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-08 19:03:21"),
+    modified = "2025-05-19 20:55:02.309649"),
 
   wagp__wagp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 26670, Max: 587000",
+      levels = "Min: 0, Median: 0, Mean: 26800, Max: 587000",
       breaks = "",
       adj = ""),
     ACS = list(
       groups = 1,
-      levels = "Min: 0, Median: 0, Mean: 25300, Max: 727000",
+      levels = "Min: 0, Median: 202, Mean: 26370, Max: 724000",
       breaks = "",
       adj = "",
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2023-09-08 19:03:37"),
+    modified = "2025-05-19 20:55:02.309688"),
 
   yrbuilt__ybl = list(
     AHS = list(
-      groups = 1:21,
-      levels = c("Less than 1940", "[1940 to 1950)", "[1950 to 1960)", "[1960 to 1970)", "[1970 to 1980)", "[1980 to 1990)", "[1990 to 2000)", "[2000 to 2005)", "[2005 to 2006)", "[2006 to 2007)", "[2007 to 2008)", "[2008 to 2009)", "[2009 to 2010)", "[2010 to 2011)", "[2011 to 2012)", "[2012 to 2013)", "[2013 to 2014)", "[2014 to 2015)", "[2015 to 2016)", "[2016 to 2017)", "2017 or more"),
-      breaks = c(1940, 1950, 1960, 1970, 1980, 1990, 2000, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017),
+      groups = 1:22,
+      levels = c("Less than 1940", "[1940 to 1950)", "[1950 to 1960)", "[1960 to 1970)", "[1970 to 1980)", "[1980 to 1990)", "[1990 to 2000)", "[2000 to 2005)", "[2005 to 2006)", "[2006 to 2007)", "[2007 to 2008)", "[2008 to 2009)", "[2009 to 2010)", "[2010 to 2011)", "[2011 to 2012)", "[2012 to 2013)", "[2013 to 2014)", "[2014 to 2015)", "[2015 to 2016)", "[2016 to 2017)", "[2017 to 2018)", "2018 or more"),
+      breaks = c(1940, 1950, 1960, 1970, 1980, 1990, 2000, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018),
       adj = ""),
     ACS = list(
-      groups = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 21),
+      groups = 1:22,
       levels = c("1939 or earlier", "1940 to 1949", "1950 to 1959", "1960 to 1969", "1970 to 1979", "1980 to 1989", "1990 to 1999", "2000 to 2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),
       breaks = "",
       adj = "",
       agg = ""),
     ordered = TRUE,
     comment = "",
-    modified = "2023-09-08 19:04:55")
+    modified = "2025-05-19 20:55:58.038981")
 )

@@ -4,10 +4,8 @@ library(dplyr)
 library(lubridate) 
 library(rpart)
 library(xts)
+library(data.table)
 source("R/utils.R")
-source("R/createDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
 
 setwd("/Users/karthikakkiraju/Documents/FusionData/")
 
@@ -30,50 +28,28 @@ d_p0 <- read_csv("survey-raw/NHTS/2017/perpub.csv") # Load raw NHTS 2017 househo
 nm2 <- c(setdiff(names(d_t00), names(d_p0)), "HOUSEID","PERSONID")
 d <- d_t00  %>% select(all_of(nm2))
 
-#Modify variables to add trailing 0's
-d <- d %>% mutate(OBHTNRNT = ifelse(OBHTNRNT == '5','05', OBHTNRNT),
-                  DTHTNRNT = ifelse(DTHTNRNT == '5','05', DTHTNRNT),
-                  WHYTRP1S = ifelse(WHYTRP1S == '1', "01",WHYTRP1S),
-                  
-                  TRPTRANS = ifelse(TRPTRANS == '1', "01",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '2', "02",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '3', "03",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '4', "04",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '5', "05",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '6', "06",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '7', "07",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '8', "08",TRPTRANS),
-                  TRPTRANS = ifelse(TRPTRANS == '9', "09",TRPTRANS))
-
 # Load and process codebook
 codebook <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet ="CODEBOOK_TRIP") %>%
  
-   setNames(c('var', 'desc', 'type', 'length', 'valuelabel', 'frequency','weighted'))%>%  #value and label are in the same cell. Need to separate them into differnt columns
+   setNames(c('var', 'desc', 'type', 'length', 'valuelabel', 'frequency','weighted'))%>%  #value and label are in the same cell. Need to separate them into different columns
    select(var, desc, valuelabel) %>%
- 
-  
   fill(var, desc) %>% # Replacing NA with the appropriate  entry
-  
-  
   mutate(
    valuelabel= gsub("Responses=","",valuelabel, fixed = TRUE),  #separating the valuelabel cell at the "=" sign 
-    )%>%
-     
-       mutate(
+)%>%
+     mutate(
     value = (str_extract(valuelabel, "[^=]+")),
     label = (str_extract(valuelabel, "[^=]+$")),
     valuelabel = (NULL),
      ) %>%
-
     unnest(cols = c(label)) %>%
-  
-
   # Replacing "Not ascertained", "I don't know", "Don't know" labels with NA  
   mutate(
-    label = ifelse(grepl("Not ascertained", label) | grepl("I don't know", label) | grepl("Don't know", label) | grepl("I prefer not to answer",label) | grepl("Refused", label), NA, label)   # Set label to NA if value is "I don't know", "Not ascertained",  (these observations are to be imputed eventually)
-    ) %>%
-
-  mutate_all(trimws)
+    label = ifelse(grepl("Not ascertained", label) | grepl("I don't know", label) | grepl("Don't know", label) | grepl("I prefer not to answer",label) | grepl("Refused", label), NA, label),
+                   label = ifelse((var == 'DWELTIME' & value == '-9'),0, label)) %>%
+  #Remove leading zeros to ensure compatability with 'd'
+  mutate(value = gsub("^0([1-9])$", "\\1", value)) %>%
+                mutate_all(trimws)
 
   
 # Variables with "Appropriate skip" values
@@ -89,20 +65,20 @@ as.values <- list(
   DROP_PRK = "No drop off",
   DRVR_FLG = "No driver status",
   EDUC = "No education",
-  HHMEMDRV = " No household member on drive",
+  HHMEMDRV = "No household member on drive",
   NUMTRANS = 0,
-  ONTD_P10 = "No household indentifier",
-  ONTD_P11 = "No household indentifier",
-  ONTD_P12 = "No household indentifier",
-  ONTD_P13 = "No household indentifier",
-  ONTD_P2 = "No household indentifier",
-  ONTD_P3 = "No household indentifier",
-  ONTD_P4 = "No household indentifier",
-  ONTD_P5 = "No household indentifier",
-  ONTD_P6 = "No household indentifier",
-  ONTD_P7 = "No household indentifier",
-  ONTD_P8 = "No household indentifier",
-  ONTD_P9 = "No household indentifier",
+  ONTD_P10 = "No",
+  ONTD_P11 = "No",
+  ONTD_P12 = "No",
+  ONTD_P13 = "No",
+  ONTD_P2 = "No",
+  ONTD_P3 = "No",
+  ONTD_P4 = "No",
+  ONTD_P5 = "No",
+  ONTD_P6 = "No",
+  ONTD_P7 = "No",
+  ONTD_P8 = "No",
+  ONTD_P9 = "No",
   PRMACT = "No primary activity",
   PSGR_FLG = "No passenger status",
   TRACCTM = 0,
@@ -215,8 +191,6 @@ d <- d[intersect(names(d), codebook$var)]
 
 options(scipen = 999) #Removes scientific notation. Scientific notation creeps in during new label creation and creates NA values upon comparison with ordered.factors.
 
-
-
 for (v in names(d)) {
 
   cb <- filter(codebook, var == v )
@@ -262,33 +236,27 @@ for (v in names(d)) {
 
 # Detect structural dependencies
 # Which variables have missing values and how frequent are they?
+#d1 <- d %>% select( -'TRACC_CRL' ,-starts_with('ONTD'))
+#d1b <- d %>% select(setdiff(colnames(d),colnames(d1)))
+
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
 na.count  # See which variables have NA's
 
-
 ## Impute NA values in 'd'
-imp <- imputeMissing(data = d,
-                    N = 1,
-                   weight = "WTTRDFIN",
-                   y_exclude = "DWELTIME",
-                     x_exclude = c("HOUSEID", "PERSONID","WHOPROXY"))
+d <- fusionModel::impute(data = as.data.table(d), 
+                         weight = "WTTRDFIN",
+                         ignore = c("HOUSEID", "PERSONID",'TDCASEID'),
+                         cores = 2)
 
-# Replace NA's in 'd' with the imputed values
-d[names(imp)] <- imp
-rm(imp)
-gc()
-
-anyNA(d)
-
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count  # See which variables have NA's
 #-----
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
-
-
 # See which variables in 'd' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
-
 gvars <- intersect(gnames, names(d))
 
 # Class new/added geo identifiers as unordered factors
@@ -306,15 +274,15 @@ h.final <- d %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
 
   rename(
-    nhts_2017_hid = HOUSEID,
-    nhts_2017_pid = PERSONID,
+    hid = HOUSEID,
+    pid = PERSONID,
     weight = WTTRDFIN    # Rename ID and weight variables to standardized names
   ) %>%
   
   rename_with(~ gsub("WTTRDFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTTRDFIN")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(nhts_2017_hid, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
-  arrange(nhts_2017_hid)
+  select(hid, pid, everything(), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(hid)
 
 #----------------
 

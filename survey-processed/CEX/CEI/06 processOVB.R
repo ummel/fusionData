@@ -8,7 +8,7 @@ processOVB <- function(survey_years, codebook) {
       intnum = as.integer(str_sub(NEWID, -1, -1))
     ) %>%
     rename_with(tolower) %>%
-    select(-newid, -qyear)
+    dplyr::select(-newid, -qyear)
 
   # Remove duplicate entries and retain data from latest available interview
   # Unclear why there are duplicate entries
@@ -16,7 +16,7 @@ processOVB <- function(survey_years, codebook) {
     group_by(cuid) %>%
     filter(intnum == max(intnum)) %>%
     group_by(cuid, vehicib) %>%
-    slice(1) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   #----------------
@@ -48,7 +48,8 @@ processOVB <- function(survey_years, codebook) {
     vpurindv = NA,
     vehpuryr = NA,
     vehqpmt = 0,
-    vintrate = 0
+    vintrate = 0,
+    vfinstat = NA
 
   )
 
@@ -141,20 +142,13 @@ processOVB <- function(survey_years, codebook) {
 
     # Create variable giving numver of years since vehicle was purchased
     mutate(years_since_purchase = pmax(0, survey_year - vehpuryr)) %>%
-    select(-vehpuryr)
+    dplyr::select(-vehpuryr)
 
   #-----
 
   # Impute missing
-  imp <- imputeMissing(data = d,
-                       N = 2,
-                       max_ncats = 15,
-                       x_exclude = c("cuid", "intnum"))
-
-  # Add imputed variables to 'd'
-  d <- d %>%
-    select(-any_of(names(imp))) %>%
-    cbind(imp)
+  imp <- impute(data = d,
+                ignore = c("cuid", "intnum"))
 
   #-----
 

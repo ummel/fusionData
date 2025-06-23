@@ -128,23 +128,6 @@ list(
     comment = "",
     modified = "2022-05-03 18:41:03"),
 
-  grad__schl = list(
-    AHS = list(
-      groups = c(6, 7, 8, 2, 3, 4, 5, 11, 11, 12, 10, 15, 9, 1, 14, 13, 10),
-      levels = c("10th grade", "11th grade", "12th grade, no diploma", "1st, 2nd, 3rd, or 4th grade", "5th or 6th grade", "7th or 8th grade", "9th grade", "Associate degree in college - academic program", "Associate degree in college - occupational / vocational program", "Bachelor's degree (for example: BA, AB, BS)", "Diploma or certificate from a vocational, technical, trade or business school beyond", "Doctorate degree (for example: PhD, EdD)", "High school graduate - high school diploma or equivalent (for example: GED)", "Less than 1st grade", "Master's degree (for example: MA, MS, MEng, MEd, MSW, MBA)", "Professional school degree (for example: MD, DDS, DVM, LLB, JD)", "Some college but no degree"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 9, 9, 10, 10, 11, 12, 13, 14, 15),
-      levels = c("No schooling completed", "Nursery school, preschool", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "12th grade - no diploma", "Regular high school diploma", "GED or alternative credential", "Some college, but less than 1 year", "1 or more years of college credit, no degree", "Associate's degree", "Bachelor's degree", "Master's degree", "Professional degree beyond a bachelor's degree", "Doctorate degree"),
-      breaks = "",
-      adj = "",
-      agg = logical(0)
-    ),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-12 10:13:20"),
-
   grandhh__npp = list(
     AHS = list(
       groups = 1:2,
@@ -225,22 +208,6 @@ list(
     comment = "",
     modified = "2023-09-12 10:07:20"),
 
-  hhinusyr__yoep = list(
-    AHS = list(
-      groups = c(2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 1),
-      levels = c("1935", "1937", "1938", "1940", "1941", "1942", "1943", "1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "Born in US"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18),
-      levels = c("Born in the U.S.", "1929 or earlier (Bottom-coded)", "1930 - 1934", "1935 - 1938", "1939 - 1940", "1941 - 1942", "1943 - 1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019"),
-      breaks = "",
-      adj = "",
-      agg = "reference"),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-12 10:16:58"),
-
   hhmove__mv = list(
     AHS = list(
       groups = 1:7,
@@ -292,7 +259,7 @@ list(
   hincp__hincp = list(
     AHS = list(
       groups = 1,
-      levels = "Min: -5000, Median: 51500, Mean: 75700, Max: 3876000",
+      levels = "Min: -5000, Median: 60000, Mean: 84900, Max: 3876000",
       breaks = "",
       adj = ""),
     ACS = list(
@@ -303,7 +270,7 @@ list(
       agg = ""),
     ordered = "",
     comment = "",
-    modified = "2022-05-03 18:43:44"),
+    modified = "2025-05-19 19:48:03.346995"),
 
   intp__intp = list(
     AHS = list(
@@ -320,23 +287,6 @@ list(
     ordered = "",
     comment = "",
     modified = "2023-09-04 17:59:40"),
-
-  inusyr__yoep = list(
-    AHS = list(
-      groups = c(2, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 1),
-      levels = c("1935", "1937", "1938", "1939", "1940", "1941", "1942", "1943", "1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "Born in US"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 2, 2, 3, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19),
-      levels = c("Born in the U.S.", "1929 or earlier (Bottom-coded)", "1930 - 1934", "1935 - 1938", "1939 - 1940", "1941 - 1942", "1943 - 1944", "1945", "1946", "1947", "1948", "1949", "1950", "1951", "1952", "1953", "1954", "1955", "1956", "1957", "1958", "1959", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019"),
-      breaks = "",
-      adj = "",
-      agg = logical(0)
-    ),
-    ordered = TRUE,
-    comment = "",
-    modified = "2023-09-12 10:15:46"),
 
   kitchsink__sink = list(
     AHS = list(
@@ -385,38 +335,6 @@ list(
     ordered = FALSE,
     comment = "",
     modified = "2023-09-04 18:04:15"),
-
-  mil__mil = list(
-    AHS = list(
-      groups = 1:3,
-      levels = c("Never served in military", "Now on active duty", "Served on active duty in the past"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = c(1, 2, 3, 3),
-      levels = c("Never served in the military", "Now on active duty", "On active duty in the past, but not now", "Only on active duty for training in Reserves / National Guard"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = FALSE,
-    comment = "",
-    modified = "2023-09-04 18:05:25"),
-
-  multigen__multg = list(
-    AHS = list(
-      groups = c(2, 1, 1, 1, 1, 1, 2),
-      levels = c("Householder only", "Householder and one younger generation", "Householder and two or more younger generations", "Householder and at least one younger generation, at least one older generation", "Householder and one older generation", "Householder and two or more older generations", "Not applicable"),
-      breaks = "",
-      adj = ""),
-    ACS = list(
-      groups = 2:1,
-      levels = c("No, not a multigenerational household", "Yes, is a multigenerational household"),
-      breaks = "",
-      adj = "",
-      agg = ""),
-    ordered = FALSE,
-    comment = "",
-    modified = "2022-05-03 18:45:44"),
 
   numelders__r65 = list(
     AHS = list(
@@ -525,10 +443,10 @@ list(
       levels = c("Less than 5 years old", "Yes", "No"),
       breaks = "",
       adj = "",
-      agg = ""),
+      agg = "reference"),
     ordered = FALSE,
     comment = "",
-    modified = "2023-09-04 18:08:50"),
+    modified = "2025-04-05 10:38:57.214519"),
 
   phear__dear = list(
     AHS = list(

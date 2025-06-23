@@ -4,10 +4,7 @@ library(dplyr)
 library(lubridate) 
 library(rpart)
 library(xts)
-source("R/utils.R")
-source("R/createDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
+
 
 #This is the script to summarise vehicle data at the household level
 #Since all vehicles have the same weight for a given household, no weights are used here
@@ -20,33 +17,33 @@ names <- c('bestmile','fegempg','gscost','gstotcst','gsyrgal')
 #Read vehicle level data summarized at the household level. 
 
 nhts_v <-  fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_V_processed.fst") %>%
-                     select(c('nhts_2017_hid','vehid','vehtype','bestmile','fegempg','fueltype',
+                     select(c('hid','vehid','vehtype','bestmile','fegempg','fueltype',
                               'gscost','gstotcst','gsyrgal')) %>% 
-        mutate(fueltype = gsub("Hybrid, electric or alternative fuel","Alt",fueltype),
+        dplyr::mutate(fueltype = gsub("Hybrid, electric or alternative fuel","Alt",fueltype),
                fueltype = gsub("Some other fuel","other",fueltype))
 
 #Summarize by vehicle type and fuel type by total 
-nhts_v_s1 <- nhts_v %>% select(vehtype, nhts_2017_hid, bestmile,gstotcst,gsyrgal,fueltype) %>%
-  group_by(nhts_2017_hid,vehtype,fueltype) %>% 
+nhts_v_s1 <- nhts_v %>% select(vehtype, hid, bestmile,gstotcst,gsyrgal,fueltype) %>%
+  group_by(hid,vehtype,fueltype) %>% 
   summarize_if(is.numeric,sum) 
 
 #Summarize all vehicle types and fuel types at the household level by total    
-nhts_v_s2 <- nhts_v %>% select(vehtype, nhts_2017_hid, bestmile, gstotcst, gsyrgal) %>% 
-              group_by(nhts_2017_hid) %>% 
+nhts_v_s2 <- nhts_v %>% select(vehtype, hid, bestmile, gstotcst, gsyrgal) %>% 
+              group_by(hid) %>% 
               summarize_if(is.numeric,sum)
 
 #Summarize by vehicle type and fuel type by average 
-nhts_v_m1 <- nhts_v %>% select(vehtype, nhts_2017_hid, gscost,fueltype) %>%
-  group_by(nhts_2017_hid,vehtype,fueltype) %>% 
+nhts_v_m1 <- nhts_v %>% select(vehtype, hid, gscost,fueltype) %>%
+  group_by(hid,vehtype,fueltype) %>% 
   summarize_if(is.numeric,mean) 
 
 #Summarize all vehicle types and fuel types at the household level by average
-nhts_v_m2 <- nhts_v %>% select(vehtype, nhts_2017_hid, gscost) %>%
-             group_by(nhts_2017_hid) %>% 
+nhts_v_m2 <- nhts_v %>% select(vehtype, hid, gscost) %>%
+             group_by(hid) %>% 
              summarize_if(is.numeric,mean) 
 
 #Merge all the dataframes
-d_0 <-  merge(nhts_v_s1,nhts_v_m1,by = c('nhts_2017_hid','vehtype','fueltype')) %>% 
+d_0 <-  merge(nhts_v_s1,nhts_v_m1,by = c('hid','vehtype','fueltype')) %>% 
   mutate(
     vehtype = gsub("/Car/Station Wagon","",vehtype),
     vehtype = gsub("/Motorbike","",vehtype),
@@ -58,13 +55,13 @@ d_0 <-  merge(nhts_v_s1,nhts_v_m1,by = c('nhts_2017_hid','vehtype','fueltype')) 
   mutate_all(trimws) %>%
   mutate(vehtype = paste0(vehtype,"_",fueltype)) %>% 
   subset(., select = -c(fueltype))  %>%
-  reshape(.,timevar='vehtype',idvar=c("nhts_2017_hid"),direction="wide")  %>% 
-  mutate_at(vars(-c(nhts_2017_hid)), ~replace(., is.na(.), 0))  %>%
+  reshape(.,timevar='vehtype',idvar=c("hid"),direction="wide")  %>% 
+  mutate_at(vars(-c(hid)), ~replace(., is.na(.), 0))  %>%
   colClean()   %>%
   rename_with(tolower) 
 
-d <- merge(nhts_v_s2,nhts_v_m2,by = c('nhts_2017_hid')) %>%
-      merge(d_0,by = c('nhts_2017_hid'))
+d <- merge(nhts_v_s2,nhts_v_m2,by = c('hid')) %>%
+      merge(d_0,by = c('hid'))
 
 #Create new codebook with column names and values from the summarized data 
 codebook_d = data.frame(var = colnames(d)) %>%
@@ -134,7 +131,7 @@ codebook_d = data.frame(var = colnames(d)) %>%
 #Create new variable description 
 codebook <- left_join(codebook_d,codebook_v1, by = 'var') %>%
         mutate(
-          desc = ifelse(var == 'nhts_2017_hid',"Household Identifier",desc),
+          desc = ifelse(var == 'hid',"Household Identifier",desc),
           desc = ifelse(var == 'bestmile',"Total best estimate of annual miles of all household vehicles",desc),
           desc = ifelse(var == 'gstotcst',"Total annual fuel expenditures in US dollars for all household vehicles",desc),
           desc = ifelse(var == 'gsyrgal',"Total annual fuel consumption in US gallons for all household vehicles",desc),

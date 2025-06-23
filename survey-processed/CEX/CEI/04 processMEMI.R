@@ -8,7 +8,7 @@ processMEMI <- function(survey_years, codebook) {
            cuid = as.integer(str_sub(NEWID, 1, -2)),
            intnum = as.integer(str_sub(NEWID, -1, -1))) %>%
     rename_with(tolower) %>%
-    select(-newid)
+    dplyr::select(-newid)
 
   #----------------
 
@@ -151,12 +151,12 @@ processMEMI <- function(survey_years, codebook) {
 
   # Impute missing
   # There are so few NA's in the MEMI data (currently), it makes sense to impute separately from the FMLI and expenditure variables
-  imp <- imputeMissing(data = d, N = 1)
+  d <- impute(data = d)
 
   # Add imputed variables to 'd'
-  d <- d %>%
-    select(-any_of(names(imp))) %>%
-    cbind(imp)
+ # d <- d %>%
+   # select(-any_of(names(imp))) %>%
+   # cbind(imp)
 
   return(d)
 

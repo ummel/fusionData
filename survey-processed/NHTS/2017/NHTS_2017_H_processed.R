@@ -2,10 +2,6 @@ library(fusionModel)
 library(fusionData)
 library(tidyverse)
 source("R/utils.R")
-source("R/createDictionary.R")
-source("R/compileDictionary.R")
-source("R/imputeMissing.R")
-source("R/detectDependence.R")
 
 #This is the script to process household along with the summarized vehicle and trip level data
 #Make sure that the corresponding summarized files have been generated before running this
@@ -21,15 +17,21 @@ wt <- within(wt, rm("WTHHFIN"))
 d_02 <- merge(d_01,wt,by="HOUSEID")
 
 #Read vehicle-level data summarized at the household level
-d_v <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_V_summary.fst") %>% rename(HOUSEID = nhts_2017_hid)
+d_v <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_V_summary.fst") %>% rename(HOUSEID = hid)
 
 #Read trip-level data summarized at the household level
-d_t <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_T_summary.fst") %>% rename(HOUSEID = nhts_2017_hid)
+d_t <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_T_summary.fst") %>% rename(HOUSEID = hid)
 
 #Read person-level file and summarise it
-d_p <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_P_processed.fst") %>% select(nhts_2017_hid,deliver,weight) %>%
+d_p <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_P_processed.fst") %>% select(hid,deliver,weight) %>%
         mutate(deliver = ifelse(deliver == "No online delivery",0,deliver)) %>%
-        group_by(nhts_2017_hid) %>% summarise(deliver_home = weighted.mean(deliver,weight)) %>% rename(HOUSEID = nhts_2017_hid)
+        group_by(hid) %>% summarise(deliver_home = sum(deliver)) %>% rename(HOUSEID = hid)
+
+d_p_hlt <- fst::read_fst("survey-processed/NHTS/2017/NHTS_2017_P_processed.fst") %>% select(hid,health,pid) %>%
+        filter(pid == 1) %>% 
+        rename(HOUSEID = hid) %>%# mutate(hlt = as.factor(ifelse(health %in% c('Fair','Poor'),'FALSE','TRUE'))) %>% 
+        select(-pid)#, -health) 
+
 
 #Merge household data and summarized vehicle data
 d_03 <- merge(d_02,d_v, by = c('HOUSEID'),  all.x=TRUE)
@@ -38,18 +40,18 @@ d_03 <- merge(d_02,d_v, by = c('HOUSEID'),  all.x=TRUE)
 d_04 <- merge(d_03,d_t, by = c('HOUSEID'),  all.x=TRUE)
 
 #Merge household data and summarized person-level data
-d <- merge(d_04,d_p, by = c('HOUSEID'),  all.x=TRUE)
+d <- merge(d_04,d_p, by = c('HOUSEID'),  all.x=TRUE) 
 
 rm(d_01,d_02,d_03,d_04)
 
 #Replace NA arising from trip-level merger with O. This could be due to household members not traveling
-for (v in names(d_t)) {
-  d[[v]] <- ifelse(is.na(d[[v]]),0, d[[v]])}
+#for (v in names(d_t)) {
+ # d[[v]] <- ifelse(is.na(d[[v]]),0, d[[v]])}
 
 # Load and process household codebook
 codebook_h <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", sheet ="CODEBOOK_HH") %>%
 
-   setNames(c('var', 'desc', 'type', 'length', 'valuelabel', 'frequency','weighted'))%>%  #value and label are in the same cell. Need to separate them into differnt columns
+   setNames(c('var', 'desc', 'type', 'length', 'valuelabel', 'frequency','weighted') )%>%  #value and label are in the same cell. Need to separate them into differnt columns
    select(var, desc, valuelabel) %>%
 
   fill(var, desc) %>% # Replacing NA with the appropriate  entry
@@ -73,7 +75,7 @@ codebook_h <- readxl::read_excel("survey-raw/NHTS/2017/codebook_v1.2.xlsx", shee
   mutate(
     label = ifelse(var == 'HHSTFIPS', value,label),
     label = ifelse(var == 'HH_CBSA', value,label) ,
-    label = ifelse(value == 'XXXXX',"None",label),
+    label = ifelse(value == 'XXXXX',"",label),
     label =  ifelse((var == 'TAXI'|var == 'PARA'|var == 'BUS'|var == 'BIKE'|var == 'TRAIN') & (is.na(label)),"Appropriate skip",label)) %>%  #For these variables NA values are replaced instead of imputing 
   mutate_all(trimws)
 
@@ -86,7 +88,7 @@ codebook_t <- fst::read_fst(path = "survey-processed/NHTS/2017/NHTS_2017_T_codeb
 
 #Merge trip,vehicle, and household codebooks
 codebook <-   bind_rows(codebook_h,codebook_v,codebook_t) %>% distinct(var,value,label, .keep_all = T) %>%
-              add_row(var = "deliver_home",desc = "Online deliveries made to home",value = NA, label = NA)
+              add_row(var = "deliver_home",desc = "Online deliveries made to home",value = NA, label = NA) 
 
 rm(codebook_h,codebook_v,codebook_t)
 
@@ -258,34 +260,31 @@ for (v in names(d)) {
 
 }
 
-# Detect structural dependencies
-
-
 #-----
 #Replace vehicle level data NA values with 0 if household has no vehicle
 for(v in names(d_v))
   if(v != "HOUSEID")
 {d[[v]]= ifelse(d$HHVEHCNT == 0,0,d[[v]])}
 
+###Make NA times which are >200 min#####
+d <- d %>% mutate(trwaittm = ifelse(trwaittm > 200, NA, trwaittm)) %>% 
+            left_join(.,d_p_hlt, by = 'HOUSEID')
 
+# See which variables have NA's
 # Which variables have missing values and how frequent are they?
 na.count <- colSums(is.na(d))
 na.count <- na.count[na.count > 0]
-# See which variables have NA's
 na.count
 
+d <- fusionModel::impute(as.data.table(d), 
+                          weight = 'WTHHFIN',
+             ignore = c('HOUSEID','SMPLSRCE','TRAVDAY','HHRELATD','TDAYDATE','SCRESP','RESP_CNT','HH_CBSA',
+                        grep("WTHH", colnames(d), value = TRUE)),
+             cores = 3)
 
-## Impute NA values in 'd'
-imp <- imputeMissing(data = d,
-                    N = 1,
-                   weight = "WTHHFIN",
-                   x_exclude = c("HOUSEID",'SMPLSRCE','SCRESP',"WTHHFIN\\d"))
-
-# Replace NA's in 'd' with the imputed values
-d[names(imp)] <- imp
-#rm(imp)
-#gc()
-
+na.count <- colSums(is.na(d))
+na.count <- na.count[na.count > 0]
+na.count
 
 # Add/create variables for geographic concordance with variables in 'geo_concordance.fst'
 d1 <- d %>%
@@ -298,87 +297,75 @@ d1 <- d %>%
   mutate(
     ur12 = ifelse(URBRUR == 'Rural','R','U'),
     state = str_pad(state, 2, pad ="0"),
-   # cbsa13 = as.factor(cbsa13),
+    cbsa13 = as.factor(cbsa13),
     state = as.factor(state)) 
 
-# Check for non-numeric entries and replace "None" with NA
-d1$cbsa13[d1$cbsa13 == "None"] <- NA
-
-# Convert to factor
-d1$cbsa13 <- as.factor(d1$cbsa13)
-
-#Remove entries with travel flag at the state-division level. This could be due to the response being from a non-home location
-#Similar filter was used in the BTS model
+#Flag entries at the state-division level. 
+#This could be due to the response being from a non-home location
+#This was noted in the BTS LATCH model
 geo2 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
-        select('state','division','region') %>% unique()
+  select('state','division','region') %>% unique()
 
-dxx <-  d1  %>%
+d1 <-  d1  %>%
   merge(.,geo2, by ='state') %>%
   mutate(travel_flag = ifelse(nhts_division == division, 'No','Yes')) %>%
-  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag')) %>%
+  filter(travel_flag == "No")  %>% 
+  select(-c('division','region','travel_flag')) %>%
   rename(
-    region = nhts_region ,
+    region = nhts_region,
     division = nhts_division)
-
-#Remove entries with travel flag at the cbsa-division level.This could be due to the response being from a non-home location
-#Similar filter was used in the BTS model
-#geo1 <- fst::read_fst("geo-processed/concordance/geo_concordance.fst")  %>%
- # select('cbsa13','division','region')  %>% unique()
-
-#d_travel_1 <-  d_travel_2  %>% filter(!is.na(cbsa13)) %>%
-#  merge(.,geo1, by ='cbsa13') %>%
-#  mutate(travel_flag = ifelse((nhts_division == division) & (nhts_region == region), 'No','Yes')) %>%
-#  filter(travel_flag == "No")  %>% select(-c('division','region','travel_flag'))
-
-#dxx <- bind_rows(d2,d_travel_1)  %>%
- # rename(
-#    region = nhts_region ,
- #   division = nhts_division)
-
 
 # See which variables in 'dxx' are also in 'geo_concordance' and
 gnames <- names(fst::fst("geo-processed/concordance/geo_concordance.fst"))
-gvars <- intersect(gnames, names(dxx))
+gvars <- intersect(gnames, names(d1))
 
 # Class new/added geo identifiers as unordered factors
-dxx <- dxx %>%
+d1 <- d1 %>%
 
   #CBSA correction: There are some CBSA which have been suppressed in NHTS but are available in 'geoconcordance.fst'
   #We could drop these entries altogether, randomly assign CBSA to the households, or just drop the CBSA variable. Choose #3
-#  mutate(
- #   cbsa13 = data.table::fifelse((state ==  '09'|state ==  '10'|state ==  '15'|state ==  '34') & is.na(cbsa13), NA, as.factor(cbsa13))) %>%
-    mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE)) 
+  mutate(
+    cbsa13 = data.table::fifelse((state ==  '09'|state ==  '10'|state ==  '15'|state ==  '34') & is.na(cbsa13), NA, as.factor(cbsa13))) %>%
+    mutate_at(gvars, ~ factor(.x, levels = sort(unique(.x)), ordered = FALSE))  %>%
+  
+  mutate(
+    
+#Add custom variables and descriptions
+placeinsecurity = PLACE == "Strongly agree"|PLACE == "Agree",
+priceinsecurity = PRICE == "Strongly agree"|PRICE == "Agree",
+travelinsecurity =  WALK2SAVE == "Strongly agree"| WALK2SAVE == "Agree" |BIKE2SAVE == "Strongly agree"|BIKE2SAVE == "Agree",
+travelinsecurity_intense =  WALK2SAVE == "Strongly agree" |BIKE2SAVE == "Strongly agree")
+
+d1 = expss::apply_labels(d1, placeinsecurity = "Travel insecurity due to financial burden")
+d1 = expss::apply_labels(d1,priceinsecurity = "Travel insecurity due to price")
+d1 = expss::apply_labels(d1,travelinsecurity = "Travel insecurity overall due to biking and walking")
+d1 = expss::apply_labels(d1,travelinsecurity_intense = "Travel insecurity overall due to biking and walking")
+d1 = expss::apply_labels(d1, health = "Health of respondent")
+
 #----------------
-dxx$cbsa13[is.na(dxx$cbsa13)] <- "None"
+d1$cbsa13[is.na(d1$cbsa13)] <- ""
 
 # Assemble final output
 # NOTE: var_label assignment is done AFTER any manipulation of values/classes, because labels can be lost when classes are changed
-h.final <- dxx %>%
+
+h.final <- d1 %>%
   mutate_if(is.factor, safeCharacters) %>%
   mutate_if(is.numeric, convertInteger) %>%
   mutate_if(is.double, cleanNumeric, tol = 0.001) %>%
   labelled::set_variable_labels(.labels = setNames(as.list(safeCharacters(codebook$desc)), codebook$var), .strict = FALSE) %>%  # Set descriptions for codebook variables
   labelled::set_variable_labels(.labels = setNames(as.list(paste(gvars, "geographic concordance")), gvars)) %>%  # Set descriptions for geo identifiers
-  
-    rename(
-    nhts_2017_hid = HOUSEID,
-    weight      = WTHHFIN,# Rename ID and weight variables to standardized names
-  ) %>%
-  
+    rename(hid = HOUSEID,
+           weight = WTHHFIN ) %>%   # Rename ID and weight variables to standardized names
   rename_with(~ gsub("WTHHFIN", "REP_", .x, fixed = TRUE), .cols = starts_with("WTHHFIN")) %>%  # Rename replicate weight columns to standardized names
   rename_with(tolower) %>%  # Convert all variable names to lowercase
-  select(nhts_2017_hid, everything(), -starts_with("rep_"), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
-  arrange(nhts_2017_hid)
-#----------------
-
+  select(hid, everything(), starts_with("rep_")) %>%   # Reorder columns with replicate weights at the end
+  arrange(hid) 
 
 # Create dictionary and save to disk
 dictionary <- createDictionary(data = h.final, survey = "NHTS", vintage = 2017, respondent = "H")
 saveRDS(object = dictionary, file = "survey-processed/NHTS/2017/NHTS_2017_H_dictionary.rds")
-compileDictionary()
+fusionData::compileDictionary()
 #----------------
 
 # Save data to disk (.fst)
 fst::write_fst(x = h.final, path = "survey-processed/NHTS/2017/NHTS_2017_H_processed.fst", compress = 100)
-rm(d_p,d_t,d_v,d,d1,dxx,imp,wt)
-
