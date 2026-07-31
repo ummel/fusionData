@@ -7,12 +7,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Data backend for fusionACS platform • fusionData</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.4.2/css/all.min.css" rel="stylesheet">
-<link href="deps/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet">
+<link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Data backend for fusionACS platform">
-<meta name="description" content="Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.">
-<meta property="og:description" content="Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.">
+<meta name="description" content="Data backend for fusionACS platform">
+<meta property="og:description" content="Data backend for fusionACS platform">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">fusionData</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,13 +98,13 @@
 <p>fusionData includes a convenience function called <code><a href="reference/installPackage.html">installPackage()</a></code> to safely update (re-install) your local installation of the fusionData package. If you modify important code yourself or pull changes from the Github repository, it is necessary to re-install the fusionData <em>package</em> locally to get all of the functionality. For example, if a function is added or modified on Github, your local installation won’t reflect the changes until you pull and re-install. <code><a href="reference/installPackage.html">installPackage()</a></code> does a number of operations that our initial <code><a href="https://devtools.r-lib.org/reference/install.html" class="external-link">devtools::install()</a></code> didn’t, so let’s go ahead and run it now:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/installPackage.html">installPackage</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>For full functionality, it is also necessary to download at least some of the remotely-stored survey microdata and processed spatial data files. The following section (“Usage and structure”) provides more detail about this and the associated reasoning. The functions <code><a href="reference/getSurveyProcessed.html">getSurveyProcessed()</a></code> and <code><a href="reference/getGeoProcessed.html">getGeoProcessed()</a></code> offer an easy way to do this. For example, to run most of the code in this README you will minimally need:</p>
+<p>For full functionality, it is also necessary to download at least some of the remotely-stored survey microdata and processed spatial data files. The following section (“Usage and structure”) provides more detail about this and the associated reasoning. The functions <code>getSurveyProcessed()</code> and <code>getGeoProcessed()</code> offer an easy way to do this. For example, to run most of the code in this README you will minimally need:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Download RECS 2015 processed survey microdata file</span></span>
-<span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"RECS_2015"</span><span class="op">)</span></span>
+<span><span class="fu">getSurveyProcessed</span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"RECS_2015"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Download only the essential remote spatial data files</span></span>
-<span><span class="fu"><a href="reference/getGeoProcessed.html">getGeoProcessed</a></span><span class="op">(</span>dataset <span class="op">=</span> <span class="st">"essential"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">getGeoProcessed</span><span class="op">(</span>dataset <span class="op">=</span> <span class="st">"essential"</span><span class="op">)</span></span></code></pre></div>
 <p>The downloads may take a few minutes. The files are automatically placed in the appropriate sub-directories of <code>/fusionData</code> on your local drive, with the directories created if necessary. After successful download, your fusionData “system” is ready to go.</p>
 </div>
 <div class="section level2">
@@ -172,7 +172,7 @@
 <li>“Dictionary” files (.rds) that contain standardized metadata and variable descriptions for a particular survey.</li>
 </ol>
 <p>Example: <code>/survey-processed/RECS/2015/RECS_2015_H_dictionary.rds</code></p>
-<p><code>/survey-processed</code> also includes .fst files containing the processed microdata itself. These files are stored remotely and can be added to a user’s local fusionData directory by calling <code><a href="reference/getSurveyProcessed.html">getSurveyProcessed()</a></code>.</p>
+<p><code>/survey-processed</code> also includes .fst files containing the processed microdata itself. These files are stored remotely and can be added to a user’s local fusionData directory by calling <code>getSurveyProcessed()</code>.</p>
 <p>For example, the .fst file <code>/survey-processed/RECS/2015/RECS_2015_H_processed.fst</code> contains processed, household-level microdata for the 2015 RECS. The <em>code</em> that creates this file is found in <code>/survey-processed/RECS/2015/RECS_2015_H_processed.R</code>. The .R file is part of the Github repository (<a href="https://github.com/ummel/fusionData/blob/master/survey-processed/RECS/2015/RECS_2015_H_processed.R" class="external-link">see here</a>), but the .fst file is stored remotely.</p>
 <p>Use of <a href="http://www.fstpackage.org/" class="external-link">.fst files</a> allows data to be read very quickly from disk, in part or in full. Functions in the fusionData package take advantage of this.</p>
 </div>
@@ -195,7 +195,7 @@
 <li>Custom <code>.R</code> scripts that transform <em>raw</em> spatial data (located in <code>/geo-raw</code>) into processed .rds files that meet certain requirements.</li>
 </ol>
 <p>Example: <code>/geo-processed/EPA-SLD/epa-sld_v3_processed.R</code></p>
-<p><code>/geo-processed</code> also includes .rds files containing the processed spatial data itself. These files are stored remotely and can be added to a user’s local fusionData directory by calling <code><a href="reference/getGeoProcessed.html">getGeoProcessed()</a></code>.</p>
+<p><code>/geo-processed</code> also includes .rds files containing the processed spatial data itself. These files are stored remotely and can be added to a user’s local fusionData directory by calling <code>getGeoProcessed()</code>.</p>
 <p>For example, the .rds file <code>/geo-processed/EPA-SLD/epa-sld_v3_processed.rds</code> contains processed spatial variables from version 3 of the EPA’s <a href="https://www.epa.gov/smartgrowth/smart-location-mapping#SLD" class="external-link">Smart Location Database (SLD)</a>. The <em>code</em> that creates this file is found in <code>/geo-processed/EPA-SLD/epa-sld_v3_processed.R</code>. The .R file is part of the Github repository (<a href="https://github.com/ummel/fusionData/blob/master/geo-processed/EPA-SLD/epa-sld_v3_processed.R" class="external-link">see here</a>), but the .rds file is stored remotely.</p>
 <p>Importantly, the <code>/geo-processed</code> remote content <em>also</em> includes two “essential” spatial data files that are, in practice, all that most users will need to perform data fusion locally. These files and their roles are described in more detail later on.</p>
 <ol style="list-style-type: decimal">
@@ -352,7 +352,7 @@
 <span>ordered <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>comment <span class="op">=</span> <span class="st">""</span>,</span>
 <span>modified <span class="op">=</span> <span class="st">"2021-07-03 12:10:17"</span><span class="op">)</span></span></code></pre></div>
-<p>This list object contains all of the information necessary to construct RECS and ACS microdata containing a new variable called “fuelheat__hfl”; i.e. the harmonized version of the two associated heating fuel variables. This is precisely what the <code><a href="reference/harmonize.html">harmonize()</a></code> function does – typically when called by <code><a href="reference/prepare.html">prepare()</a></code> as explained below – using all of the harmonies available in the specified harmony file. Note that harmonized variables are always indicated by a double-underscore (“__“).</p>
+<p>This list object contains all of the information necessary to construct RECS and ACS microdata containing a new variable called “fuelheat__hfl”; i.e. the harmonized version of the two associated heating fuel variables. This is precisely what the <code><a href="reference/harmonize.html">harmonize()</a></code> function does – typically when called by <code>prepare()</code> as explained below – using all of the harmonies available in the specified harmony file. Note that harmonized variables are always indicated by a double-underscore (“__“).</p>
 <p>Using the <code><a href="reference/harmony.html">harmony()</a></code> app to manually define harmonies and then letting <code><a href="reference/harmonize.html">harmonize()</a></code> take care of subsequent data manipulation makes the construction of harmonized microdata easier, faster, and <em>much</em> safer. It is generally advisable to use the <code><a href="reference/harmonize.html">harmonize()</a></code> app to create and edit harmonies. It is also possible to manually edit the .R harmony files, if necessary, but be careful.</p>
 <p>Most users will eventually find themselves constructing harmonies via the app and, as a result, modifying their <em>local</em> version of .R harmony files. This means you must commit and push those changes for them to show up in the Github repository – and become available for others to use. This also means it is important to pull the most recent version of the repository when you begin working with fusionData. Otherwise, you risk duplicating the efforts of someone else and/or failing to make use of the most recent version of harmony (and other) files.</p>
 </div>
@@ -402,7 +402,7 @@
 <p>In some cases, the spatial dataset’s processed .rds file will include multiple location variables that are used collectively to achieve spatial concordance. For example, a spatial dataset with block group observations must include columns for “state”, “county10”, “tract10”, and “bg10” in order to allow a smooth merge with the concordance file (this is the case for the EPA-SLD dataset).</p>
 <p>Unlike with processed <em>survey</em> data, the naming convention for processed spatial data files is quite relaxed. The function <code><a href="reference/compileSpatial.html">compileSpatial()</a></code> automatically detects and compiles all files in <code>/geo-processed</code> ending with “_processed.rds”. As long as a processed spatial data file has the necessary suffix – and meets the two hard requirements mentioned above – it will be compiled into the <code>geo_predictors.fst</code> file.</p>
 <p>Whenever a processed .rds file is added or updated, it is necessary to run <code><a href="reference/compileSpatial.html">compileSpatial()</a></code> to update the <code>geo_predictors.fst</code> file.</p>
-<p>The <code>geo_predictors.fst</code> file contains all variables and vintages across available spatial datasets, aggregated to PUMA-level in preparation for merging with survey microdata. The structure of this file is unusual, but it is not intended to be worked with directly. It is designed to allow the <code><a href="reference/assemble.html">assemble()</a></code> function (demonstrated below) to efficiently read the necessary data from disk when it merges spatial variables for particular donor and recipient surveys.</p>
+<p>The <code>geo_predictors.fst</code> file contains all variables and vintages across available spatial datasets, aggregated to PUMA-level in preparation for merging with survey microdata. The structure of this file is unusual, but it is not intended to be worked with directly. It is designed to allow the <code>assemble()</code> function (demonstrated below) to efficiently read the necessary data from disk when it merges spatial variables for particular donor and recipient surveys.</p>
 <p>Consequently, unless a user is actively adding or editing processed spatial data, the only “geo files” that are strictly necessary for the fusion process are <code>geo_predictors.fst</code> and <code>geo_concordance.fst</code>, both of which can be obtained by calling <code>getGeoProcessed(dataset = "essential")</code>.</p>
 </div>
 <div class="section level2">
@@ -412,11 +412,11 @@
 <p>As of fusionData v1.0, these two steps are helpfully wrapped into the <code><a href="reference/fusionInput.html">fusionInput()</a></code> and <code><a href="reference/fusionOutput.html">fusionOutput()</a></code> functions, respectively. These functions safely execute all of the steps required for successful fusion. In practice, users need only call the two high-level functions and ensure that the resulting console output and log files look good.</p>
 <p>For a worked example, let’s prepare the required inputs for fusion of the RECS 2015 to the ACS 2015 (in test mode, of course!). This requires the processed microdata for both surveys to be present in your local <code>/fusionData</code> installation. If you haven’t already, you can download these files using:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"RECS_2015"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACS_2015"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">getSurveyProcessed</span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"RECS_2015"</span><span class="op">)</span></span>
+<span><span class="fu">getSurveyProcessed</span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACS_2015"</span><span class="op">)</span></span></code></pre></div>
 <p>You will also need to install the <a href="https://github.com/ummel/fusionModel" class="external-link">fusionModel package</a>:</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"ummel/fusionModel"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"ummel/fusionModel"</span><span class="op">)</span></span></code></pre></div>
 <p>Now let’s make a call to <code><a href="reference/fusionInput.html">fusionInput()</a></code>. The function arguments are fully documented in <code><a href="reference/fusionInput.html">?fusionInput</a></code>. If you run this code in an interactive session, you will be prompted at the console to approve certain steps before proceeding (again, this is all documented). The console output is designed to be very informative and describe what is being done behind the scenes.</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">input.dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fusionInput.html">fusionInput</a></span><span class="op">(</span>donor <span class="op">=</span> <span class="st">"RECS_2015"</span>,</span>
@@ -583,8 +583,8 @@
 <p>This is done automatically within <a href="https://ummel.github.io/fusionData/reference/assemble.html"><code>assemble</code></a>. In this scenario, person-level fusion variables are aggregated based on their class. By default, numeric variables return the household total (sum), unordered factors return the level of the household’s reference person, and ordered factors return the household’s maximum level. This is one reason why specifying variables as ordered or unordered factors is important within the ingestion process.</p>
 <p>If the default aggregation methods are not correct for a specific variable, then you can override them in one of two ways: using the <code>agg_fun</code> argument or the <code>agg_adj</code> argument. Lets look at an example using ASEC and two variables at the person level: <code>kidcneed</code>, which flags if a child under the age of 14 needs paid childcare while their parents work, and <code>schllunch</code>, which is the value of school lunch meals provided to children for free at school.</p>
 <p>First, download the processed microdata for both the ASEC 2019 and ACS 2019 surveys:</p>
-<pre><code><span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACS_2019"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/getSurveyProcessed.html">getSurveyProcessed</a></span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACES_2019"</span><span class="op">)</span></span></code></pre>
+<pre><code><span><span class="fu">getSurveyProcessed</span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACS_2019"</span><span class="op">)</span></span>
+<span><span class="fu">getSurveyProcessed</span><span class="op">(</span>survey <span class="op">=</span> <span class="st">"ACES_2019"</span><span class="op">)</span></span></code></pre>
 <p><code>{r, echo = TRUE} asec &lt;- fst::read_fst("survey-processed/ASEC/2019/ASEC_2019_P_processed.fst") head(select(asec, asec_2019_hid, weight, rep_1, schllunch, kidcneed))</code></p>
 <p>By default, <code>schllunch</code> would be summed across all household members (because it is numeric) and <code>kidcneed</code> would take the reference person’s value (because it is an unordered factor). However, (somewhat confusingly) in the person-level data, ASEC records <code>schllunch</code> as the same for all members of the <em>family</em>. Summing <code>schllunch</code> across household members would result in double counting the total school lunch value of that household, even if there are multiple families in the household. This problem occurs with many of the ASEC variables related to poverty because the <em>family-level</em> response is recorded for each <em>individual</em> in the family.</p>
 <p>The default behavior for <code>kidcneed</code> would be the value of the reference person. As the reference person is the householder, who is never a child under the age 14, this would result in the aggregated variable being always “not in universe”. Instead, we want to take the modal value across members of the household. This will ignore the NIU values and be a 1 if the majority of children need paid child care, and 0 if not.</p>
@@ -807,7 +807,7 @@ output.dir &lt;- fusionOutput(input = input.dir)</code></pre>
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Kevin Ummel <br><small class="roles"> Author, maintainer </small>  </li>
+<li>Kevin Ummel <br><small class="roles"> Author, maintainer </small>   </li>
 <li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
@@ -823,7 +823,7 @@ output.dir &lt;- fusionOutput(input = input.dir)</code></pre>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
