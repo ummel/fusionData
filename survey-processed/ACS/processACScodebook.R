@@ -1,107 +1,148 @@
-# Return pre-processed ACS codebook
+# Process and Standardize ACS PUMS Codebooks
+#
+# PURPOSE & OVERVIEW FOR USERS:
+# As part of the fusionData microdata build pipeline, raw American Community Survey
+# (ACS) Public Use Microdata Sample (PUMS) codebooks and data dictionaries are
+# processed into a standardized, machine-readable format.
+#
+# ACS codebooks distributed by the U.S. Census Bureau vary across survey vintages:
+#   - Pre-2012 vintages are primarily distributed as .pdf files.
+#   - 2012-2016 vintages are distributed as structured .txt files.
+#   - 2017 onward vintages are distributed as structured .csv files.
+#
+# The processACScodebook() function automates the parsing, cleaning, and
+# normalization of these disparate dictionary files into a uniform data frame
+# structure (codebook) containing:
+#   - 'var': The standardized ACS variable identifier (e.g., "HINCP", "TEN", "ST").
+#   - 'desc': A clear, standardized description of what the variable measures.
+#   - 'value': The raw encoded code/value (e.g., "0", "1", "100..500").
+#   - 'label': Human-readable factor level label corresponding to the value.
+#   - 'adj': Indicates if inflation adjustment factors (ADJHSG/ADJINC) apply.
+#   - 'custom_desc': Flag indicating if a manually refined description was applied.
+#
+# USAGE CONTEXT:
+# This is an internal maintainer function used when processing new ACS survey
+# vintages for the fusionData and fusionACS ecosystem.
 
-# Example input
+# Example inputs
+# dictionary.file <- "survey-raw/ACS/2005/PUMSDataDict05.pdf"
 # dictionary.file <- "survey-raw/ACS/2015/PUMSDataDict15.txt"
 # dictionary.file <- "survey-raw/ACS/2019/PUMS_Data_Dictionary_2019.csv"
 
+library(tidyverse)
+library(pdftools)
+
 processACScodebook <- function(dictionary.file) {
 
-  # Function to capitalize first letter in string
+  # Internal helper function to capitalize the first letter of a string
   capFirst <- function(x) {
     str_sub(x, 1, 1) <- toupper(str_sub(x, 1, 1))
     return(x)
   }
 
-  # Function to return text found after the first open parenthesis
+  # Internal helper function to extract text enclosed within parenthetical expressions
   parText <- function(x) {
-    x <- sub(".*\\(", "", x)  # Remove everything up t0 and including first "("
+    x <- sub(".*\\(", "", x)  # Remove everything up to and including the first "("
     i <- which(str_sub(x, -1) == ")")
-    x[i] <- str_sub(x[i], 1, -2)  # Remove ending ")", if present
+    x[i] <- str_sub(x[i], 1, -2)  # Remove trailing ")", if present
     return(x)
   }
 
-  #----------
+  # ----------
 
-  # Detect if the original/native dictionary file is .csv, .txt, or .pdf
+  # Validate file format
   suffix <- str_sub(dictionary.file, start = -4)
   stopifnot(suffix %in% c(".csv", ".txt", ".pdf"))
 
-  # Either read the .csv file or pre-process the .txt file
+  cli::cli_alert_info("Processing ACS codebook from {.file {dictionary.file}}...")
+
+  # Ingest dictionary file according to its native format
   ddata <- if (suffix == ".csv") {
+    # 2017+ CSV dictionary files have a standard tabular layout
     read.csv(dictionary.file, header = FALSE, na.strings = "") %>%
       setNames(c('record', 'var', 'type', 'length', 'value', 'value2', 'label')) %>%
       select(var, value, value2, label)
   } else {
     if (suffix == ".txt") {
+      # 2013-2016 plain text dictionary files parsed via custom text parser
       convertTXTdictionary(dictionary.file)
     } else {
-      # When file is PDF, must convert to text first and then pass result to convertTXTdictionary()
+      # Pre-2013 PDF dictionary files are converted to raw text streams first,
+      # cleaned of page headers/footers, and then processed by convertTXTdictionary()
       x <- pdftools::pdf_text(dictionary.file)
+      x <- gsub("\n+[ ]*[0-9]{1,3}\n$", "\n", x)  # Strip PDF page footer numbers
       x <- trimws(strsplit(paste(x, collapse = ""), split = "\n")[[1]])
       convertTXTdictionary(x)
     }
   }
 
-  #----------
+  # ----------
 
+  # Process, filter, and normalize raw dictionary lines into standardized codebook entries
   codebook <- ddata %>%
 
-    distinct() %>%   # Eliminate duplicate entries (i.e. one each for household and person-records)
+    distinct() %>%   # Deduplicate rows shared between household and person-level headers
 
     split(f = .$var) %>%
 
+    # Identify range values, blank/missing placeholders, and literal values
     map(~ mutate(.x,
                  rng = (value != value2 & !is.na(value2)),
-                 miss = grepl("^(b)\\1*$", value),  # Matches "b", "bb", etc.
-                 value = ifelse(miss, NA, value),  # Replace "b", "bb", etc. with NA
+                 miss = grepl("^(b)\\1*$", value),  # Matches Census whitespace representations "b", "bb", etc.
+                 value = ifelse(miss, NA, value),  # Convert whitespace codes to true NA
                  asis = !rng & !miss)) %>%
 
+    # Reconstruct variable-level metadata tables with unified value and label columns
     map_dfr(~ tibble(var = .x$var[1],
                      desc = .x$value[1],
                      value = if (all(.x$asis)) {.x$value[-1]} else {if (!any(.x$miss)) {NA} else {c(.x$value[.x$miss], if (any(.x$rng)) {NULL} else {.x$value[!.x$miss][-1]})}},
                      label = if (all(.x$asis)) {.x$label[-1]} else {if (!any(.x$miss)) {NA} else {c(.x$label[.x$miss], if (any(.x$rng)) {NULL} else {.x$label[!.x$miss][-1]})}})) %>%
 
-    mutate_if(is.character, str_squish) %>%  # Remove any unnecessary white space
+    mutate_if(is.character, str_squish) %>%  # Clean up whitespace around parsed strings
+
+    # Filter out redundant, technical allocation, or superseded Census variables
     filter(
-      !(str_sub(var, 1, 3) == "RAC" & label %in% c("Yes", "No")),  # Remove Yes/No race recode variables, since race information captured in RAC1P
-      !grepl("allocation flag", tolower(desc), fixed = TRUE),  # Remove allocation flag variables (after 2008)
-      !grepl("allocation$", tolower(desc)),  # Remove allocation flag variables (2008 and earlier)
-      !grepl("eligibility coverage edit", desc, fixed = TRUE),  # Remove health insurance coverage edit variables (not necessary)
-      !grepl("See 'Employment Status Recode' (ESR)", desc, fixed = TRUE),  # Remove detailed employment questions since 'ESR' variable captures this information
-      !grepl("^MLP.", var)  # Remove veteran period of service recodes (all information contained in 'VPS')
+      !(str_sub(var, 1, 3) == "RAC" & label %in% c("Yes", "No")),  # Drop binary race recodes (covered comprehensively by RAC1P)
+      !grepl("allocation flag", tolower(desc), fixed = TRUE),  # Drop post-2008 item allocation flag variables
+      !grepl("allocation$", tolower(desc)),  # Drop pre-2008 item allocation flag variables
+      !grepl("eligibility coverage edit", desc, fixed = TRUE),  # Drop internal health insurance edit flags
+      !grepl("See 'Employment Status Recode' (ESR)", desc, fixed = TRUE),  # Drop redundant intermediate employment questions
+      !grepl("^MLP.", var)  # Drop legacy military period flags (subsumed by 'VPS')
     ) %>%
 
-    # Second attempt to remove allocation flag variables
-    # This is necessary, because text formatting bugs in .txt dictionary files can result in the allocation flag text going to "value" instead of "desc"
+    # Secondary filter pass for allocation flags
+    # Catches edge cases where text formatting glitches in legacy .txt dictionaries shifted description text into the value column
     group_by(var) %>%
-    mutate(alloc_flag1 = any(grepl("allocation flag", tolower(value), fixed = TRUE)), # After 2008
+    mutate(alloc_flag1 = any(grepl("allocation flag", tolower(value), fixed = TRUE)), # Post-2008
            alloc_flag2 = any(grepl("allocation$", tolower(value)))) %>%  # 2008 and earlier
     ungroup() %>%
     filter(!alloc_flag1, !alloc_flag2) %>%
 
-    # Second attempt to remove race recode variables
-    # This is necessary, because text formatting bugs in .txt dictionary files can result in the race recode text going to "value" instead of "desc"
+    # Secondary filter pass for race recodes caught by value column anomalies
     group_by(var) %>%
     mutate(recode_flag = str_sub(var[1], 1, 3) == "RAC" & any(grepl("combination", paste(desc, value), fixed = TRUE))) %>%
     ungroup() %>%
     filter(!recode_flag) %>%
 
+    # Coerce character representation of numeric codes to standard integer storage
+    # and tag variables that require financial adjustment factors (ADJHSG/ADJINC)
     mutate(
       temp = suppressWarnings(as.integer(value)),
-      value = ifelse(is.na(temp), value, as.character(temp)),  # Coerces 'value' to integer (but stored as character) whenever possible in order to match raw data resulting from fread()
+      value = ifelse(is.na(temp), value, as.character(temp)),  # Ensures integer representation matches data imported via data.table::fread()
       temp = NULL,
       adj = ifelse(grepl("use adjhsg", tolower(desc)), "ADJHSG", NA),
       adj = ifelse(grepl("use adjinc", tolower(desc)), "ADJINC", adj)
     ) %>%
 
+    # Standardize variable descriptions for clarity and readability
     mutate(
-      desc = gsub("\\s*\\([^\\)]+\\)", "", desc),  # Remove parenthetical text in description
-      desc = gsub("recode", "", desc),  # Remove word 'recode' as it doesn't seem necessary (might induce confusion)
-      desc = gsub("HH", "household", desc),  # Replace 'HH' with 'household' to avoid confusion
-      desc = ifelse(var %in% c("RMS", "RMSP"), "Number of rooms, excluding bathrooms", desc),  # Helpful for RMS/RMSP variable to note that it excludes bathrooms in room count
-      desc = gsub("write-in", "", desc, fixed = TRUE),  # Remove "write-in" (unnecessary); appears to only affect year of naturalization variable
-      desc = gsub("english", "English", desc),  # Upper case for English language
-      desc = ifelse(desc == "VA", "VA health care", desc),  # Clearer than "VA" only
+      desc = gsub("\\s*\\([^\\)]+\\)", "", desc),  # Strip parenthetical annotations from descriptions
+      desc = gsub("recode", "", desc),  # Drop redundant word 'recode'
+      desc = gsub("HH", "household", desc),  # Expand abbreviation 'HH' to 'household'
+      desc = ifelse(var %in% c("RMS", "RMSP"), "Number of rooms, excluding bathrooms", desc),  # Explicit clarification for room counts
+      desc = gsub("write-in", "", desc, fixed = TRUE),  # Remove unnecessary "write-in" flags
+      desc = gsub("english", "English", desc),  # Capitalize proper nouns
+      desc = ifelse(desc == "VA", "VA health care", desc),  # Expand abbreviated health system labels
       desc = ifelse(desc == "Indian health service", "Indian Health Service", desc),
       desc = gsub(" puma ", " PUMA ", desc),
       desc = gsub(" soc codes", " SOC codes", desc),
@@ -110,69 +151,58 @@ processACScodebook <- function(dictionary.file) {
       desc = capFirst(desc)
     ) %>%
 
+    # Standardize value labels (e.g., FIPS codes, factor levels, parenthetical parsing)
     mutate(
-      label = ifelse(var == "ST", value, label), # Replace state text names with FIPS code
-      label = gsub("/ ", "/", label, fixed = TRUE),  # Manual text error fix-ups
-      label = gsub(" / ", "/", label, fixed = TRUE),  # Manual text error fix-ups
-      label = gsub("//", "/", label, fixed = TRUE),  # Manual text error fix-ups
-      label = ifelse(str_sub(label, 1, 3) == "N/A", parText(label), label),   # For N/A labels, replace with parenthetical text
+      label = ifelse(var %in% c("ST", "STATE"), value, label), # Replace full state text names with FIPS codes
+      label = gsub("/ ", "/", label, fixed = TRUE),  # Fix irregular slash formatting
+      label = gsub(" / ", "/", label, fixed = TRUE),
+      label = gsub("//", "/", label, fixed = TRUE),
+      label = ifelse(str_sub(label, 1, 3) == "N/A", parText(label), label),   # Convert "N/A (description)" labels to extracted parenthetical text
       label = gsub(" FT", " full-time", label, fixed = TRUE),
       label = gsub("NILF ", "Not-in-labor-force ", label, fixed = TRUE),
       label = gsub("<", "less than", label, fixed = TRUE),
       noedit = grepl("/[0-9]", label) | is.na(label),
       label = ifelse(noedit, label, map_chr(strsplit(label, split = "/"), ~ paste(capFirst(.x[!tolower(.x) %in% c("gq", "vacant")]), collapse = " / "))),
       noedit = NULL,
-      label = ifelse(grepl("suppress", tolower(label)), NA, label),  # Set suppressed values to NA to be imputed
-      label = sub("^\\.", "", label),  # Remove any leading periods
+      label = ifelse(grepl("suppress", tolower(label)), NA, label),  # Replace administrative suppression notes with NA
+      label = sub("^\\.", "", label),  # Strip leading period artifacts
       label = capFirst(label)
     ) %>%
 
-    # Manual removal of variables with unnecessary or redundant information
+    # Manually drop variables containing obsolete or non-informative metrics
     filter(!var %in% c("RT", "DECADE", "SRNT", "SVAL", "OCPIP", "GRPIP", "DRIVESP", "DRATX", "SPORDER", "WAOB", "MRGX", "SMX")) %>%
 
-    # Known, manual fix-ups to codebook that appear to be relevant across survey years
+    # Apply manual fixes for known variable level edge cases across survey years
     mutate(
       label = ifelse(is.na(value) & var %in% c("BROADBND", "DIALUP", "HISPEED", "DSL", "FIBEROP", "MODEM", "OTHSVCEX", "SATELLITE"), "No paid access to the internet", label),
-      label = ifelse(is.na(value) & var == "CPLT", "No couple present", label),  # Manual edit: codebook appears to be wrong
-      label = ifelse(is.na(value) & var == "RNTM", "No", label),  # Non-renting units cannot have meals included in rent
-      label = ifelse(is.na(value) & var == "LANP", "GQ/Vacant", label)  # Original label dropped because it is in parentheses
+      label = ifelse(is.na(value) & var == "CPLT", "No couple present", label),  # Fix error in raw Census dictionary
+      label = ifelse(is.na(value) & var == "RNTM", "No", label),  # Fix non-renter meal inclusion indicator
+      label = ifelse(is.na(value) & var == "LANP", "GQ/Vacant", label),  # Restore missing label lost due to original parenthetical formatting
+      value = ifelse(value == 0 & var == "DRAT", "1", value),  # Typo fix specific to 2008 PUMS dictionary
+      label = ifelse(is.na(value) & var == "DRAT", "No service-connected disability/never served in military", label),
+      value = ifelse(grepl("age less than 15 years", value) & var == "MARHYP", NA, value),
+      label = ifelse(is.na(value) & var == "MARHYP", "Age less than 15 years; never married", label)
     ) %>%
 
     add_count(var) %>%
     mutate(label = ifelse(n == 1 & is.na(value) & !is.na(label), 0, label)) %>%
     mutate_if(is.character, str_squish) %>%
-    distinct() %>%   # Final check to eliminate duplicate entries
+    distinct() %>%   # Final deduplication pass
     select(var, desc, value, label, adj)
 
-  #-----
+  # -----
 
-  # # Universal renaming of specific variables across ACS vintages
-  # # Convert instances of newer variable name (e.g. TAXAMT) in 'codebook' to the earlier name (TAXP) for consistency over time
-  # # Should be limited to cases where the underlying concept/question is the same; OK if the factor levels differ across vintages
-  # # Prior to 2018, the property tax variable was "TAXP". More recent name is "TAXAMT".
-  # # Prior to 2008, the property value variable was "VAL". More recent name is "VALP".
-  # # Prior to 2020, the HU/GQ identifier "TYPE". More recent name is "TYPEHUGQ".
-  # # Prior to 2020, the internet access was "ACCESS". More recent name is "ACCESSINET".
-  # # Prior to 2021, the year built was "YBL". More recent name is "YRBLT".
-  # varnames <- list(
-  #   TAXAMT = "TAXP",
-  #   VALP = "VAL",
-  #   TYPEHUGQ = "TYPE",  # The TYPE variable is eventually dropped since there is no variation; renaming retained for consistency
-  #   ACCESSINET = "ACCESS",
-  #   YRBLT = "YBL"
-  # )
-  #
-  # codebook$var0 <- NA  # 'var0' retains the original name of the variable so that it can be changed in the microdata later
-  # for (v in names(varnames)) {
-  #   i <- which(codebook$var == v)
-  #   codebook$var0[i] <- v
-  #   codebook$var[i] <- varnames[[v]]
-  # }
+  # Standardize variable name for State FIPS codes across all vintages
+  # Renames post-2023 "STATE" back to "ST" for consistency with earlier PUMS datasets
+  if ("STATE" %in% codebook$var) {
+    codebook <- codebook %>%
+      mutate(var = ifelse(var == "STATE", "ST", var))
+  }
 
-  #-----
+  # -----
 
-  # Known manual edits to ACS variable descriptions/definitions
-
+  # Apply curated, authoritative descriptions to key microdata variables
+  # Overrides raw Census dictionary descriptions with clearer, project-standard terms
   vardefs <- list(
     DIVISION = "Census division",
     REGION = "Census region",
@@ -188,7 +218,7 @@ processACScodebook <- function(dictionary.file) {
     ELEP = "Electricity cost last month",
     FULP = "Fuel cost (oil, kerosene, wood, etc.) in the past 12 months",
     GASP = "Gas cost (pipeline, bottled, or tank) last month",
-    GRNTP = "Gross rent including utilites, monthly",  # https://www.census.gov/quickfacts/fact/note/US/HSG860221
+    GRNTP = "Gross rent including utilites, monthly",  # Source: https://www.census.gov/quickfacts/fact/note/US/HSG860221
     INSP = "Home insurance, annual",
     MHP = "Mobile home cost (site rent, fees, etc.), annual",
     RNTP = "Contract rent, monthly",
@@ -214,18 +244,18 @@ processACScodebook <- function(dictionary.file) {
     codebook$custom_desc[i] <- TRUE
   }
 
-  #-----
+  # -----
+
+  cli::cli_alert_success("Processed {.val {length(unique(codebook$var))}} variables from codebook.")
 
   return(codebook)
 
 }
 
-#------------------------
+# ------------------------------------------------------------------------------
 
-# Function to convert .txt dictionary file (pre-2017) to something similar to the .csv structure that is provided from 2017 onward
-
-# Example input
-#file <- "survey-raw/ACS/2016/PUMSDataDict16.txt"
+# Helper function to convert raw .txt dictionary files (pre-2017) into a
+# standardized tabular format mimicking modern .csv dictionary releases.
 
 convertTXTdictionary <- function(input) {
 
@@ -235,114 +265,108 @@ convertTXTdictionary <- function(input) {
     d <- input
   }
 
-  # First line (guess start point based on "RT" variable being first)
+  # Locate start line based on "RT" (Record Type) being the first listed variable
   start <- which(substring(d, 1, 2) == "RT")[1]
 
-  # Likely final line
+  # Locate end line (last replicate weight variable 'PWGTP80' plus buffer lines)
   finish <- which(substring(d, 1, 7) == "PWGTP80") + 2L
 
   d <- d[start:finish]
 
-  #-----
+  # -----
 
-  # Strings that should be converted to single quotes
-  quote.chars <- c("\x92", "\x93", "\x94")
+  # Standardize character encoding artifacts and non-standard punctuation
+  quote.chars <- c("\x92", "\x93", "\x94", "\\92", "\\93", "\\94")
   for (x in quote.chars) d <- gsub(x, "'", d, fixed = TRUE, useBytes = TRUE)
 
-  # Manual fix-up for invalid character
+  # Clean invalid byte sequences and non-breaking spaces
   d <- gsub("\xa0", "", d, fixed = TRUE, useBytes = TRUE)
 
-  # Replace with dash
+  # Standardize en-dashes and specialized hyphens
   d <- gsub("\x96", "-", d, fixed = TRUE, useBytes = TRUE)
+  d <- gsub("\\96", "-", d, fixed = TRUE, useBytes = TRUE)
+  d <- gsub("\xe2\x80'", "-", d, fixed = TRUE, useBytes = TRUE)
 
-  # Remove asterisks
-  #d <- gsub("\\*", "", d, fixed = TRUE)  # This doesn't catch all cases for some reason
+  # Convert erroneous hyphenated or lettered range representations to standard double-dot notation ('..')
+  d <- gsub(" - 9", "..9", d, fixed = TRUE)
+  d <- gsub(" B 9", "..9", d, fixed = TRUE)
+
+  # Remove formatting asterisks
   d <- gsub("\\*+", "", d)
 
-  # Manual fix-up for some military occupation codes that run together, preventing appropriate string split
+  # Separate run-together military occupation codes to allow clean string splitting
   mil.chars <- paste0("928110P", 1:7)
   for (x in mil.chars) d <- sub(x, paste0(x, " "), d, fixed = TRUE)
 
-  # Replace an erroneous tab (see d[142])
+  # Clean tab character artifacts
   d <- gsub("$\t", "$", d, fixed = TRUE)
 
-  # Replace tabs with pipe (|) that we will use later to split text strings into pieces
+  # Convert tabs into pipe ('|') delimiters for structured token splitting
   d <- gsub("\t", "|", d, fixed = TRUE)
 
-  # Remove pipes found at end of a line
+  # Strip trailing pipes at end of lines
   d <- sub("\\|$", "", d)
 
-  # Insert extra space in front of ".N/A" to ensure all instances are split properly (see NAICSP variable)
+  # Insert padding space before ".N/A" to ensure clean tokenization (e.g., NAICSP variable)
   d <- sub(".N/A", " .N/A", d, fixed = TRUE)
 
-  #-----
+  # -----
 
-  # Identify which lines have orphaned text; append the orphaned text to end of previous line; remove orphans
+  # Detect and reattach orphaned line wraps (lines beginning with '.') back to their preceding header line
   temp <- trimws(gsub("|", "", d, fixed = TRUE))
   k <- which(substring(temp, 1, 1) == ".")
   d[k] <- substring(temp[k], first = 2)
   for (i in rev(k)) d[i - 1] <- paste(d[i - 1], d[i])
   if (length(k)) d <- d[-k]
 
-  #-----
+  # -----
 
-  # Replace " ." with pipe so it can be split as well
-  # Can't do this before orphans or we won't catch all of the legit orphans
+  # Convert value descriptor delimiters (" .") into pipes for splitting
   d <- gsub(" .", "|", d, fixed = TRUE)
 
-  # Remove unnecessary spaces
+  # Clean extra internal whitespace
   d <- stringr::str_squish(d)
 
-  # Remove intentional blank lines
+  # Remove structural header lines and blank spacer lines from raw text
   d <- d[!grepl("intentionally blank", d, fixed = TRUE)]
-
-  # Remove line identifying start of person record variables
   d <- d[!grepl("PERSON RECORD", d, fixed = TRUE)]
 
-  #-----
+  # -----
 
+  # Split lines into character vectors based on pipe delimiters
   d <- lapply(d, strsplit, split = "\\|+")
-
   d <- map(d, ~ .x[[1]][str_squish(.x[[1]]) != ""])
 
-  #-----
+  # -----
 
-  # Identify indices in 'd' that are the start of a variable entry
-  # This works for the codebook structure in some years, but not all
-  ind <- which(map_lgl(d, ~ grepl("[A-Z]+", .x[1]) & length(.x) == 2 & !is.na(suppressWarnings(as.numeric(.x[2])))))
+  # Identify indices corresponding to the start of new variable entries
+  # Matches variable name + position width (e.g., "ANC1P 3") or isolated line numbers
+  ind1 <- grep("^[A-Z][A-Z0-9]*\\s[0-9]$", d)
+  ind2 <- which(map_lgl(d, ~ grepl("^[A-Z][A-Z0-9]*", .x[1]) & length(.x) == 2 & !is.na(suppressWarnings(as.numeric(.x[2])))))
+  ind3 <- grep("^[0-9]$", d) - 1L  # Handles PDF conversion errors where position integer was pushed to a new line
+  ind <- sort(unique(c(ind1, ind2, ind3)))
 
-  # An alternative approach if the first call to 'ind' does not return any indices
-  if (!length(ind)) {
-    blanks <- which(lengths(d) == 0)  # Blank lines
-    capletter <- which(map_lgl(d, ~ grepl("^[A-Z]+", .x[1])))  # Lines starting with a capital letter
-    capword <- which(map_lgl(d, ~ word(.x[1], start = 1, end = 1) == toupper(word(.x[1], start = 1, end = 1))))  # Lines starting with an all-caps word
-    ind <- intersect(intersect(blanks + 1, capletter), capword)  # Assumes new variable entry denoted by an all-caps word following a blank line
-    ind <- setdiff(ind, blanks - 1)  # Removes single rows of capitalized words with a following blank
-  }
+  # -----
 
-  #-----
-
-  # Function to parse text within each variable entry
-  #i <- 21  # CONP
-  #i <- 14  # AGS
-  #i <- 43  # RNTP
+  # Inner helper function to parse values, ranges, and labels for a single variable block
   parseEntry <- function(i) {
 
-    # Extract the lines in 'd' associated with variable entry number 'i'
+    # Extract lines belonging to variable entry 'i'
     if (i == length(ind)) {
       x <- d[ind[i]:length(d)]
     } else {
       x <- d[ind[i]:(ind[i + 1] - 1)]
     }
 
-    x <- compact(x)
+    x <- purrr::compact(x)
 
+    # Extract and append parenthetical "Note:" text if present in the variable block
     note <- map_lgl(x, ~ tolower(substring(.x[1], 1, 5)) == "note:")
 
     if (any(note)) {
-      note.text <- paste(unlist(x[which(note):length(x)]), collapse = " ")
+      note.text <- paste(unlist(x[which(note)[1]:length(x)]), collapse = " ")
       note.text <- paste0("(", str_squish(substring(note.text, first = 6)), ")")
-      drop <- c(1, 2, which(note):length(x))
+      drop <- c(1, 2, which(note)[1]:length(x))
     } else {
       note.text <- NULL
       drop <- c(1, 2)
@@ -350,6 +374,7 @@ convertTXTdictionary <- function(input) {
 
     y <- x[-drop]
 
+    # Parse individual value ranges and labels
     parseValuesLabel <- function(x) {
       z <- unlist(strsplit(x[1], "..", fixed = TRUE))
       out <- str_squish(c(z[1], ifelse(length(z) == 1, z[1], z[2]), sub(" .", "", x[2], fixed = TRUE)))
@@ -366,13 +391,10 @@ convertTXTdictionary <- function(input) {
 
   }
 
-  # For troubleshooting parseEntry()
-  #for (i in seq_along(ind)) test <- parseEntry(i)
-
-  # Parse all variables entries and assemble as data frame
+  # Parse all identified variable entries and stack into a unified data frame
   result <- map_dfr(seq_along(ind), parseEntry)
 
-  # For 'var' (variable name) column; extract only the first word (the upper case variable identifier)
+  # Clean variable identifier to retain only the leading uppercase string
   result$var <- word(result$var, start = 1, end = 1)
 
   return(result)

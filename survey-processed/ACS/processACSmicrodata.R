@@ -1,9 +1,72 @@
+# Clean and Standardize ACS PUMS Microdata Records
+#
+# PURPOSE & OVERVIEW FOR USERS:
+# The processACSmicrodata() function is an internal, non-exported maintainer utility
+# in the fusionData workflow. Its primary objective is to ingest raw American
+# Community Survey (ACS) Public Use Microdata Sample (PUMS) CSV/ZIP archives
+# for a specific survey vintage and respondent unit, transform raw coded
+# responses into clean, fully labeled variables, resolve historical structural
+# inconsistencies across vintages, impute missing values, and output standardized
+# production files.
+#
+# SURVEY VINTAGES & RESPONDENT UNITS:
+#   - 'year': Integer survey vintage (2005 onward).
+#   - 'respondent': Respondent unit, specified as "H" (Household) or "P" (Person).
+#
+# KEY PROCESSING PHASES:
+#   1. Directory Parsing & Codebook Standardizing: Locates raw Census ZIP/CSV archives
+#      and runs processACScodebook() to generate a structured data dictionary.
+#   2. SERIALNO Standardization: Converts raw Census alphanumeric SERIALNO strings
+#      into clean 32-bit integer housing unit identifiers ('hid'), tagging Group
+#      Quarters (GQ) vs. Housing Unit (HU) status via fixed prefixes.
+#   3. Financial Inflation Adjustments: Scales monetary variables (income, housing costs)
+#      using Census adjustment factors (ADJINC, ADJHSG).
+#   4. Domain & Universe Filtering: Restricts records to valid U.S. States + D.C.
+#      (dropping territories like Puerto Rico) and filters out vacant/non-sampled units.
+#   5. Label Mapping & Factor Coercion: Replaces raw integer codes with human-readable
+#      labels from the codebook, ordering ordinal factors appropriately.
+#   6. Utility & Tax Harmonization: Standardizes utility cost flags and categorizes
+#      legacy top-coded tax/value variables (e.g., TAXP -> TAXAMT).
+#   7. Missing Data Imputation: Runs fusionModel::impute() to fill non-response
+#      gaps across variables prior to downstream microdata matching.
+#   8. Output Assembly: Constructs variable labels, renames geographic variables
+#      to match census decade definitions (puma00, puma10, puma20), adds person-level
+#      IDs ('pid'), and saves binary output files (.rds dictionary and .fst microdata).
+#
+# FILE LOCATIONS & EXPECTED INPUTS:
+# Expects raw Census archives under 'survey-raw/ACS/{year}/' containing:
+#   - Dict*.txt, Dict*.csv, Dict*.pdf (Census codebook dictionary)
+#   - csv_hus.zip and csv_pus.zip (Raw microdata archives from Census Bureau)
+
+# SOURCE DATA INFORMATION:
+# Raw .csv data files downloaded from here:
+#   https://www2.census.gov/programs-surveys/acs/data/pums/
+#   Download "csv_hus.zip" and "csv_pus.zip" for nationwide microdata for given year (1-year)
+#
+# Data dictionary (.csv) files downloaded from here:
+#   https://www.census.gov/programs-surveys/acs/microdata/documentation.html
+#
+# Example: PUMS_Data_Dictionary_2019.csv
+# This is a .csv file but identified on website by an Excel icon
+#
+# For years prior to 2017, there is no .csv data dictionary available.
+# Instead, must use the .txt file (e.g. PUMSDataDict15.txt)
+#
+# The PUMA variable has the vintage specified here, depending on the year:
+#   https://www.census.gov/programs-surveys/acs/geography-acs/geography-boundaries-by-year.2020.html
+#
+# OUTPUTS GENERATED:
+# Saves two files into 'survey-processed/ACS/{year}/':
+#   - ACS_{year}_{H|P}_dictionary.rds: Data frame dictionary of processed variables.
+#   - ACS_{year}_{H|P}_processed.fst: Highly compressed, standardized microdata file.
+
 library(tidyverse)
 library(data.table)
+library(fst)
+fst::threads_fst(nr_of_threads = 1L)
 source("R/utils.R")
 
 # FUNCTION INPUTS
-# Specify file paths to dictionary and raw zip data files
 # year <- 2015
 # respondent <- "P"
 
@@ -19,7 +82,7 @@ processACSmicrodata <- function(year, respondent) {
   hus <- toupper(respondent) == "H"
 
   # Report which data is being processed
-  cat("Processing ", year, " ACS-PUMS ", ifelse(hus, "Household", "Person"), "-level microdata\n", sep = "")
+  cli::cli_h1("Processing {year} ACS-PUMS {ifelse(hus, 'Household', 'Person')}-level microdata")
 
   # Files in the associated /survey-raw directory
   raw.files <- list.files(file.path("survey-raw/ACS", year), full.names = TRUE)
@@ -40,7 +103,7 @@ processACSmicrodata <- function(year, respondent) {
   #-----
 
   # Process codebook into standard format
-  cat("Processing raw codebook data into useful format\n")
+  cli::cli_alert_info("Processing raw codebook data into useful format")
   source("survey-processed/ACS/processACScodebook.R")
   codebook <- processACScodebook(dictionary.file)
 
@@ -50,18 +113,16 @@ processACSmicrodata <- function(year, respondent) {
   wvar <- ifelse(hus, "WGTP", "PWGTP")
 
   # Unzip raw .zip file
-  cat("Un-zipping raw microdata files to temporary directory\n")
+  cli::cli_alert_info("Un-zipping raw microdata files to temporary directory")
   tdir <- tempfile()
   unzip(data.zipfile, exdir = tdir, overwrite = TRUE)
   dfiles <- list.files(path = tdir, pattern = ".csv$", full.names = TRUE)
 
   # Read PUMS .csv data files
-  cat("Reading raw microdata from disk\n")
+  cli::cli_alert_info("Reading raw microdata from disk")
   d <- dfiles %>%
-    #map_dfr(data.table::fread, colClasses = c(SERIALNO = 'character')) %>%
     map_dfr(data.table::fread) %>%
     rename_with(toupper)   # Ensure upper-case names for consistency for 'codebook'; replicate weights are sometimes lower-case in the raw data
-  #mutate(SERIALNO_original = SERIALNO)   # Retain copy of original SERIALNO for row-ordering at end
 
   # Delete temporary files
   unlink(tdir, recursive = TRUE)
@@ -71,6 +132,11 @@ processACSmicrodata <- function(year, respondent) {
   for (i in 1:ncol(d)) {
     x <- d[[i]]
     if (is.character(x)) set(d, j = i, value = na_if(x, ""))
+  }
+
+  # Manual fix for 2023 onward to rename "STATE" to "ST" for consistency with earlier vintages
+  if (year >= 2023) {
+    d <- rename(d, ST = STATE)
   }
 
   # Function to convert PUMS SERIALNO to a standardized 32-bit integer identifier
@@ -88,33 +154,27 @@ processACSmicrodata <- function(year, respondent) {
   }
 
   # Create standardized housing unit ID (hid) via cleanACSID()
+  # Note: GQ units in housing records have weight (WGTP) set to zero
   gq <- filter(codebook, grepl("group quarters population", label))
   hu <- if (hus) d$WGTP > 0 else !d[[gq$var[1]]] %in% gq$value
+  if (year == 2005) hu <- rep(TRUE, nrow(d))  # For 2005 only, there are no group quarter individuals (only housing units in the data)
   d[, SERIALNO := cleanACSID(SERIALNO, hu)]
-
-  #-------------
-
-  # Manual check against household-level processed data
-  # h <- fst::read_fst("survey-processed/ACS/2017/ACS_2017_H_processed.fst")
-  # uniqueN(h$hid)
-  # uniqueN(d$SERIALNO[hu])
-  # d[, CHECK := cleanACSID(SERIALNO, hu)]
-  # uniqueN(d$CHECK)
-  # uniqueN(d$CHECK[hu])
-  # all(h$hid %in% d$CHECK) # This needs to be true
 
   #-------------
 
   # Apply 'ADJHSG' and 'ADJINC' adjustment to appropriate variables
   # Note that this code makes no adjustments prior to 2008, as there was only a single ADJUST variable for dollar amounts
-  v.adjhsg <- filter(codebook, var %in% names(d) & adj == "ADJHSG")$var
-  v.adjinc <- filter(codebook, var %in% names(d) & adj == "ADJINC")$var
-  d <- d %>%
-    mutate_at(v.adjhsg, ~ round(.x * (ADJHSG / 1e6))) %>%
-    mutate_at(v.adjinc, ~ round(.x * (ADJINC / 1e6)))
+  if (year >= 2008) {
+    v.adjhsg <- filter(codebook, var %in% names(d) & adj == "ADJHSG")$var
+    v.adjinc <- filter(codebook, var %in% names(d) & adj == "ADJINC")$var
+    d <- d %>%
+      mutate_at(v.adjhsg, ~ round(.x * (ADJHSG / 1e6))) %>%
+      mutate_at(v.adjinc, ~ round(.x * (ADJINC / 1e6)))
+  }
 
   # If 'hus', remove group quarter observations AND vacant housing units
-  # Note that person records retain individuals in group quarters, while household records have GQ's removed because they have NA's for many variables
+  # Note that person records retain individuals in group quarters, while household records have GQ because they have NA's for many variables
+  # The person records do not include vacant housing units, by default
   # Remove any variables lacking variation (this drops ADJHSG and ADJINC)
   # Ensure observations restricted to U.S. states and D.C.
   if (hus) d <- d[WGTP > 0 & NP > 0, ]
@@ -130,7 +190,7 @@ processACSmicrodata <- function(year, respondent) {
   }
 
   # Adjusting codebook for consistency with the data/variables in 'd'
-  cat("Making codebook consistent with the microdata\n")
+  cli::cli_alert_info("Making codebook consistent with the microdata")
   codebook <- codebook %>%
     filter(var %in% names(d)) %>%
     add_count(var) %>%
@@ -145,9 +205,9 @@ processACSmicrodata <- function(year, respondent) {
   # These should be investigated manually in 'codebook' and 'd' and any corrections to codebook made below OR edits introduced in 'processACScodebook.R'
   issues <- filter(codebook, is.na(value), label == "")
   if (nrow(issues) > 0) {
-    cat("Identified potential issues in 'codebook':\n")
+    cli::cli_alert_warning("Identified potential issues in 'codebook':")
     print(issues)
-    cat("These cases will have 'label' set to NA to force imputation.\nIf this is not correct, please STOP and correct the codebook processing code\n")
+    cli::cli_alert_info("These cases will have 'label' set to NA to force imputation.\nIf this is not correct, please STOP and correct the codebook processing code")
   }
 
   # Can insert additional, manual codebook fix-ups if necessary
@@ -159,7 +219,7 @@ processACSmicrodata <- function(year, respondent) {
 
   # Assign ACS labels from codebook to the data
   # Update the values in 'd' with labels from the codebook (i.e. replace the original integer values with text)
-  cat("Assigning codebook labels to the microdata\n")
+  cli::cli_alert_info("Assigning codebook labels to the microdata")
 
   # Specify which variables should be treated as ordered factors
   # In general, we want to coerce unordered factors to ordered factors whenever feasible (there is some judgement involved)
@@ -170,7 +230,9 @@ processACSmicrodata <- function(year, respondent) {
 
   # Ordered factor variables present in the data
   ordfac <- intersect(ordered.factors, codebook$var)
-  if (length(ordfac)) cat(" -- Treating the following variables as ordered factors:\n", paste(ordfac, collapse = "\n"), "\n", sep = "")
+  if (length(ordfac)) {
+    cli::cli_alert_info("Treating the following variables as ordered factors: {.val {ordfac}}")
+  }
 
   # Only retain variables remaining in the codebook
   dvars <- c(intersect(names(d), codebook$var))
@@ -178,8 +240,9 @@ processACSmicrodata <- function(year, respondent) {
 
   # Update variable values with associated labels from 'codebook'
   # Loop through each variable in 'd', assigning labels when applicable
-  cat("Assigning labels to raw data\n")
-  pb <- txtProgressBar(max = length(dvars), style = 3)
+  cli::cli_alert_info("Assigning labels to raw data")
+
+  pb <- cli::cli_progress_bar("Applying codebook labels", total = length(dvars))
   for (i in seq_along(dvars)) {
 
     v <- dvars[i]
@@ -201,7 +264,9 @@ processACSmicrodata <- function(year, respondent) {
       num.na <- sum(is.na(x))
       x <- factor(x, levels = intersect(z, x), ordered = TRUE)
       # This is a final safety check to ensure no NA's introduced inadvertently
-      if (sum(is.na(x)) != num.na) cat(v, ": introduced", sum(is.na(x)), "NA values (subsequently imputed) due to values in raw data not being present in codebook. Should be reported to survey administrators.\n")
+      if (sum(is.na(x)) != num.na) {
+        cli::cli_alert_warning("{v}: introduced {sum(is.na(x))} NA values (subsequently imputed) due to values in raw data not being present in codebook. Should be reported to survey administrators.")
+      }
     }
 
     # Convert variable type; leaves ordered factors unchanged
@@ -225,10 +290,10 @@ processACSmicrodata <- function(year, respondent) {
     set(d, j = v, value = x)
 
     # Update progress bar
-    setTxtProgressBar(pb, i)
+    cli::cli_progress_update(id = pb)
 
   }
-  close(pb)
+  cli::cli_progress_done(id = pb)
 
   #-----
 
@@ -242,8 +307,7 @@ processACSmicrodata <- function(year, respondent) {
   if (hus) {
 
     # Adjust and modify housing-related variables
-    cat("Adjusting housing variables\n")
-    #setDT(d)
+    cli::cli_alert_info("Adjusting housing variables")
 
     # Convert categorical/factor property tax variable prior to 2018 (TAXP) to numeric value (topcoded at $10,000)
     # See here: https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMS_Data_Dictionary_2017.pdf
@@ -260,10 +324,9 @@ processACSmicrodata <- function(year, respondent) {
       set(d, j = "TAXAMT", value = as.integer(v))
       set(d, j = "TAXP", value = NULL)
       codebook$var <- replace(codebook$var, codebook$var == "TAXP", "TAXAMT")
-      #d$TAXP <- d$TAXAMT <- as.integer(v)  # Adds temporary 'TAXAMT' variable for use in housing-related code below
     }
 
-    # Convert categorical/factor property value variable prior to 2008 (VAL) to numeric value (topcoded at $1000000)
+    # Convert categorical/factor property value variable prior to 2008 (VAL) to numeric value (topcoded at $1,000,000)
     # See here: https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMSDataDict07.pdf
     # The factor levels and topcode value used for VAL did not change from 2005-2007
     if (year < 2008) {
@@ -279,7 +342,6 @@ processACSmicrodata <- function(year, respondent) {
       set(d, j = "VALP", value = as.integer(v))
       set(d, j = "VAL", value = NULL)
       codebook$var <- replace(codebook$var, codebook$var == "VAL", "VALP")
-      #d$VAL <- d$VALP <- as.integer(v)  # Adds temporary 'VALP' variable for use in housing-related code below
     }
 
     # If property tax (TAXAMT) or home insurance (INSP) is zero, but included in mortgage payment, set to NA so it is imputed
@@ -294,61 +356,6 @@ processACSmicrodata <- function(year, respondent) {
 
   #---------------------------------------
 
-  # NOT USED: MOVE ELSEWHERE
-  # if (hus) {
-  #
-  #   cat("Creating custom mortgage payment variable\n")
-  #
-  #   # Calculate household annual mortgage payment (mortgage) with property taxes and insurance excluded
-  #   # Determine if the annual property tax and insurance amounts are valid or need to be imputed (i.e. set to NA)
-  #   # Set property tax (TAXAMT) and home insurance (INSP) to NA if expenditure is included in mortgage payment
-  #   # Total mortgage payment is sum of MRGP (first mortgage) and SMP (all second and junior mortgages and home equity loans)
-  #   # Variables MRGI and MRGT indicate if first mortgage payment includes insurance (MRGI) or property taxes (MRGT)
-  #   # Assume that property taxes can be zero, but insurance payment must be positive if the property is mortgaged
-  #   d <- d %>%
-  #     mutate(
-  #       mortgage = 12 * (MRGP + SMP),  # Convert monthly mortgage payments to annual
-  #       mortgage = ifelse((MRGP > 0 & MRGP < 10) | (SMP > 0 & SMP < 10), NA, mortgage), # Sometimes MRGP = 4 or SMP = 4 is present in raw data, but this seems incorrect (set NA to impute)
-  #       mortgage = ifelse(MRGT == "Yes, taxes included in payment", mortgage - TAXAMT, mortgage),
-  #       mortgage = ifelse(MRGI == "Yes, insurance included in payment", mortgage - INSP, mortgage),
-  #       mortgage = ifelse(TEN == "Owned free and clear", 0, mortgage),
-  #       mortgage = ifelse(grepl("Owned with mortgage", TEN) & mortgage <= 0, NA, mortgage), # Any remaining invalid 'mortgage' values
-  #       TAXAMT = ifelse(TAXAMT == 0 & MRGT == "Yes, taxes included in payment", NA, TAXAMT),
-  #       INSP = ifelse(INSP == 0 & (MRGI == "Yes, insurance included in payment" | grepl("Owned with mortgage", TEN)), NA, INSP)
-  #     )
-  #
-  # }
-
-  #---------------------------------------
-
-  # NOT USED: MOVE ELSEWHERE
-  # if (hus) {
-  #
-  #   # Create annual "rental value" (rentval) variable to be imputed for owner-occupied units
-  #   # Create "property value" (propval) variable to be imputed for renter-occupied units
-  #   cat("Creating custom rental value and property value variables\n")
-  #
-  #   # Rental equivalence is estimated using rental values available for rented units and then applying an "owner premium" post-imputation (code below)
-  #   # The owner premium is based on owner's self-reported property values, using the technique described here:
-  #   # https://www.bea.gov/system/files/2019-11/improving-measures-of-national-and-regional-housing-services-us-accounts.pdf
-  #   # RNTP (not used) is the "contract rent"; the rent actually paid by the tenant (possibly including utilities)
-  #   # The GRNTP variable is "gross rent" and includes "estimated utilities" (https://www.census.gov/quickfacts/fact/note/US/HSG860221)
-  #   # From Census: "Gross rent is intended to eliminate differentials that result from varying practices with respect to the inclusion of utilities and fuels as part of the rental payment."
-  #   # Reported GRNTP values <$150/month set to NA and imputed (~0.005 percentile nationally)
-  #   # Reported VALP values <$1000 set to NA and imputed (~0.005 percentile nationally for mobile homes)
-  #   # NOTE: This means the resulting rental equivalence is the approximate rent inclusive of utilities
-  #   d <- d %>%
-  #     mutate(rentval = ifelse(grepl("Rented", TEN) & GRNTP >= 150, 12 * GRNTP, NA),
-  #            propval = ifelse(grepl("Owned", TEN) & VALP >= 1000, VALP, NA))
-  #
-  #   # If necessary, remove temporary TAXAMT and VALP variables
-  #   if (year < 2018) d$TAXAMT <- NULL
-  #   if (year < 2008) d$VALP <- NULL
-  #
-  # }
-
-  #---------------------------------------
-
   if (hus) {
 
     # If prior to survey year 2018, add utility fuel cost flag variables to microdata
@@ -360,7 +367,7 @@ processACSmicrodata <- function(year, respondent) {
 
     if (year < 2018) {
 
-      cat("Adding utility cost flag variables\n")
+      cli::cli_alert_info("Adding utility cost flag variables")
       stopifnot(all(c("ELEP", "FULP", "GASP", "WATP") %in% names(d)))
 
       d$ELEFP <- c("Included in rent or in condo fee", "No charge or electricity not used")[d$ELEP]
@@ -393,146 +400,22 @@ processACSmicrodata <- function(year, respondent) {
     na.count <- colSums(is.na(d))
     na.count <- na.count[na.count > 0]
     na.count <- na.count / nrow(d)  # Proportion of values that are missing
-    cat("Percentage of missing values:\n")
+    cli::cli_alert_info("Percentage of missing values:")
     print(round(na.count * 100, 2))
 
-    # # Get PUMA-level MCDC spatial predictor variables
-    # mcdc <- fst::read_fst("geo-processed/geo_predictors.fst") %>%
-    #   filter(vintage == year) %>%
-    #   select(state, puma10, starts_with("mcdc..")) %>%
-    #   rename(ST = state, PUMA = puma10)
-    #
-    # # Merge MCDC spatial predictors
-    # d <- left_join(d, mcdc, by = join_by(ST, PUMA))
-
-    cat("Imputing missing values\n")
-
-    # ignore <- setdiff(names(d), c(wvar, names(mcdc), "DIVISION", "REGION", "NP", "ACR", "BLD", "FS", "HFL", "HHL", "HHT", "HUPAC", "NOC", "BDSP", "BDS", "RMSP", "RMS", "TEN", "VEH", "YBL", "YRBLT", "HINCP", "FES", "WIF", "R18", "R65", "HHLDRAGEP", "HHLDRRAC1P"))
-    # ignore <- c(ignore, "PUMA")  # Ignore PUMA factor variable
-    # rm(mcdc)
+    cli::cli_alert_info("Imputing missing values")
 
     # Use impute() to impute missing values in 'd'
     ignore <- names(select(d, SERIALNO, PUMA, starts_with("WGTP"), starts_with("PWGTP")))
     d <- fusionModel::impute(d, weight = wvar, ignore = ignore)
 
-    # Remove MCDC variables
-    #d <- select(d, -starts_with("mcdc.."))
-
   }
-
-  #---------------------------------------
-
-  # NOT USED: MOVE ELSEWHERE
-  # if (hus) {
-  #
-  #   # After imputation is complete:
-  #
-  #   # Update the MRGP and SMP variables so they correctly sum to 'mortgage'
-  #   # This is necessary in case some of the 'mortgage' values were imputed above
-  #   # d <- d %>%
-  #   #   mutate(SMP = round(mortgage * smp_share),
-  #   #          MRGP = mortgage - SMP)
-  #
-  #   # Apply owner premium for imputed rental values
-  #   # Apply renter discount for imputed property values
-  #   cat("Adjusting imputed rental and property values\n")
-  #
-  #   # The function below applies an "owner premium" adjustment to initial rental equivalence based on imputation of observed contract rents
-  #   # The owner premium is based on owner's self-reported property values, using the BEA technique described here:
-  #   # https://www.bea.gov/system/files/2019-11/improving-measures-of-national-and-regional-housing-services-us-accounts.pdf
-  #   # Page 6: "If the house value is exactly equal to the stratified median value of houses, the owner premium is
-  #   #  15 percent. If the house value is less than the stratified median value, the premium decreases
-  #   #  linearly to a minimum of 5 percent. If the house value is greater than the stratified median value,
-  #   #  the premium increases linearly."
-  #
-  #   # Post-imputation input variables
-  #   rentval <- d$rentval
-  #   propval <- d$propval
-  #   tenure <- d$TEN
-  #   state <- d$ST
-  #   structure <- d$BLD
-  #   bedrooms <- if (year < 2008) d$BDS else d$BDSP  # Use 'BDS" factor variable prior to 2008
-  #   weight <- d$WGTP
-  #
-  #   # Function to clip/winsorize number of bedrooms
-  #   clipFun <- function(x, cumprop = 0.9) {
-  #     p <- cumsum(table(x) / length(x))
-  #     i <- max(which(p <= cumprop))
-  #     x[x > i] <- i
-  #     return(x)
-  #   }
-  #
-  #   # Convert 'bedrooms' to 5-value integer, regardless of whether original variable is categorical (BDS) or continuous (BDSP)
-  #   if (is.factor(bedrooms)) bedrooms <- as.integer(bedrooms) - 1
-  #   bedrooms <- as.integer(cut(bedrooms, breaks = c(-Inf, 1:4, Inf)))
-  #
-  #   # Prepare input data set; create state-level "Other" category for infrequent 'structure' and 'bedrooms' values
-  #   # All mobile home units are assigned to a single stratum, regardless of number of bedrooms
-  #   dset <- data.frame(rentval, propval, tenure, state, structure, bedrooms, weight) %>%
-  #     mutate(owned = grepl("Owned", tenure), # Is the housing unit owned?
-  #            structure = as.character(structure),
-  #            structure = ifelse(grepl("One-family", structure), "Single", structure),
-  #            structure = ifelse(grepl("Mobile", structure) | grepl("Boat", structure), "Mobile", structure),
-  #            structure = ifelse(!structure %in% c("Single", "Mobile"), "Multi", structure)) %>%
-  #     group_by(state) %>%
-  #     mutate(bedrooms = ifelse(structure == "Mobile", 1L, clipFun(bedrooms))) %>%
-  #     ungroup()
-  #
-  #   # Safety check on row ordering
-  #   stopifnot(all.equal(rentval, dset$rentval))
-  #
-  #   # Calculate median property value of owner-occupied housing units, by state-structure-bedrooms stratum
-  #   # Used to adjust the rental value of owner-occupied units upward
-  #   strata.propval <- dset %>%
-  #     filter(owned) %>% # Restrict to owned housing units
-  #     group_by(state, structure, bedrooms) %>%
-  #     summarize(median_propval = matrixStats::weightedMedian(propval, weight), .groups = "drop")
-  #
-  #   # Used to adjust the property value of renter-occupied units downward
-  #   strata.rentval <- dset %>%
-  #     filter(!owned) %>% # Restrict to owned housing units
-  #     group_by(state, structure, bedrooms) %>%
-  #     summarize(median_rentval = matrixStats::weightedMedian(rentval, weight), .groups = "drop")
-  #
-  #   #---
-  #
-  #   cat(" -- Applying owner premium for imputed rental value\n")
-  #   adj.rentval <- dset %>%
-  #     left_join(strata.propval, by = c("state", "structure", "bedrooms")) %>%
-  #     mutate(r = ifelse(owned, propval / median_propval, NA),
-  #            adj = ifelse(r <= 0.5, 1.05, ifelse(r > 1, 1 + 0.15 + 0.3 * (r - 1), 1 + 0.05 + 0.2 * (r - 0.5))),
-  #            adj = ifelse(owned, adj, 1),  # If housing unit is not owner, set 'adj' for rental value to 1 (i.e. renter-occupied unit)
-  #            rentval = rentval * adj)
-  #
-  #   # Update 'rentval' with adjusted values
-  #   d$rentval <- round(adj.rentval$rentval)
-  #
-  #   # Confirmation of plausible adjustment values
-  #   #summary(adj.rentval$adj[adj.rentval$owned])
-  #
-  #   #---
-  #
-  #   cat(" -- Applying renter discount for imputed property value\n")
-  #   adj.propval <- dset %>%
-  #     left_join(strata.rentval, by = c("state", "structure", "bedrooms")) %>%
-  #     mutate(r = ifelse(owned, NA, median_rentval / rentval),
-  #            adj = ifelse(r <= 0.5, 1.05, ifelse(r > 1, 1 + 0.15 + 0.3 * (r - 1), 1 + 0.05 + 0.2 * (r - 0.5))),
-  #            adj = ifelse(owned, 1, 1 / adj),   # If housing unit is owned, set 'adj' to 1 (i.e. owner-occupied unit)
-  #            propval = pmax(1000, propval * adj))  # Enforce minimum of $1,000
-  #
-  #   # Update 'propval' with adjusted values
-  #   d$propval <- round(adj.propval$propval)
-  #
-  #   # Confirmation of plausible adjustment values
-  #   #summary(adj.propval$adj[!adj.propval$owned])
-  #
-  # }
 
   #---------------------------------------
 
   # Assemble output
   # NOTE: var_label assignment is done after any manipulation of values/classes, because labels can be lost in the process
-  cat("Assembling final output\n")
+  cli::cli_alert_info("Assembling final output")
   d <- d %>%
     arrange(SERIALNO) %>%
     mutate_if(is.factor, safeCharacters) %>%
@@ -555,7 +438,7 @@ processACSmicrodata <- function(year, respondent) {
 
   # For person records, add 'pid' variable identifying each person within household (reference person = 1)
   if (!hus) {
-    cat("Adding person identifier (pid) variable\n")
+    cli::cli_alert_info("Adding person identifier (pid) variable")
     rvar <- tolower(filter(codebook, label == "Reference person")$var)  # Name of the household member relationship variable
     d <- addPID(data = d, hid = "hid", refvar = rvar)
   }
@@ -563,7 +446,7 @@ processACSmicrodata <- function(year, respondent) {
   #---------------------------------------
 
   # Add manual/custom variable definitions/labels for modified, undefined, or ambiguous variables
-  cat("Assigning custom variable definitions\n")
+  cli::cli_alert_info("Assigning custom variable definitions")
 
   # Manual variable definitions; these need not be present in the data (silently ignored if not present)
   manual.defs <- list(
@@ -574,9 +457,6 @@ processACSmicrodata <- function(year, respondent) {
     puma00 = "Public use microdata area code based on 2000 census definition",
     puma10 = "Public use microdata area code based on 2010 census definition",
     puma20 = "Public use microdata area code based on 2020 census definition",
-    # mortgage = "Annual mortgage payment, principal and interest",
-    # rentval = "Annual rental value including utilities, imputed for owner-occupied units",
-    # propval = "Property value reported by owner, imputed for renter-occupied units",
     elefp = "Electricity cost flag variable",
     fulfp = "Fuel cost flag variable",
     gasfp = "Gas cost flag variable",
@@ -593,10 +473,11 @@ processACSmicrodata <- function(year, respondent) {
   # Identify which variables have definitions/labels and prepare to drop those that are not defined
   vlabs <- labelled::var_label(d)
   vkeep <- names(which(lengths(vlabs) > 0))
-  drop <- setdiff(names(d), vkeep)  # Variables to be dropped due to absence of variable description (TO DO: Print to console?)
-  if (length(drop)) cat("Removing the following undefined variable(s):\n", paste(drop, collapse = "\n"), "\n", sep = "")
+  drop <- setdiff(names(d), vkeep)  # Variables to be dropped due to absence of variable description
+  if (length(drop)) {
+    cli::cli_alert_warning("Removing the following undefined variable(s): {.val {drop}}")
+  }
 
-  #---------------------------------------
   #---------------------------------------
 
   # Retain desired variables and order columns
@@ -605,25 +486,24 @@ processACSmicrodata <- function(year, respondent) {
     select(year, hid, any_of('pid'), weight, any_of(c('region', 'division')), state, starts_with('puma'), everything(), -starts_with('rep_'), starts_with('rep_'))  # Reorder columns with replicate weights at the end
 
   # Create dictionary
-  cat("Creating dictionary\n")
+  cli::cli_alert_info("Creating dictionary")
   dictionary <- fusionData::createDictionary(data = d,
                                              survey = "ACS",
                                              vintage = year,
                                              respondent = ifelse(hus, "H", "P"))
 
   # Save dictionary to disk (.rds)
-  cat("Saving dictionary to disk\n")
+  cli::cli_alert_info("Saving dictionary to disk")
   fname <- paste0("ACS_", year, ifelse(hus, "_H", "_P"), "_dictionary.rds")
   saveRDS(object = dictionary,
           file = file.path("survey-processed/ACS", year, fname))
 
   # Save processed microdata to disk (.fst)
-  cat("Saving processed microdata to disk\n")
-  fst::threads_fst(nr_of_threads = 2L)
+  cli::cli_alert_info("Saving processed microdata to disk")
   fst::write_fst(x = d,
                  path = file.path("survey-processed/ACS", year, sub("dictionary.rds", "processed.fst", fname)),
                  compress = 100)
 
-  return(dictionary)
+  cli::cli_alert_success("Processing finished for {year} ACS {ifelse(hus, 'Household', 'Person')}-level microdata.")
 
 }
