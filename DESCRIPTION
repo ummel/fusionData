@@ -16,25 +16,26 @@ Roxygen: list(markdown = TRUE)
 Depends: 
     R (>= 3.5.0)
 Imports: 
+    collapse,
+    data.table,
     devtools,
-    labelled,
-    pbapply,
-    spatstat.geom,
-    gower,
+    dplyr,
     DT,
+    fst,
+    gower,
     gt,
+    labelled,
+    matrixStats,
+    pbapply,
+    purrr,
     rhandsontable,
+    shiny,
     shinyjs,
     shinyWidgets,
-    matrixStats,
-    dplyr,
-    purrr,
+    spatstat.geom,
     stringr,
-    tibble,
-    fst,
-    shiny,
-    data.table,
     styler,
+    tibble,
     tidyr
 URL: https://ummel.github.io/fusionData/
 Config/roxygen2/version: 8.0.0
