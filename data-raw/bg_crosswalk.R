@@ -49,7 +49,7 @@ pop2020 <- map(states, \(st) {
 # Read zipped NHGIS crosswalk CSV directly using high-performance `data.table::fread`
 xwalk <- data.table::fread("data-raw/source_data/nhgis_bg2020_bg2010.csv.zip") |>
 
-  # Format geographic identifiers as zero-padded 12-digit GEOID strings (SSCCCTTTTTTB)
+  # Format geographic identifiers as zero-padded 12-digit GEOID strings
   mutate(
     bg20 = str_pad(bg2020ge, width = 12, pad = "0"),
     bg10 = str_pad(bg2010ge, width = 12, pad = "0"),
