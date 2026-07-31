@@ -2,27 +2,71 @@
 % Please edit documentation in R/conveyHarmony.R
 \name{conveyHarmony}
 \alias{conveyHarmony}
-\title{Convey an existing harmony file to new survey(s)}
+\title{Convey Existing Survey Variable Harmonies to New Survey Pairs}
 \usage{
 conveyHarmony(from, to, overwrite = FALSE)
 }
 \arguments{
-\item{from}{Character. Name of the .R harmony file with existing harmonies of interest (e.g. "RECS_2015__ACS_2019.R")}
+\item{from}{Character. File name of an existing R harmony specification file
+located in \verb{harmony/harmonies/} (e.g., \code{"RECS_2015__ACS_2019.R"}).}
 
-\item{to}{Character. Name of desired new harmony file (e.g. "RECS_2015__ACS_2015.R").}
+\item{to}{Character. File name for the target harmony specification file to be
+created in \verb{harmony/harmonies/} (e.g., \code{"RECS_2015__ACS_2015.R"}).}
 
-\item{overwrite}{Logical. If \code{to} already exists, should it be overwritten? Default is \code{FALSE}.}
+\item{overwrite}{Logical. If \code{TRUE}, overwrites \code{to} if it already exists on disk.
+Defaults to \code{FALSE}.}
 }
 \value{
-The \code{to} harmony file is written to disk (at \code{/harmony/harmonies}), if valid harmonies are detected. The list object with retained harmonies is written to disk using internal function at \code{harmony/R/harmony2dotR.R}. Possible message printed to console indicating harmonies that are not strictly valid but should be explored manually via \link{harmony} app.
+Invisibly returns \code{NULL}. As a side effect, writes a new R script containing
+the retained harmony list object to \verb{harmony/harmonies/[to]} if at least one valid
+harmony is identified.
 }
 \description{
-Attempts to convey harmonies in an existing harmony file to a new harmony file for different survey(s). This is useful when introducing a new vintage of an existing survey, and some of the already-specified harmonies may be valid for the new vintage.
+Transfers variable harmonization specifications from an existing harmony file
+(\code{from}) to a new target survey pair (\code{to}). This function accelerates the
+harmonization workflow when introducing a new vintage of an existing survey
+by re-using previously defined, validated variable mappings.
 }
 \details{
-For a harmony in \code{from} to be considered valid for \code{to}, it must match exactly on variable names and all factor levels (if present). User should always manually check the \code{to} .R file before using it for analysis!
+A harmony mapping in \code{from} is considered \strong{valid} and automatically conveyed
+to \code{to} only if:
+\enumerate{
+\item Both donor and recipient variables exist in the dictionary metadata for the
+target survey pair.
+\item The expected factor level definitions in the source harmony match the target
+survey dictionary values exactly (for categorical variables).
 }
-\examples{
-conveyHarmony(from = "RECS_2015__ACS_2019.R", to = "RECS_2015__ACS_2015.R")
 
+If variables exist in the target surveys but their factor level structures differ
+(e.g., revised response categories in a newer survey vintage), \code{conveyHarmony()}
+excludes the mapping from the new file and outputs a console message identifying
+candidates for manual re-harmonization via the \code{harmony} Shiny application.
+}
+\section{Directory Requirement}{
+
+\strong{Important:} This function must be executed with your R working directory set to
+the root of the local \code{fusionData} repository (e.g., \code{setwd("path/to/fusionData")}).
+It reads from \verb{harmony/harmonies/} and sources \code{harmony/R/harmony2dotR.R}.
+}
+
+\section{Workflow Note}{
+
+While \code{conveyHarmony()} automates the transfer of identical mappings, \strong{users
+should always manually inspect and verify the resulting \code{.R} file in \verb{harmony/harmonies/}}
+or load it in the \code{harmony} Shiny application.
+}
+
+\examples{
+\dontrun{
+# Ensure working directory is set to the fusionData repository root
+conveyHarmony(
+  from = "RECS_2015__ACS_2019.R",
+  to = "RECS_2015__ACS_2015.R",
+  overwrite = TRUE
+)
+}
+
+}
+\seealso{
+\code{\link[fusionData]{dictionary}}
 }

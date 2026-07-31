@@ -1,8 +1,29 @@
-# Function to "clean" a numeric vector by reducing to significant digits and converting to integer, if possible
-# If the input can be immediately coerced to integer, it is and returned as such
-# Otherwise, the number of digits is reduced and integer coercion attempted one final time
+# Helper utility functions for internal package use within `fusionData`.
+# These unexported utilities focus on data type conversion, numeric precision,
+# spatial/survey variable transformations, and basic data integrity checks.
+
+
+# Reduced Precision & Integer Coercion ------------------------------------
+
+#' Reduce numeric precision and coerce to integer if possible
+#'
+#' Used across data harmonization steps to minimize memory overhead and storage size.
+#' First attempts a direct integer conversion. If non-integers are present, it rounds
+#' values to significant digits within a specified relative tolerance (`tol`) and
+#' re-attempts integer coercion if the proportion of integer-like values exceeds `threshold`.
+#'
+#' @param x Numeric vector.
+#' @param tol Relative numerical tolerance passed to `signifDigits()`. Default is 0.001.
+#' @param minimize Logical. If `TRUE`, attempts Z-score transformation before rounding
+#'   to see if it yields fewer unique values.
+#' @param threshold Numeric fraction (0 to 1). Proportion of values that must be integer-like
+#'   to trigger integer conversion.
+#'
+#' @return Numeric vector (coerced to integer class if criteria are met).
+#'
+#' @noRd
 cleanNumeric <- function(x, tol = 0.001, minimize = FALSE, threshold = 0.999) {
-  x <- convertInteger(x, threshold = 1)  # This coerces to integer, if possible
+  x <- convertInteger(x, threshold = 1)  # Coerces immediately to integer if entirely integer-like
   if (is.double(x)) {
     x <- signifDigits(x, tol = tol, minimize = minimize)
     x <- convertInteger(x, threshold = threshold)
@@ -10,11 +31,20 @@ cleanNumeric <- function(x, tol = 0.001, minimize = FALSE, threshold = 0.999) {
   return(x)
 }
 
-#------------------
 
-# Function to return numeric vector rounded to reasonable significant digits
-# Returns a significant digit-ized result that is within 'tol' (percent) of the original value for all observations
-# If minimize = TRUE, function will try converting x to Z-scores first and 'tol' assessed relative to the Z-scores, then return result that minimizes number of unique values
+#' Round numeric vector to significant digits based on relative tolerance
+#'
+#' Ensures all transformed observations stay within `tol` (as a relative percentage)
+#' of their original values. Useful for lossy numeric compression before storing microdata.
+#'
+#' @param x Numeric vector.
+#' @param tol Relative error tolerance threshold (e.g., 0.001 = 0.1% max relative change).
+#' @param minimize Logical. If `TRUE`, compares direct rounding against Z-score rounded
+#'   values and returns whichever representation yields fewer unique values.
+#'
+#' @return Numeric vector rounded to significant digits.
+#'
+#' @noRd
 signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 
   intFUN <- function(x, orig = x) {
@@ -43,11 +73,20 @@ signifDigits <- function(x, tol = 0.001, minimize = FALSE) {
 
 }
 
-#------------------
 
-# Function to convert a numeric vector to integer, if possible
-# Checks if maximum value is coercible to 32-bit integer; see ?integer "Details"
-# If the fraction of integer-coercible values exceeds 'threshold', then non-integer values are coerced to integer
+#' Coerce numeric vector to integer class if safe
+#'
+#' Checks whether values are within 32-bit integer limits (`.Machine$integer.max`)
+#' and whether the proportion of whole numbers meets or exceeds `threshold`.
+#' Converts `allNA` vectors to logical.
+#'
+#' @param x Numeric vector.
+#' @param threshold Numeric fraction (0 to 1). Minimum proportion of whole numbers required
+#'   to convert entire vector to integer. Default is 0.99.
+#'
+#' @return Vector converted to integer, logical (if all NA), or unchanged numeric.
+#'
+#' @noRd
 convertInteger <- function(x, threshold = 0.99) {
   if (collapse::allNA(x)) {
     x <- as.logical(x)
@@ -63,32 +102,35 @@ convertInteger <- function(x, threshold = 0.99) {
   return(x)
 }
 
-#-------------------
 
-# Weighted quantile function
-# Note that NA's are automatically removed
-# n <- 1e3
-# x <- sample(0:n, n)
-# w <- sample(1:n, n)
-# microbenchmark(median(rep(x, w)), unit = "us")
-# microbenchmark(weightedQuantile(x, w), unit = "us")
-# all(median(rep(x, w)) == weightedQuantile(x, w))
+# Weighted Calculations & Scaling ---------------------------------------
 
+#' Weighted quantile estimation using step function empirical CDF
+#'
+#' Fast calculation of weighted sample quantiles (default is median).
+#' Automatically removes NA values. Useful for survey data with observation weights (e.g., ACS).
+#'
+#' @param x Numeric vector of values.
+#' @param w Numeric vector of sample weights. Defaults to unweighted (all 1s).
+#' @param p Numeric vector of probabilities in `[0, 1]`. Default is 0.5 (median).
+#'
+#' @return Vector of estimated quantiles corresponding to `p`.
+#'
+#' @noRd
 weightedQuantile <- function(x, w, p = 0.5) {
 
   if (missing(w)) w <- rep.int(1L, length(x))
 
   # Order the values and weights accordingly
-  ord <- order(x, na.last = NA)  # This removes NA's from 'x'
+  ord <- order(x, na.last = NA)  # Removes NA's from 'x'
   x <- x[ord]
   w <- w[ord]
 
-  # Check that weights are positive
-  w <- w / mean(w)  # To avoid possible integer overflow
+  # Normalize weights to avoid potential integer overflow
+  w <- w / mean(w)
   stopifnot(all(w > 0))
 
-  # Extract the quantile values for each percentile in 'p'
-  # This uses a stepfun to extract 'x' for the precise values of 'p'
+  # Extract quantile values using stepfun over the cumulative weight distribution
   if (length(x) > 1) {
     out <- stepfun(x = (cumsum(w) / sum(w))[-length(x)], y = x)(p)
   } else {
@@ -99,119 +141,22 @@ weightedQuantile <- function(x, w, p = 0.5) {
 
 }
 
-# Alternative using 'spatstat.geom', but looks slower (perhaps more precise)
-# weightedQuantile <- function(x, w, probs = 0.5) {
-#   cdf <- spatstat.geom::ewcdf(x = x, weights = w, normalise = TRUE)
-#   spatstat.geom::quantile.ewcdf(x = cdf, names = FALSE, probs = probs)
-# }
 
-#-------------------
-
-# Better variable abbreviation; used within summarizeSpatialDataset()
-betterAbbreviate <- function(x) {
-  y <- str_extract_all(x, "[a-zA-Z0-9]*")
-  y <- str_squish(map_chr(y, paste, collapse = " "))
-  y <- str_to_title(paste0(y, rep_len(letters, length(y))))
-  abb <- tolower(abbreviate(y, named = FALSE))
-  stopifnot(length(unique(abb)) == length(abb))
-  return(abb)
-}
-
-#-------------------
-
-# Function returns TRUE if 'x' has only one non-NA value OR is entirely NA
-novary <- function(x) data.table::uniqueN(x, na.rm = TRUE) <= 1
-
-#-------------------
-
-# Function tries to make sure the returned factor is only ASCII-compliant characters
-# This is mainly for future safety to prevent cross-platform of database issues with non-ASCII characters
-safeCharacters <- function(x) {
-
-  stopifnot(is.factor(x) | is.character(x))
-  y <- y0 <- if (is.factor(x)) levels(x) else unique(as.character(x))
-
-  # This code chunk attempts to ensure that the factor levels are all ASCII-compliant
-  # If it detects non-ASCII strings, it attempts to convert using stringi::stri_trans_general()
-  # However, this conversion may not work as-is on a Windows machine (see here: https://github.com/gagolews/stringi/issues/269)
-  enc <- stringi::stri_enc_mark(y)
-  fix <- which(!is.na(y) & enc != "ASCII")
-  y[fix] <- stringi::stri_trans_general(y[fix], "Latin-ASCII")
-  ascii <- stringi::stri_enc_mark(y) == "ASCII"  # Attempt to confirm that characters are all ASCII
-  if (any(!ascii, na.rm = TRUE)) stop("Couldn't fix non-ASCII character(s) for strings:\n", paste(na.omit(unique(y[!ascii])), collapse = "\n"))
-
-  # General text fix-ups for obvious/common errors
-  y <- gsub('"', "", y, fixed = TRUE)  # Replace double-quote with blank
-  y <- gsub(" ,", ",", y, fixed = TRUE)  # Remove space ahead of a comma
-  y <- str_squish(y)
-
-  if (identical(y, y0)) {
-    x
-  } else {
-    if (is.factor(x)) {
-      factor(y[as.integer(x)], levels = y, ordered = is.ordered(x))
-    } else {
-      y[match(x, y0)]
-    }
-  }
-
-}
-
-#------------------
-
-# # Function to return weighted percentiles of 'x'; used by harmonize()
-# # Percentiles are returned only if number of unique 'x' is at least 'min.unique'
-# # This leaves variables like age or household size unaffected (original 'x' returned)
-# # If the proportion of zero values is >= min.zero, then zeros are preserved in output
-# # If zeros are preserved, then negative values are assigned percentiles ranging from 0 to -1, which the most negative value receiving -1
-# # The logic here is that respondents tend to be accurate about -/0/+ classification of the response, but we want percentiles to capture the relative ranking within these classes
-#
-# convertPercentile <- function(x, w = NULL, min.unique = 100, min.zero = 0.05) {
-#
-#   i <- which(!is.na(x))
-#
-#   if (is.numeric(x) & length(unique(x[i])) >= min.unique) {
-#
-#     if (is.null(w)) w <- rep(1, length(x))
-#
-#     zeros <- sum(x[i] == 0) / length(i) >= min.zero
-#     k <- if (zeros) i[x[i] != 0] else i
-#
-#     q <- if (zeros & any(x[k] > 0)) k[x[k] > 0] else k
-#     cdf <- spatstat.geom::ewcdf(x[q], w[q])
-#     x[q] <- cdf(x[q])
-#
-#     # Negative values - only relevant if zeros = TRUE
-#     if (zeros & any(x[k] < 0)) {
-#       q <- k[x[k] < 0]
-#       cdf <- spatstat.geom::ewcdf(-x[q], w[q])
-#       x[q] <- -cdf(-x[q])
-#     }
-#
-#     # Reduce precision of output
-#     x <- cleanNumeric(x, tol = 0.001)
-#
-#   }
-#
-#   return(x)
-#
-# }
-
-#-------------------
-
-# Function to return a robust scaled measure of a numeric/continuus variable; used with assemble()
-# Scaled values are returned only if number of unique 'x' is at least 'min.unique'
-# This leaves variables like age or household size unaffected (original 'x' returned)
-# Original zeros are preserved in the output, with all other values converted to a robust, weighted Z-score: i.e. (x - median(x)) / mad(x)
-# A final adjustment ensures that the (weighted) median of the scaled, non-zero output equals 1
-# This effectively assumes that conceptually similar variables with different measurement scales are sampling the same median household and zero-response households but could have varying scales otherwise
-
-# Example
-# cei <- read_fst("survey-processed/CEX/CEI/CEI_2015-2019_H_processed.fst", columns = c("weight", "fincbtxm", "mrtgip"))
-# acs <- read_fst("survey-processed/ACS/2019/ACS_2019_H_processed.fst", columns = c("weight", "hincp", "mortgage"))
-# test1 <- convert2scaled(cei$mrtgip, cei$weight)
-# test2 <- convert2scaled(acs$mortgage, acs$weight)
-
+#' Robust weighted scaling for continuous survey variables
+#'
+#' Used in `assemble()` to normalize continuous variables (like household income or mortgage payments)
+#' across different survey datasets. Calculates robust Z-scores using median and MAD:
+#' `(x - median) / mad`. Preserves original zeros and scales non-zero medians to 1.
+#' Only transforms variables with at least `min.unique` unique non-zero values.
+#'
+#' @param x Numeric vector.
+#' @param w Numeric vector of survey weights.
+#' @param min.unique Minimum number of unique values required to perform scaling. Default is 100.
+#' @param precision Number of significant digits for output rounding. Default is 3.
+#'
+#' @return Scaled numeric vector, or original vector if `uniqueN(x) < min.unique`.
+#'
+#' @noRd
 convert2scaled <- function(x, w, min.unique = 100, precision = 3) {
   if (is.numeric(x) & data.table::uniqueN(x) >= min.unique) {
     i <- x != 0
@@ -227,111 +172,20 @@ convert2scaled <- function(x, w, min.unique = 100, precision = 3) {
   return(x)
 }
 
-#-------------------
 
-# Function returning summary string for numeric variable
-numFormat <- function(x, w = NULL) {
-  if (is.null(w)) w <- rep(1, length(x))
-  paste(
-    c("Min:", "Median:", " Mean:", "Max:"),
-    cleanNumeric(c(min(x, na.rm = TRUE), matrixStats::weightedMedian(x, w), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
-    collapse = ", ")
-}
-
-#-------------------
-
-# Function returning summary string for a categorical variable (character, factor or logical)
-catFormat <- function(x) {
-  stopifnot(!is.numeric(x))
-  if (is.character(x)) x <- factor(x)
-  if (is.logical(x)) "[TRUE], [FALSE]" else paste(paste0("[", levels(x), "]"), collapse = ", ")
-}
-
-#-------------------
-
-# Function to add a valid "pid" (person ID) column to person-level microdata
-# This ensures that 'pid' is 1:n() for each household AND that the reference person is pid = 1, as expected by harmonize()
-# hid: Variable indicating the unique household identifiers
-# refvaf: Variable indicatin each person's relationship to reference person; reference person label must be the FIRST level
-addPID <- function(data, hid, refvar) {
-  stopifnot(is.factor(data[[refvar]]))
-  cat("Reference person level:", levels(data[[refvar]])[1], "\n")
-  data %>%
-    arrange(across(all_of(c(hid, refvar)))) %>%
-    group_by(across(all_of(hid))) %>%
-    mutate(pid = 1L:n()) %>%
-    ungroup() %>%
-    labelled::set_variable_labels(.labels = list(pid = "Person identifier within household"))
-}
-
-#-------------------
-
-# Function to treat integer and numeric as equal when checking for identical classes in prepare()
-sameClass <- function(x, y) {
-  if (x[1] == "integer") x <- "numeric"
-  if (y[1] == "integer") y <- "numeric"
-  identical(x, y)
-}
-
-#-------------------
-
-# # Function to automatically detect outliers and set to NA using Rosner's test
-# setOutliersNA <- function(x, ignore.zeros = TRUE) {
-#   X <- if (ignore.zeros) na_if(x, 0) else x
-#   K <- sum(0.6745 * (X - median(X, na.rm = TRUE)) / mad(X, constant = 1, na.rm = TRUE) > 3.5, na.rm = TRUE)
-#   K <- max(1, min(K, floor(sum(!is.na(X)) / 2)))
-#   rosner <- suppressWarnings(EnvStats::rosnerTest(X, k = K)$all.stats)
-#   outlier.index <- rosner$Obs.Num[rosner$Outlier]
-#   x[outlier.index] <- NA
-#   return(x)
-# }
-
-#-------------------
-
-# Function to integerize real (non-integer) positive weights
-# 'mincor' refers to the minimum allowable Pearson correlation between 'x' and the integerized version of 'x'
-# Function will also handle 'x' that is constant or already integer
-integerize <- function(x, mincor = 0.999) {
-  stopifnot(all(x > 0))
-  if (sd(x) == 0) {
-    return(rep(1L, length(x)))
-  } else {
-    p <- 0
-    i <- 0
-    r <- max(x) / min(x)
-    while (p < mincor) {
-      i <- i + 1
-      mx <- ifelse(is.integer(x), r, max(r, 10 ^ i))
-      z <- 1 + mx * ((x - min(x)) / r)
-      z <- as.integer(round(z))
-      p <- cor(x, z)
-    }
-    return(z)
-  }
-}
-
-# Examples
-# x <- rlnorm(1e3)
-# xint <- integerize(x)
-# cor(x, xint)
-#
-# x <- 1:10
-# xint <- integerize(x)
-# all.equal(x, xint)
-#
-# x <- rep(0.1, 10)
-# xint <- integerize(x)
-# unique(xint)
-
-#-------------------
-
-# Function to identically scale one or two datasets (df or matrix) of numeric variables and convert to positive integers with selected precision
-# This is used within assemble() to scale the numeric spatial predictors to improve compression when saved to disk
-# It uses a robust scaling: (x - median(x)) / mad(x)
-# When 'x' and 'y' are supplied, the median and mad of 'x' are used to scale both inputs
-# The 'precision' argument controls the number of digits in resulting integers
-# A horizontal shift is also applied so that the minimum integer output value is zero; this avoids storing negative indicator without affecting the scale
-
+#' Convert numeric continuous features to positive integers via robust scaling
+#'
+#' Used within `assemble()` to compress spatial predictor datasets before saving to disk.
+#' Uses robust median/MAD centering and scaling, applies a precision multiplier,
+#' and applies a horizontal shift so all output values are non-negative integers.
+#'
+#' @param x Data frame, matrix, or numeric vector of features.
+#' @param y Optional second data frame, matrix, or vector to scale using `x`'s parameters.
+#' @param precision Integer power of 10 applied before rounding to preserve decimal detail.
+#'
+#' @return Scaled integer data frame/vector, or a list `list(x = ..., y = ...)` if `y` is provided.
+#'
+#' @noRd
 scale2integer <- function(x, y = NULL, precision = 2) {
 
   vec <- FALSE
@@ -376,12 +230,273 @@ scale2integer <- function(x, y = NULL, precision = 2) {
 
 }
 
-#-------------------
 
-# Version of match.call() that returns default argument values when not explicitly stated
-# 'exclude' allows particular function arguments to be excluded from result
-# https://stackoverflow.com/questions/14397364/match-call-with-default-arguments
+#' Convert positive real weights to approximate integer weights
+#'
+#' Iteratively scales real-valued weights to integer values until the Pearson
+#' correlation between original and integer weights meets `mincor`.
+#'
+#' @param x Numeric vector of strictly positive weights.
+#' @param mincor Minimum acceptable Pearson correlation between original and integerized weights.
+#'
+#' @return Integer vector of converted weights.
+#'
+#' @noRd
+integerize <- function(x, mincor = 0.999) {
+  stopifnot(all(x > 0))
+  if (sd(x) == 0) {
+    return(rep(1L, length(x)))
+  } else {
+    p <- 0
+    i <- 0
+    r <- max(x) / min(x)
+    while (p < mincor) {
+      i <- i + 1
+      mx <- ifelse(is.integer(x), r, max(r, 10 ^ i))
+      z <- 1 + mx * ((x - min(x)) / r)
+      z <- as.integer(round(z))
+      p <- cor(x, z)
+    }
+    return(z)
+  }
+}
 
+
+# String & Categorical Cleaners ------------------------------------------
+
+#' Generate unique, clean, abbreviated variable names
+#'
+#' Helper used in `summarizeSpatialDataset()` to simplify lengthy geographic or spatial variable names.
+#' Extracts alphanumeric tokens, converts to Title Case, runs `abbreviate()`, converts to lowercase,
+#' and enforces uniqueness using `make.unique()`.
+#'
+#' @param x Character vector of variable names.
+#'
+#' @return Character vector of standardized short unique identifiers.
+#'
+#' @noRd
+betterAbbreviate <- function(x) {
+  y <- str_extract_all(x, "[a-zA-Z0-9]+")
+  y <- str_squish(purrr::map_chr(y, paste, collapse = " "))
+  y <- str_to_title(y)
+  abb <- abbreviate(y, named = FALSE) |>
+    tolower() |>
+    make.unique(sep = "")
+  stopifnot(length(unique(abb)) == length(abb))
+  return(abb)
+}
+
+
+#' Sanitize strings and factor levels to ASCII encoding
+#'
+#' Cleans string or factor variables to prevent cross-platform encoding errors when writing to disk
+#' or transferring across databases. Transliterates non-ASCII characters to Latin-ASCII,
+#' strips extraneous double quotes, and removes leading/trailing spaces.
+#'
+#' @param x Character vector or factor.
+#'
+#' @return Character vector or factor matching input class, cleaned to ASCII standards.
+#'
+#' @noRd
+safeCharacters <- function(x) {
+
+  stopifnot(is.factor(x) | is.character(x))
+  y <- y0 <- if (is.factor(x)) levels(x) else unique(as.character(x))
+
+  # Transliterate non-ASCII strings using stringi
+  enc <- stringi::stri_enc_mark(y)
+  fix <- which(!is.na(y) & enc != "ASCII")
+  y[fix] <- stringi::stri_trans_general(y[fix], "Latin-ASCII")
+  ascii <- stringi::stri_enc_mark(y) == "ASCII"
+  if (any(!ascii, na.rm = TRUE)) {
+    stop("Couldn't fix non-ASCII character(s) for strings:\n", paste(na.omit(unique(y[!ascii])), collapse = "\n"))
+  }
+
+  # Text cleanup
+  y <- gsub('"', "", y, fixed = TRUE)
+  y <- gsub(" ,", ",", y, fixed = TRUE)
+  y <- str_squish(y)
+
+  if (identical(y, y0)) {
+    x
+  } else {
+    if (is.factor(x)) {
+      factor(y[as.integer(x)], levels = y, ordered = is.ordered(x))
+    } else {
+      y[match(x, y0)]
+    }
+  }
+
+}
+
+
+# Household Data Utilities ------------------------------------------------
+
+#' Add sequential person ID within household
+#'
+#' Constructs a person identifier (`pid`) running from `1:n()` for each household unit.
+#' Sorts member records such that the household reference person (first factor level in `refvar`)
+#' is always assigned `pid = 1`, satisfying downstream requirements in `harmonize()`.
+#'
+#' @param data Data frame containing household microdata.
+#' @param hid Column name identifying unique household IDs.
+#' @param refvar Column name (factor) indicating relationship to reference person.
+#'   The primary reference person label must be the FIRST factor level.
+#'
+#' @return Data frame with sorted rows and a newly appended, labelled `pid` column.
+#'
+#' @noRd
+addPID <- function(data, hid, refvar) {
+  stopifnot(is.factor(data[[refvar]]))
+  cli::cli_inform("Reference person level: {.val {levels(data[[refvar]])[1]}}")
+  data %>%
+    arrange(across(all_of(c(hid, refvar)))) %>%
+    group_by(across(all_of(hid))) %>%
+    mutate(pid = 1L:n()) %>%
+    ungroup() %>%
+    labelled::set_variable_labels(.labels = list(pid = "Person identifier within household"))
+}
+
+
+# Summary Formatting & Inspection ----------------------------------------
+
+#' Format summary string for numeric variables
+#'
+#' Generates a single-line text summary containing Min, Median, Mean, and Max,
+#' applying `cleanNumeric()` for readable digit display. Supports observation weights.
+#'
+#' @param x Numeric vector.
+#' @param w Optional numeric vector of sample weights.
+#'
+#' @return Single character string summarizing key central tendencies and range.
+#'
+#' @noRd
+numFormat <- function(x, w = NULL) {
+  if (is.null(w)) w <- rep(1, length(x))
+  paste(
+    c("Min:", "Median:", " Mean:", "Max:"),
+    cleanNumeric(c(min(x, na.rm = TRUE), matrixStats::weightedMedian(x, w), weighted.mean(x, w, na.rm = TRUE), max(x, na.rm = TRUE))),
+    collapse = ", ")
+}
+
+
+#' Format summary string for categorical variables
+#'
+#' Displays available factor levels or logical levels as formatted bracketed strings
+#' for logging and exploratory inspection.
+#'
+#' @param x Character vector, factor, or logical vector.
+#'
+#' @return Single character string listing unique levels/categories.
+#'
+#' @noRd
+catFormat <- function(x) {
+  stopifnot(!is.numeric(x))
+  if (is.character(x)) x <- factor(x)
+  if (is.logical(x)) "[TRUE], [FALSE]" else paste(paste0("[", levels(x), "]"), collapse = ", ")
+}
+
+
+# Data Structure & Logical Checks -----------------------------------------
+
+#' Check if vector contains no variance or is entirely NA
+#'
+#' Returns `TRUE` if `x` contains 1 or 0 unique non-NA values.
+#'
+#' @param x Atomic vector or factor.
+#'
+#' @return Logical scalar (`TRUE` or `FALSE`).
+#'
+#' @noRd
+novary <- function(x) data.table::uniqueN(x, na.rm = TRUE) <= 1
+
+
+#' Compare data classes treating integer and numeric as equivalent
+#'
+#' Helper used during feature matching in `prepare()` to prevent class mismatch warnings
+#' when comparing standard double numeric vectors against integer vectors.
+#'
+#' @param x Character vector representing standard R class name(s) (e.g., `class(vec1)`).
+#' @param y Character vector representing standard R class name(s) (e.g., `class(vec2)`).
+#'
+#' @return Logical scalar indicating class equality.
+#'
+#' @noRd
+sameClass <- function(x, y) {
+  if (x[1] == "integer") x <- "numeric"
+  if (y[1] == "integer") y <- "numeric"
+  identical(x, y)
+}
+
+
+#' Compare vectors for value equality while ignoring factor levels and names
+#'
+#' Evaluates whether `x` and `y` have identical element values. Strips vector names
+#' and converts factors to character vectors before evaluation.
+#'
+#' @param x Atomic vector or factor.
+#' @param y Atomic vector or factor.
+#'
+#' @return Logical scalar (`TRUE` or `FALSE`).
+#'
+#' @noRd
+identical2 <- function(x, y) {
+
+  normalize <- function(v) {
+    if (is.factor(v)) {
+      return(as.character(v))
+    }
+    if (is.atomic(v)) {
+      return(unname(v))
+    }
+    unname(v)
+  }
+
+  isTRUE(all.equal(normalize(x), normalize(y)))
+}
+
+
+#' Detect potential zero-inflation in numeric vector
+#'
+#' Checks whether a numeric vector contains at least 1% zeros and evaluates whether
+#' the zero-mass relative density exceeds an arbitrary empirical threshold compared
+#' to non-zero values.
+#'
+#' @param x Numeric vector.
+#' @param threshold Ratio threshold evaluated at zero density. Default is 0.9.
+#'
+#' @return Logical scalar (`TRUE` if zero-inflated, `FALSE` otherwise).
+#'
+#' @noRd
+inflated <- function(x, threshold = 0.9) {
+  if (is.numeric(x)) {
+    if (sum(x == 0) >= 0.01 * length(x)) {
+      d1 <- density(x)
+      d2 <- density(x[x != 0], bw = d1$bw, from = min(d1$x), to = max(d1$x))
+      z <- which.min(abs(d1$x))
+      d2$y[z] / d1$y[z] < threshold
+    } else {
+      FALSE
+    }
+  } else {
+    FALSE
+  }
+}
+
+
+# System & Path Utilities ------------------------------------------------
+
+#' Evaluate function call with default argument values included
+#'
+#' Wraps `match.call()` to explicitly include default formal argument values
+#' from the calling function definition, enabling complete call inspection.
+#'
+#' @param ... Arguments passed to parent frame match call.
+#' @param exclude Character vector of parameter names to omit from returned call object.
+#'
+#' @return Language object representing the expanded function call.
+#'
+#' @noRd
 match.call.defaults <- function(..., exclude = NULL) {
   call <- evalq(match.call(expand.dots = FALSE), parent.frame(1))
   formals <- evalq(formals(), parent.frame(1))
@@ -390,26 +505,35 @@ match.call.defaults <- function(..., exclude = NULL) {
   match.call(sys.function(sys.parent()), call)
 }
 
-#-------------------
 
-# Return normalized path using the '.Platform$file.sep' separator
+#' Return normalized file path using platform-specific separator
+#'
+#' Convenience wrapper around `normalizePath()` setting `winslash`
+#' to current platform separator (`.Platform$file.sep`).
+#'
+#' @param path Character vector of file paths.
+#' @param mustWork Logical passed to `normalizePath()`. Default is `NA`.
+#'
+#' @return Character vector of normalized file paths.
+#'
+#' @noRd
 full.path <- function(path, mustWork = NA) {
   normalizePath(path = path, winslash = .Platform$file.sep, mustWork = mustWork)
 }
 
-#-------------------
 
-# Modified version of dplyr::if_else() that preserves original factor levels of 'yes' or 'no' in the output, if possible
-# This can be used as a drop-in replacement for ifelse() or if_else() when factor level preservation is needed
-# Note that the 'yes' levels and ordering are prioritized over 'no' when both are consistent with the returned values
-
-# Examples of factor preservation use case
-# x <- factor(sample(letters[1:2], 20, replace = TRUE))
-# levels(x)
-# test <- if.else(x == "a", "b", x)
-# levels(test)
-# test <- if.else(x == "a", NA, x)
-
+#' Drop-in conditional statement preserving factor levels
+#'
+#' Modified wrapper around `dplyr::if_else()` that maintains original factor levels
+#' and ordering of `yes` or `no` arguments in the resulting output.
+#'
+#' @param test Logical vector condition.
+#' @param yes Value/vector to return when test is TRUE.
+#' @param no Value/vector to return when test is FALSE.
+#'
+#' @return Vector matching structure of `yes`/`no` with factor levels preserved where applicable.
+#'
+#' @noRd
 if.else <- function(test, yes, no) {
   out <- dplyr::if_else(test, yes, no)
   yl <- levels(yes)
@@ -422,11 +546,19 @@ if.else <- function(test, yes, no) {
   return(out)
 }
 
-#-------------------
 
-# Much faster version of table() and can accommodate weights
-# Returns number of NA observations if na.rm = FALSE (default); i.e. equivalent to table(..., useNA = 'always')
-# https://stackoverflow.com/questions/17374651/find-the-n-most-common-values-in-a-vector
+#' Fast contingency and weighted frequency tables via data.table
+#'
+#' High-performance replacement for base `table()` that accepts observation weights
+#' and efficiently handles NA grouping using `data.table`.
+#'
+#' @param x Atomic vector.
+#' @param w Optional numeric vector of sample weights.
+#' @param na.rm Logical. If `TRUE`, removes NA values from the frequency table. Default is `FALSE`.
+#'
+#' @return Named numeric vector of counts or weight sums, named by unique values of `x`.
+#'
+#' @noRd
 table2 <- function(x, w = NULL, na.rm = FALSE) {
   require(data.table)
   stopifnot(is.atomic(x))
@@ -440,4 +572,53 @@ table2 <- function(x, w = NULL, na.rm = FALSE) {
   }
   if (na.rm) ds <- na.omit(ds)
   return(setNames(ds$N, ds$x))
+}
+
+
+# Geographic Boundary Mappers -------------------------------------------
+
+#' Map Connecticut Planning Region codes to legacy County FIPS codes
+#'
+#' Handles mixed-vintage Census datasets for Connecticut following the 2022 Census OMB adoption
+#' of Planning Regions (110–190) as county-equivalents. Converts planning region codes back to
+#' legacy 3-digit county FIPS (001–015) when present. Returns input unchanged if legacy codes are detected.
+#'
+#' @param x Character or numeric vector containing Connecticut county/planning region codes.
+#'
+#' @return Character vector formatted as 3-digit zero-padded county FIPS codes.
+#'
+#' @noRd
+ct_planning_to_county_fips <- function(x) {
+
+  x_chr <- as.character(x)
+
+  # Detect whether planning-region codes (110-190) are present
+  needs_conversion <- any(as.numeric(x_chr) >= 110 & as.numeric(x_chr) <= 190, na.rm = TRUE)
+
+  if (!needs_conversion) return(sprintf("%03d", as.numeric(x_chr)))
+
+  # Lookup map: Planning Region -> Legacy County FIPS
+  lookup <- c(
+    "110" = "003", # Capitol -> Hartford County
+    "120" = "001", # Greater Bridgeport -> Fairfield County
+    "190" = "001", # Western CT -> Fairfield County
+    "130" = "007", # Lower CT River Valley -> Middlesex County
+    "140" = "009", # Naugatuck Valley -> New Haven County
+    "170" = "009", # South Central CT -> New Haven County
+    "150" = "013", # Northeastern CT -> Tolland County
+    "160" = "005", # Northwest Hills -> Litchfield County
+    "180" = "011"  # Southeastern CT -> New London County
+  )
+
+  out <- x_chr
+
+  idx <- x_chr %in% names(lookup)
+  out[idx] <- lookup[x_chr[idx]]
+
+  suppressWarnings({
+    numeric_idx <- !idx
+    out[numeric_idx] <- sprintf("%03d", as.numeric(out[numeric_idx]))
+  })
+
+  return(out)
 }

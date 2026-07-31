@@ -2,17 +2,56 @@
 % Please edit documentation in R/compileDictionary.R
 \name{compileDictionary}
 \alias{compileDictionary}
-\title{Compile universal survey dictionary}
+\title{Compile Universal Survey Data Dictionary}
 \usage{
 compileDictionary()
 }
 \value{
-Saves \code{dictionary.rda} and \code{surveys.rda} data frames to disk in \code{/data}, \code{/universe/www}, and \code{/harmony/www}.
+Invisibly returns \code{NULL}. As a side effect, the function writes updated \code{.rda} files
+containing the \code{dictionary} and \code{surveys} data frames to disk across three locations:
+\itemize{
+\item \code{data/dictionary.rda} and \code{data/surveys.rda} (Package datasets)
+\item \code{harmony/www/dictionary.rda} and \code{harmony/www/surveys.rda} (Harmony Shiny app assets)
+\item \code{universe/www/dictionary.rda} and \code{universe/www/surveys.rda} (Universe Shiny app assets)
+}
 }
 \description{
-Compiles all of the individual survey data dictionaries in \code{/survey-processed} into two tibbles that are saved to disk for use by fusionData package as well as \link{universe} and \link{harmony} Shiny apps.
+Aggregates individual survey metadata codebooks stored in \verb{survey-processed/}
+into a single, standardized data dictionary (\code{dictionary}) and a high-level
+survey metadata summary (\code{surveys}).
 }
+\details{
+This function forms part of the \strong{Document} step in the \code{fusionData} package
+workflow. It scans all recursive survey metadata files (\verb{*_dictionary.rds}) created
+during survey ingest, standardizes respondent types, calculates microdata disk
+footprints (including \code{.processed.fst} and optional \code{custom.fst} files), and
+outputs unified data objects needed by the package and embedded Shiny applications
+(\code{universe} and \code{harmony}).
+}
+\section{Directory Requirement}{
+
+\strong{Important:} This function must be executed with your R working directory set to
+the root of the local \code{fusionData} project folder (e.g., \code{setwd("path/to/fusionData")}).
+It relies on relative directory paths (\verb{survey-processed/}, \verb{harmony/www/}, and \verb{universe/www/}).
+}
+
+\section{Workflow Note}{
+
+Because \code{compileDictionary()} updates datasets stored in the package's \verb{data/} directory,
+you must rebuild or reinstall the package locally (e.g., using \code{fusionData::installPackage()})
+after running this function for the updated package datasets to take effect in your loaded session.
+}
+
 \examples{
+\dontrun{
+# Ensure working directory is set to the fusionData repository root
 compileDictionary()
 
+# Reinstall local package binaries so updated data is recognized
+installPackage()
+}
+
+}
+\seealso{
+\code{\link[usethis]{use_data}}
 }

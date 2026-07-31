@@ -7,12 +7,29 @@
 harmony()
 }
 \value{
-Opens the app in a new browser window. R session is occupied while that window is open.
+Launches the Shiny application in the default web browser. Returns
+\code{NULL} invisibly when the app is closed.
 }
 \description{
-Opens the 'harmony' Shiny app (/harmony); i.e. fusionACS Survey Harmonization Tool.
+Launches the interactive \bold{Survey Harmonization Tool} Shiny application.
+This app provides a GUI to map, group, and align variable categories between
+donor surveys (e.g., RECS, CEX, NHIS) and the recipient American Community
+Survey (ACS) microdata.
+}
+\details{
+The harmonization step is critical to the \code{fusionACS} workflow. It allows
+users to map factor levels or continuous concepts between raw donor variables
+and ACS target variables, producing standardized harmony specifications stored
+as \code{.R} files in \code{/harmony/harmonies}.
+
+Running this function blocks the active R console session while the local web
+application is active. To return to the R prompt, close the browser window or
+press \kbd{Esc} / \kbd{Ctrl+C} in the R console.
 }
 \examples{
+\dontrun{
+# Launch the interactive harmonization GUI
 harmony()
+}
 
 }

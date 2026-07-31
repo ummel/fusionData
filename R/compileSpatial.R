@@ -1,21 +1,62 @@
-#' Compile all spatial predictor variables
+#' Compile Universal Spatial Predictor Variables
 #'
 #' @description
-#' Detects and compiles all processed spatial datasets located in \code{/geo-processed} into a single \code{geo_predictors.fst} file to be utilized by \link{assemble}.
+#' Detects, aggregates, and harmonizes all processed spatial datasets in
+#' `geo-processed/` into a single, standardized spatial predictor file
+#' (`geo_predictors.fst`) and spatial dictionary (`spatial`).
 #'
-#' @return Saves \code{/geo-processed/geo_predictors.fst} to disk.
+#' @details
+#' `compileSpatial()` processes geographic covariates (e.g., land use, walkability,
+#' climate) across varying temporal vintages and spatial units
+#' into uniform PUMA-level (Public Use Microdata Area) summaries.
+#'
+#' The workflow proceeds as follows:
+#' * **Spatial Aggregation:** Processes spatial datasets in parallel across CPU
+#'   cores via `summarizeDataset()`. It matches geographic source geometries to
+#'   2010 and 2020 PUMA boundaries using geographic concordances, aggregating metrics
+#'   via weighted means (numeric/logical variables) or weighted modes (categorical variables).
+#' * **Metadata Extraction:** Extracts variable labels, data types, and observed
+#'   vintage ranges into a standardized spatial dictionary dataset (`spatial`).
+#' * **Dense Rank Transformation:** Converts numeric predictor variables into dense integer
+#'   percentile ranks (`data.table::frank(..., ties.method = "dense")`) within each
+#'   state-PUMA-vintage grouping prior to expansion.
+#' * **Temporal Expansion:** Fills temporal gaps across years (2000 through the prior
+#'   calendar year) by holding boundary vintages constant (front-filling older years with
+#'   the earliest available vintage and back-filling recent years with the latest available vintage).
+#' * **Unified Storage:** Outer-joins all processed spatial datasets across PUMA-vintages
+#'   and exports compressed binary datasets (`geo_predictors.fst` and `spatial.rda`).
+#'
+#' @section Directory Requirement:
+#' **Important:** This function must be executed with your R working directory set to
+#' the root of the local `fusionData` project folder (e.g., `setwd("path/to/fusionData")`).
+#' It reads from `geo-processed/` and outputs package datasets to `data/`.
+#'
+#' @section Workflow Note:
+#' Because `compileSpatial()` exports the spatial dictionary (`spatial`) into package
+#' internal data (`data/spatial.rda`), you should rebuild or reinstall the local package
+#' (e.g., using `fusionData::installPackage()`) after compilation so updated metadata
+#' is recognized in loaded package sessions.
+#'
+#' @return Invisibly returns `NULL`. As side effects, this function writes:
+#' \itemize{
+#'   \item `geo-processed/geo_predictors.fst` (Compressed PUMA-level predictor table)
+#'   \item `data/spatial.rda` (Package metadata object containing spatial variable labels and types)
+#' }
+#'
+#' @seealso \code{\link[fst]{write_fst}}, \code{\link[usethis]{use_data}}, \code{\link[collapse]{fmode}}
 #'
 #' @examples
+#' \dontrun{
+#' # Ensure working directory is set to the fusionData repository root
 #' compileSpatial()
+#'
+#' # Reinstall local package binaries so updated spatial dictionary is recognized
+#' installPackage()
+#' }
 #'
 #' @export
 
-#-----
-
 compileSpatial <- function() {
-
-  # Variables in geo_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
-  gtarget <- c("state", "puma10")
 
   # Identify all of the *processed.rds files available in /geo-processed
   flist <- list.files(path = "geo-processed", pattern = "_processed.rds$", recursive = TRUE, full.names = FALSE)
@@ -23,49 +64,43 @@ compileSpatial <- function() {
   # Determine all available spatial datasets associated with .rds files in 'flist'
   spatial.dsets <- unique(dirname(flist))
 
-  # Print message to console
-  cat("Identified", length(flist), "processed.rds spatial data files across", length(spatial.dsets), "spatial datasets:\n", paste(spatial.dsets, collapse = ", "), "\n")
+  # Print discovery summary to console
+  cli::cli_inform(c(
+    "i" = "Identified {.val {length(flist)}} processed spatial data file{?s} across {.val {length(spatial.dsets)}} spatial dataset{?s}:",
+    "*" = "{spatial.dsets}"
+  ))
 
-  #---
+  # Summarize each spatial dataset (in parallel, if multi-core execution is available)
+  cli::cli_inform("Summarizing spatial datasets...")
+  result <- pbapply::pblapply(spatial.dsets, summarizeDataset, cl = max(1L, parallel::detectCores() - 1L))
+  gc()
 
-  # Summarize each spatial dataset (in parallel, if possible)
-  # NOTE: Should this be done once for each dataset when it is created in /geo-processed? To prevent re-generating unnecessarily?
-  cat("Summarizing spatial datasets...\n")
-  result <- pbapply::pblapply(spatial.dsets, summarizeSpatialDataset, cl = max(1L, parallel::detectCores() - 1L))
-
-  # Troubleshooting; identify which spatial dataset is giving trouble
-  #for (v in spatial.dsets) summarizeSpatialDataset(v)
-
-  #---
-
-  # Extract spatial variable metadata
+  # Temporary recursive merge done only to extract metadata for spatial variable dictionary
   temp <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), result)
+  var.vintages <- map(temp, ~ as.character(sort(unique(temp$vintage[!is.na(.x)]))))
+  var.values <- map(temp, ~ {
+    if (is.numeric(.x)) {
+      numFormat(x = na.omit(.x))
+    } else {
+      catFormat(.x)
+    }
+  })
 
-  # Vintages available for each spatial predictor
-  var.vintages <- temp %>%
-    map(~ as.character(sort(unique(result$vintage[!is.na(.x)]))))
-
-  # Variable summaries
-  var.values <- temp %>%
-    map_chr(~ if (is.numeric(.x)) {numFormat(x = na.omit(.x))} else {catFormat(.x)})
-
-  # Basic spatial predictor dictionary
+  # Build basic spatial predictor dictionary
   spatial <- labelled::var_label(temp) %>%
     tibble::enframe(name = "predictor", value = "variable_rds") %>%
     mutate(variable_rds = as.character(variable_rds),
            vintage = as.character(var.vintages),
            values = var.values,
            type = map_chr(temp, vctrs::vec_ptype_abbr)) %>%
-    filter(!predictor %in% c("state", "puma10", "vintage"))
+    filter(!predictor %in% c("vintage", "state", "puma", "puma_vintage"))
 
-  # Save spatial dictionary to disk
+  # Save spatial dictionary to package data directory
+  cli::cli_inform("Saving geo predictors metadata...")
   usethis::use_data(spatial, overwrite = TRUE)
   rm(temp)
 
-  #---
-
   # Expand each dataset temporally before merging
-  # EXPLAIN...
 
   # Get the maximum vintage range across all spatial datasets
   years <- unlist(map(result, ~ unique(.$vintage)))
@@ -73,294 +108,177 @@ compileSpatial <- function() {
 
   expandVintage <- function(d) {
 
+    # Convert numeric values to dense integer ranks within state-PUMA-vintage groupings
+    # Ranking prior to temporal expansion significantly reduces processing time
+    num_cols <- setdiff(names(which(sapply(d, is.numeric))), key(d))
+    d[, (num_cols) := lapply(.SD, frank, ties.method = "dense", na.last = "keep"), by = .(vintage, puma_vintage), .SDcols = num_cols]
+
     vrng <- range(d$vintage)
 
+    # Front-fill years prior to the earliest available vintage
     front <- d %>%
       filter(vintage == vrng[1]) %>%
       mutate(vintage = list(years[years <= vrng[1]])) %>%
       tidyr::unnest(vintage)
 
+    # Back-fill years after the latest available vintage
     back <- d %>%
       filter(vintage == vrng[2]) %>%
       mutate(vintage = list(years[years >= vrng[2]])) %>%
       tidyr::unnest(vintage)
 
+    # Retain intermediate years as-is
     middle <- d %>%
       filter(!vintage %in% vrng)
 
+    # Combine temporally expanded partitions and re-key data.table
     rbind(front, middle, back) %>%
       distinct() %>%
       mutate(vintage = as.character(vintage)) %>%
-      data.table(key = c(gtarget, "vintage"))
+      data.table(key = c('vintage', 'state', 'puma', 'puma_vintage'))
 
   }
 
   result <- map(result, expandVintage)
 
-  #---
-
-  # Merge the individual data tables in 'result' (on keyed variables set by summarizeSpatialDataset)
+  # Recursively merge individual processed spatial datasets into a master table
   result <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), result)
 
-  # Remove columns with no variation
-  keep <- !sapply(result, novary)
-  keep[c('state', 'puma10', 'vintage')] <- TRUE
-  result <- result[, ..keep]
+  # Convert remaining character columns to unordered factors for storage efficiency
+  result <- mutate_if(result, is.character, as.factor)
 
-  # Coerce character variables to unordered factor
-  # Any truly ordered factors should be made so in the upstream script that generates the associated "*_processed.rds" file
-  # Extract the var_labels so they can be reassigned after factor coercion (dropped by coercion step)
-  # vlabs <- labelled::var_label(result)
-  # result <- mutate_if(result, is.character, factor)
-  # result <- labelled::set_variable_labels(result, .labels = vlabs)
-
-  # Remove columns with large number of levels (>30; HARD CODED!)
-  # This helps prevent factor variables producing excessive dummy variables in train() and fuse()
-  # keep <- map_lgl(result, ~ length(levels(.x)) <= 30)
-  # keep[c('state', 'puma10', 'vintage')] <- TRUE
-  # result <- result[, ..keep]
-
-  # Ensure 'result' is sorted properly
-  #setorder(result, state, puma10, vintage)
-
-  #-----
-
-  # Could impute -- takes awhile. Not a ton of missing values
-  #result <- fusionModel::impute(data = result, ignore = "puma10")
-
-  # Convert numeric values to integer ranks, when possible
-  # mutate_of() will ignore 'vintage' grouping variable
-  result <- result %>%
-    group_by(vintage) %>%
-    mutate_if(is.numeric, frank, ties.method = "dense", na.last = "keep") %>%
-    setDT(key = c(gtarget, "vintage"))
-
-  #-----
-
-  # Variable summaries
-  # var.values <- result %>%
-  #   select(-any_of(c(gtarget, 'vintage'))) %>%  # Remove geo target variables and vintage
-  #   map_chr(~ if (is.numeric(.x)) {numFormat(x = .x)} else {catFormat(.x)})
-
-  # Save final result to disk
-  cat("Writing 'geo_predictors.fst' to disk...\n")
-  fst::write_fst(result, path = "geo-processed/geo_predictors.fst", compress = 80)
+  # Save final compiled spatial predictors table to disk
+  cli::cli_inform("Writing {.path geo-processed/geo_predictors.fst} to disk...")
+  fst::write_fst(result, path = "geo-processed/geo_predictors.fst", compress = 95)
 
 }
 
-#-----------------------------------
+# Internal helper function to aggregate individual spatial datasets to PUMA level
+summarizeDataset <- function(dataset) {
 
-# Example usage
-# summarizeSpatialDataset("climate")
-# summarizeSpatialDataset("IRS-SOI")
-
-# Underlying function to process a specified dataset
-summarizeSpatialDataset <- function(dataset) {
-
-  # Variables in geo_concordance defining the "target" geography (i.e. uniquely-identified PUMA's)
-  gtarget <- c("state", "puma10")
-
-  # Check for valid 'dataset' argument
-  stopifnot(dataset %in% basename(list.dirs("geo-processed", recursive = FALSE)))
-
-  # Soft load the geo_concordance.fst file
-  pcord <- fst::fst("geo-processed/concordance/geo_concordance.fst")
-
-  #---
-
-  # Identify the *processed.rds files available for the specified 'dataset'
+  # Identify processed .rds files for the target spatial dataset
   flist <- list.files(path = file.path("geo-processed", dataset), pattern = "_processed.rds$", recursive = TRUE, full.names = TRUE)
 
-  # Load the .rds files as a list
-  data <- lapply(flist, readRDS)
+  # Load and process each file in the spatial dataset directory
+  data <- lapply(flist, function(x) {
 
-  #---
+    # Load raw data table
+    d <- as.data.table(readRDS(x))
 
-  # Check for valid 'vintage' values in input data
-  ok <- map_lgl(data, ~ all(
-    .x$vintage == "always" |
-      .x$vintage %in% 1900:as.integer(substring(Sys.Date(), 1, 4)) |
-      grepl("^\\d{4}-\\d{4}$", .x$vintage)  # Basic check for something like "dddd-dddd" (e.g. "2015-2020")
-  ))
-  if (any(!ok)) stop("The following input .rds files have invalid 'vintage' values:\n", paste(flist[!ok], collapse = "\n"))
+    # Validate that vintage values follow recognized formats (e.g., 'always', YYYY, or YYYY-YYYY)
+    ok <- all(
+      d$vintage == "always" |
+        d$vintage %in% 1900:as.integer(substring(Sys.Date(), 1, 4)) |
+        grepl("^\\d{4}-\\d{4}$", d$vintage)
+    )
+    if (any(!ok)) stop("The following input .rds file has invalid 'vintage' values:\n", x)
 
-  #---
+    # Select the optimal geographic concordance file matching input spatial geometry
+    glist <- list.files("geo-processed/concordance", pattern = "^geo_concordance.*\\.fst$", full.names = TRUE)
+    vars <- map(glist, ~ intersect(names(fst(.x)), names(d)))
+    i <- which.max(lengths(vars))
+    gdonor <- vars[[i]]
 
-  # Weird test case for dataset = "IRS-SOI"
-  #data[[5]] <- tibble(zcta10 = data[[4]]$zcta10, vintage = 1900, Something = runif(nrow(data[[4]])))
+    # Load geographic concordance and normalize spatial area weights to prevent integer overflow
+    pcord <- fst::fst(glist[i])
+    gtarget <- intersect(c("state", "puma10", "puma20"), names(pcord))
+    gv <- unique(c(gtarget, gdonor))
+    pcord <- pcord[c('puma_weight', gv)] %>%
+      na.omit() %>%
+      setnames(c("W", gv)) %>%
+      mutate(W = W / mean(W)) %>%
+      data.table(key = gv)
 
-  #---
+    # Aggregate spatial weights across matching geometries
+    pcord <- pcord[, .(W = sum(W)), by = gv]
 
-  # Unique variables names in 'data'
-  dnames <- unique(unlist(map(data, names)))
+    # Identify non-geographic predictor columns to aggregate
+    sumvars <- setdiff(names(d), c("vintage", gdonor))
 
-  # Identify geographic variables in 'd'
-  gdonor <- intersect(names(pcord), dnames)
-
-  # Convert each element of 'data' to a keyed data.table
-  data <- map(data, ~ data.table(.x, key = intersect(names(.x), gdonor)))
-
-  #---
-
-  # The PUMA-related weight variable in 'pcord' (i.e. housing unit count)
-  gw <- "puma_weight"
-
-  gv <- unique(c(gtarget, gdonor))
-  pcord <- pcord[c(gw, gv)] %>%
-    na.omit() %>%   # Removes any entries where the 'gdonor' variables might be missing/incomplete
-    setnames(c("W", gv)) %>%  # Rename the 'gw' variable to "W" for ease of use in data.table operations
-    mutate(W = W / mean(W)) %>%   # Just to avoid integer overflow issues
-    data.table(key = gv)
-
-  # Aggregate geographic weight
-  pcord <- pcord[, .(W = sum(W)), by = gv]
-
-  #---
-
-  # The variables to be summarized at PUMA level
-  gvars <- setdiff(dnames, c("vintage", gdonor))
-
-  summarizePUMA <- function(d) {
-
-    # Variables to summarize
-    sumvars <- intersect(gvars, names(d))
-
-    # Integer summary variables
-    intvars <- sumvars[map_lgl(d[, ..sumvars], is.integer)]
-
-    # Merge 'd' and 'pcord' on the common spatial variable(s)
+    # Merge spatial data with concordance table on matching donor geography
     d <- d[pcord, on = intersect(gdonor, names(d)), allow.cartesian = TRUE]
     d <- d[!is.na(d$vintage), ]
 
-    # Summary function; handles numeric and categorical cases
-    # Returns weighted mean in the numeric case
-    # Returns the single most common value/level in the categorical case
+    # Merge with PUMA crosswalk to map source data to both 2010 and 2020 PUMA boundaries
+    data("puma_crosswalk", package = "fusionData")
+    d <- d[puma_crosswalk, on = intersect(gtarget, names(puma_crosswalk)), allow.cartesian = TRUE]
+    d <- d[!is.na(d$vintage), ]
+
+    # Reshape table to long format separating 2010 and 2020 PUMA vintages
+    dlong <- melt(
+      data = d,
+      id.vars = c("state", "vintage", "W", "xwalk_weight", sumvars),
+      measure.vars = c("puma10", "puma20"),
+      variable.name = "puma_vintage",
+      value.name = "puma"
+    )
+
+    # Standardize PUMA vintage labels to integer years (2010 or 2020)
+    dlong[, puma_vintage := fifelse(puma_vintage == "puma10", 2010L, 2020L)]
+
+    # Aggregation summary function:
+    # Computes area-weighted mean for numeric/logical variables and weighted mode for categorical variables
     sumFun <- function(x, w) {
-      if (is.numeric(x)) {
+      if (is.ordered(x)) x <- as.integer(x)
+      if (is.numeric(x) | is.logical(x)) {
         weighted.mean(x, w, na.rm = TRUE)
       } else {
-        tab <- table2(x, w)
-        m <- names(sort(tab, decreasing = TRUE))[1]  # Modal value
-        m <- ifelse(m == "NA", NA, m)
-        ifelse(is.logical(x), as.logical(m), m)
+        as.character(collapse::fmode(x = x, w = w, na.rm = TRUE))
       }
     }
 
-    # Calculate weighted mean for each summary variable at the PUMA-vintage level
-    d[, lapply(.SD, sumFun, w = W), by = c(gtarget, "vintage"), .SDcols = sumvars]
-    #mutate_at(intvars, ~ as.integer(round(.x))) %>%
-    #mutate_if(is.double, cleanNumeric, tol = 0.001)
+    # Derive PUMA-level summary values weighted by area intersection and geographic weight
+    result <- dlong[, lapply(.SD, sumFun, w = W * xwalk_weight), by = .(vintage, state, puma, puma_vintage), .SDcols = sumvars]
 
-  }
+    return(result)
 
-  # Apply summarizePUMA() to each individual data frame in 'data'
-  data <- lapply(data, summarizePUMA)
+  })
 
-  #---
-
-  # Replace 'always' vintage values with maximum range starting from year 2000 and ending in current year (e.g. 2000-2024)
+  # Expand static 'always' vintages to cover full historical range (2000 through prior calendar year)
   allowed.years <- 2000:(as.integer(format(Sys.Date(), "%Y")) - 1)
   data <- map(data, ~ mutate(., vintage = ifelse(vintage == "always", paste(range(allowed.years), collapse = "-"), vintage)))
 
-  # Parse any 'vintage' values that express a year range (e.g. "2015-2020")
+  # Expand year range strings (e.g., "2015-2020") into sequence of individual annual vintages
   expandRange <- function(d) {
     V <- unique(d$vintage)
     if (any(grepl("-", V))) {
       v <- ifelse(grepl("-", V), map(V, ~ as.character(eval(parse(text = sub("-", ":", .x, fixed = TRUE))))), V)
-      d$vintage <- v[match(d$vintage, V)]  # This is rather slow...
+      d$vintage <- v[match(d$vintage, V)]
       d <- tidyr::unnest(d, vintage)
+      d <- as.data.table(d)
     }
-    #d$vintage <- as.character(d$vintage)  # Force 'vintage' to be character (even if input is un-expanded integer)
     d$vintage <- as.integer(d$vintage)
     return(d)
   }
-
   data <- map(data, expandRange)
 
-  #---
+  # Restrict dataset records to allowed annual vintages
+  data <- map(data, ~ filter(., vintage %in% allowed.years))
 
-  # Determine which list elements in 'data' can be safely 'rbind'-ed (appended) and which need to be merged
-  result <- rbindlist(data, use.names = TRUE, fill = TRUE, idcol = "_id")
-
-  # If a variable is present in more than one 'data' element, then it is treated as available for all (i.e. rbind candidate)
-  check <- result[, lapply(.SD, function(x) !all(is.na(x))), by = "_id", .SDcols = gvars] %>%
-    mutate_if(is.logical, ~ if (sum(.x) > 1) {TRUE} else {.x})
-
-  # List identifying groups of 'data' elements that can be safely 'rbind'-ed (appended)
-  grps <- split(x = check[["_id"]], f = check[, ..gvars], drop = TRUE)
-
-  #-----
-
-  # rbind 'data' elements whenever possible and then merge remaining elements on 'gtarget' and vintage
-  if (length(grps) > 1) {
-
-    data <- map(grps, ~ rbindlist(data[.x], use.names = TRUE, fill = TRUE))
-
-    # Convert each data frame in 'data' to a keyed data table to enable fast merge (below)
-    data <- map(data, ~ data.table(.x, key = c(gtarget, 'vintage')))
-
-    # Merge the individual data frames in 'data' (on keyed variables set in previous step)
-    result <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE), data)
-
-  } else {
-
-    result$`_id` <- NULL
-
+  # Extract and merge shared predictor columns across files to avoid duplicate variable names
+  exclude <- c("vintage", "state", "puma", "puma_vintage")
+  cols_list <- lapply(data, function(dt) setdiff(names(dt), exclude))
+  shared_cols <- names(which(table(unlist(cols_list)) > 1))
+  if (length(shared_cols)) {
+    keep <- c(exclude, shared_cols)
+    temp <- rbindlist(lapply(data, function(dt) dt[, ..keep]), use.names = TRUE, fill = TRUE)
+    data <- lapply(data, function(dt) dt[, (shared_cols) := NULL])
+    data <- c(data, list(temp))
+    rm(temp)
   }
 
-  #-----
+  # Outer-join processed predictor subsets by geographic keys
+  result <- Reduce(function(...) data.table::merge.data.table(..., all = TRUE, by = exclude), data)
 
-  # Create the abbreviated variables names for spatial predictors
-  # By convention, these use ".." to separate the spatial dataset identifier from the variable abbreviation
-  # NOTE that make.names() will remove dashed spatial spatial dataset name (e.g. "EPA-SLD" becomes "epa.sld")
-  # Forcing syntactically valid names avoids potential downstream issues
+  # Construct standardized, syntactically valid predictor names using the 'dataset..variable' convention
+  gvars <- setdiff(names(result), exclude)
   vnames <- make.names(paste(tolower(dataset), betterAbbreviate(gvars), sep = ".."), unique = TRUE)
   vlabs <- setNames(as.list(gvars), vnames)
-  names(result) <- c(gtarget, 'vintage', vnames)
+  names(result) <- c(exclude, vnames)
   result <- labelled::set_variable_labels(result, .labels = vlabs)
 
-  #-----
-
-  # Assemble final data.table result
-  # Pre-keyed for subsequent merges
-  result <- result %>%
-    filter(vintage %in% allowed.years) %>%   # !!! Restricts the vintages that will be returned (i.e. 2000 or later)
-    mutate_if(is.character, as.factor) %>% # Necessary? Should really be done closer to the source data
-    mutate(vintage = as.character(vintage)) %>% # Necessary?
-    data.table(key = c(gtarget, "vintage"))
-
-  #-----
-
-  # # TO DO: Interpolate missing values temporally, by 'gtarget', if possible
-  # interpolate_vector <- function(x, v) {
-  #   if (any(is.finite(x))) {
-  #     if (novary(x)) {
-  #       rep(unique(na.omit(x)), length(v))
-  #     } else {
-  #       if (is.numeric(x)) {
-  #         approx(v, x, xout = v, rule = 2)$y
-  #       } else {
-  #         tab <- table2(x, na.rm = TRUE)
-  #         m <- names(sort(tab, decreasing = TRUE))[1]  # Modal value
-  #         x[is.na(x)] <- ifelse(is.logical(x), as.logical(m), m)
-  #         x
-  #       }
-  #     }
-  #   } else {
-  #     x
-  #   }
-  # }
-  #
-  # d <- filter(result, state == "01", puma10 == "00100") %>%
-  #   select(-state, -puma10)
-  #
-  # interpolate_block <- function(d) {
-  #   mutate_at(d, -1L, interpolate_vector, v = d$vintage)
-  # }
-  #
-  # test <- temp[, interpolate_block(.SD), by = gtarget]
-
-  #-----
+  # Set data.table primary key for downstream joins and return
+  setkeyv(result, exclude)
 
   return(result)
 

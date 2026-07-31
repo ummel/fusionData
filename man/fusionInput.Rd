@@ -2,99 +2,98 @@
 % Please edit documentation in R/fusionInput.R
 \name{fusionInput}
 \alias{fusionInput}
-\title{Generate input files needed for fusion}
+\title{Generate Prepared Fusion Input Datasets from Harmonized Donor and ACS Microdata}
 \usage{
 fusionInput(
   donor,
-  respondent,
   acs_year,
-  note = NULL,
+  respondent,
   test_mode = TRUE,
-  ncores = getOption("fusionData.cores")
+  ncores = getOption("fusionData.cores"),
+  note = NULL
 )
 }
 \arguments{
-\item{donor}{Character. Donor survey identifier (e.g. \code{"RECS_2015"}).}
+\item{donor}{Character. Identifier for the donor survey vintage (e.g., \code{"RECS_2015"},
+\code{"AHS_2023"}). Must correspond to an existing harmonization file in \verb{harmony/harmonies/}.}
 
-\item{respondent}{Character. Desired respondent level of microdata. Either \code{"household"} or \code{"person"}.}
+\item{acs_year}{Integer. Year of ACS microdata serving as the recipient dataset (e.g., \code{2015}, \code{2023}).}
 
-\item{note}{Character. Optional note supplied by user. Inserted in the log file for reference.}
+\item{respondent}{Character. Unit of observation; must be either \code{"household"} (or \code{"H"})
+or \code{"person"} (or \code{"P"}).}
 
-\item{test_mode}{Logical. If \code{TRUE} (default), function uses the local "/fusion_" sub-directory (creating it if necessary). Only when \code{test_mode = FALSE} is it possible to overwrite production data in "/fusion" (no underscore).}
+\item{test_mode}{Logical. If \code{TRUE} (default), outputs are written to a scratch directory
+(\verb{fusion_/.../input/}) and datasets are truncated to ~10,000 observations for rapid testing.
+If \code{FALSE}, full-scale production files are written to \verb{fusion/.../input/}.}
 
-\item{ncores}{Integer. Number of physical CPU cores used for parallel computation.}
+\item{ncores}{Integer. Number of CPU cores allocated for parallel execution during
+harmonization and file compression. Defaults to \code{getOption("fusionData.cores")}.}
 
-\item{recipient}{Character. Recipient (ACS) survey identifier (e.g. \code{"ACS_2015"}).}
-
-\item{fuse}{Character or list. Names of donor variables to be fused to recipient. If \code{fuse} is a list, each entry is a character vector possibly indicating multiple variables to fuse as a block. The order of the \code{fuse} variables does not matter, since \code{\link[fusionModel]{prepXY}} is used internally to determine a plausible fusion sequence. If NULL (default), an attempt is made to return all donor variables not used in predictor harmonization process (it is preferable to specify explicitly, though).}
-
-\item{force}{Character. Pre-specified subset of potential predictor variables to "force" as included predictors. These variables are also used within \code{\link{fusionOutput}} to create validation subsets. We generally select the variables that best reflect the following socioeconomic and geographic concepts: income; race/ethnicity; education; household size; housing tenure; and the highest-resolution location variable for which the donor survey is thought to be representative.}
-
-\item{agg_fun}{List. Optional override of default aggregation function for person-level \code{fuse} variables when \code{respondent = "household"}. Passed to \code{\link{assemble}} internally. See Details.}
-
-\item{agg_adj}{List. Optional pre-aggregation adjustment code to apply to person-level \code{fuse} variables when \code{respondent = "household"}. Passed to \code{\link{assemble}} internally. See Details.}
+\item{note}{Character. Optional user note recorded directly in the run execution log.
+Defaults to \code{NULL}.}
 }
 \value{
-Invisibly returns path to local directory where files were saved. Messages printed to console noting progress. Resulting \code{/input} data files are saved to appropriate local directory and (optionally) to remote Google Drive storage. Also saves a .txt log file alongside data files that records console output from \code{fusionInput}.
+Invisibly returns a character string containing the absolute file path to the
+generated \verb{/input} directory.
 }
 \description{
-Handles all operations needed to generate \code{/input} files from successfully ingested and harmonized donor survey microdata. Optionally uploads resulting local \code{/input} data files to correct location in remote storage (via \code{\link{uploadFiles}}).
-
-NOTE: Argument \code{test_mode = TRUE} by default, which causes local "/fusion_" sub-directory to be used (creating it if necessary). This prevents any overwrite of production data in "/fusion" (no underscore) while in test mode.
+Constructs and formats the aligned donor (training) and ACS recipient (prediction)
+microdata datasets required for downstream statistical matching in the \code{fusionData}
+workflow. \code{fusionInput()} orchestrates survey harmonization, geographic location
+(PUMA) imputation, predictor distribution quality screening, and numeric feature
+scaling before writing compressed binary \code{.fst} files to disk.
 }
 \details{
-The function checks arguments and determines the file path to the appropriate \code{/input} directory (creating it if necessary), based on \code{donor}, \code{recipient}, \code{respondent}, and \code{test_mode}. It then executes the following steps:
+\code{fusionInput()} executes a multi-stage data-preparation pipeline:
+\itemize{
+\item \strong{Workspace Verification:} Ensures the active R session working directory is
+located within a valid \code{fusionData} repository root.
+\item \strong{Microdata Harmonization:} Executes \code{harmonize()} using the matching donor-ACS
+harmonization mapping script (e.g., \code{RECS_2015__ACS_2015.R}).
+\item \strong{Spatial Imputation:} Calls \code{imputeLocation()} to statistically assign
+PUMA-level geographic identifiers to donor survey observations.
+\item \strong{Predictor Quality Screening:} Evaluates overlapping distribution similarity between
+donor and recipient predictor variables using weighted similarity metrics. Predictors with
+similarity scores below 0.80 are automatically dropped from model training to prevent
+distributional bias.
+\item \strong{Numeric Feature Scaling:} Transforms continuous predictor variables using robust
+weighted Z-scores when necessary via \code{scaleNumeric()}.
+\item \strong{Compressed File Output:} Writes donor (\verb{*_donor.fst}) and recipient (\verb{*_recipient.fst})
+datasets utilizing maximum \code{fst} compression (\code{compress = 100}).
+}
+}
+\section{Directory Structure & Outputs}{
+
+Output files are stored in structured paths based on execution mode:
+\itemize{
+\item \strong{Test Mode:} \verb{fusion_/[DONOR]/[ACS_YEAR]/input/[DATE]/}
+\item \strong{Production Mode:} \verb{fusion/[DONOR]/[ACS_YEAR]/input/[DATE]/}
+}
+Each run creates three files in the target directory:
 \enumerate{
-\item \strong{Check for custom pre-processing script}. Looks for an \emph{optional}, pre-existing .R script in \code{/input} starting with "(00)". This script can be used to inject custom code prior to any other operations. Most likely, the custom code is used to set or modify function arguments that cannot be specified manually at function call. If found, the .R file is \code{\link{source}}-d locally and code comments are printed to the console.
-\item \strong{prepare() microdata}. \code{\link{prepare}} is called with sensible default values.
-\item \strong{assemble() microdata}. \code{\link{assemble}} is called with sensible default values. Output from \code{\link{assemble}} consists of an object named \code{data} with the harmonized donor microdata in \code{data[[1]]} and harmonized ACS microdata in \code{data[[2]]}.
-\item \strong{Check for custom .R scripts}. Looks for \emph{optional}, pre-existing .R scripts in \code{/input} starting with "(01)", "(02)", etc. These scripts can be used to inject custom code prior to next step. Most likely, the custom code is used to add or remove non-standard variables from \code{data} or otherwise adjust the default harmonized microdata. The custom code must modify the \code{fuse} vector (or list) if changes to the initial function argument are desired. If found, the .R files are \code{\link{source}}-d locally and code comments are printed to the console.
-\item \strong{Check categorical harmonized variables}. Computes the similarity of donor and ACS categorical harmonized variables by comparing proportions for the observable factor levels. Under the assumption that the donor and ACS sample the same underlying population, we expect the proportions to be fairly similar. Returns a "Similarity score" for each categorical harmonized variable, ranging from 0 to 1. Variables with scores below ~0.8 should probably be checked by the analyst (via \code{\link{harmony}}) to confirm that the harmonization strategy is valid. User is prompted in the console to indicate which variables should be ignored/dropped/removed, if any.
-\item \strong{Check location variables}. Checks the number of factor levels in each location predictor variable and compares to the number of levels in the "representative" location variable passed via \code{force}. If a location variable has more levels than the representative one, it is flagged as a potential issue since it suggests the presence of a location variable with greater spatial resolution than the one known to be representative. User is prompted in the console to indicate if they would like to remove the flagged variable(s).
-\item \strong{Check fusion and predictor variables}. The full set of fusion and potential predictor variables is determined. Summary information is printed to the console. User is prompted in the console to confirm that everything looks OK before proceeding.
-\item \strong{Run fusionModel::prepXY()}. \code{\link[fusionModel]{prepXY}} is called with sensible default values. The output is written to the appropriate \code{/input} directory and noted in console. \code{\link[fusionModel]{prepXY}} argument \code{fraction} is automatically set to use 10\% of donor observations or 50k rows (10k in test mode), whichever is higher. Sampling often has minimal effect on results but speeds up computation.
-\item \strong{Write training and prediction datasets to disk}. The (donor) training and (ACS) prediction datasets are written to the appropriate \code{/input} directory as fully-compressed \code{\link[fst]{fst}} files. Output file names noted in console. In test mode, no more than 10k rows of each is written to disk (for speed). In this case, the expected production file size is printed to the console.
-\item \strong{Upload /input files to Google Drive}. User is prompted in the console to confirm if they would like to upload resulting \code{/input} data files to the analogous location in the remote Google Drive storage.
-\item \strong{fusionInput() is finished!} Upon completion, a log file named \code{"inputlog.txt"} is written to \code{/input} for reference.
+\item \verb{[DONOR]_[ACS_YEAR]_[TYPE]_donor.fst}: Scaled, harmonized donor training microdata.
+\item \verb{[DONOR]_[ACS_YEAR]_[TYPE]_recipient.fst}: Scaled, harmonized ACS prediction microdata.
+\item \verb{[DONOR]_[ACS_YEAR]_[TYPE]_inputlog.txt}: Execution log containing system details,
+arguments, predictor similarity scores, and timing summaries.
+}
 }
 
-The user is prompted for console input (including asking about GDrive upload) \emph{only} if \code{\link{interactive}} is \code{TRUE}. Otherwise, the steps proceed without user input.
-
-If \code{donor} refers to a survey with both household- and person-level microdata \emph{and} \code{respondent = "household"} \emph{and} \code{fuse} includes person-level variables, then we have a situation where person-level fusion variables need to be aggregated to household-level prior to fusion.
-This is done automatically within \code{\link{assemble}}. In this scenario, person-level fusion variables are aggregated based on their class.
-By default, numeric variables return the household total (sum), unordered factors return the level of the household's reference person, and ordered factors return the household's maximum level.
-
-The \code{agg_fun} argument can be used to override the default aggregation function for specific fusion variables. It can reference any function that takes a vector and returns a single value and includes a 'na.rm' argument. Two special, package-specific functions are also available, "ref" and "mode", that return the reference person value and modal value, respectively. These functions are comparatively slow, especially "mode". See Examples.
-
-The \code{agg_adj} argument can be used to adjust/modify a person-level fusion variable prior to aggregation. This may be necessary if the variable is defined or measured in a way that doe not allow for straightforward aggregation to the household level. \code{agg_adj} supplies named formulas to an internal \code{\link[dplyr]{mutate}} call, allowing for complex modifications. See Examples.
-
-Note in the Examples the use of the convenience utility function \code{if.else()}. It wraps \code{\link[dplyr]{if_else}} and can be used identically but preserves factor levels and ordering in the result if possible.
-}
 \examples{
-# Since 'test_mode = TRUE' by default, this will affect files in local /fusion_ directory
-dir <- fusionInput(donor = "RECS_2015",
-                   recipient = "ACS_2015",
-                   respondent = "household",
-                   fuse = c("btung", "btuel", "cooltype"),
-                   force = c("moneypy", "householder_race", "education", "nhsldmem", "kownrent", "recs_division"),
-                   note = "Hello world. Reminder: running in test mode by default.")
+\dontrun{
+# Run input generation in fast test mode for RECS 2015 and ACS 2015
+input_dir <- fusionInput(
+  donor = "RECS_2015",
+  acs_year = 2015,
+  respondent = "household",
+  test_mode = TRUE,
+  ncores = 2
+)
 
-# List files in the /input directory
-list.files(dir)
+# Inspect generated fst and log files
+list.files(input_dir)
+}
 
-# Complicated ASEC example using custom aggregation arguments
-dir <- fusionInput(donor = "ASEC_2019",
-                   recipient = "ACS_2019",
-                   respondent = "household",
-                   fuse = c("heatsub", "heatval", "kidcneed", "hipval", "spmwic", "spmmort"),
-                   agg_adj = list(
-                      hipval = ~if.else(duplicated(asec_2019_hid), 0, hipval),
-                      kidcneed = ~if.else(kidcneed == "NIU: Over 14", "No", kidcneed),
-                      spmwic = ~if.else(duplicated(data.table(asec_2019_hid, spmfamunit)), 0, spmwic)
-                   ),
-                   agg_fun = list(
-                      spmwic = "mean",
-                      kidcneed = "mode"
-                   ))
-
+}
+\seealso{
+\code{\link{harmonize}}, \code{\link{imputeLocation}}
 }

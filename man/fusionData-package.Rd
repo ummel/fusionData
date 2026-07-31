@@ -6,7 +6,7 @@
 \alias{fusionData-package}
 \title{fusionData: Data backend for fusionACS platform}
 \description{
-Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.
+Data backend for fusionACS platform
 }
 \seealso{
 Useful links:
@@ -16,7 +16,12 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Kevin Ummel \email{ummel@berkeley.edu}
+\strong{Maintainer}: Kevin Ummel \email{kevin.ummel@yale.edu}
+
+Authors:
+\itemize{
+  \item Kevin Ummel \email{kevin.ummel@yale.edu}
+}
 
 Other contributors:
 \itemize{

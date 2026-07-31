@@ -2,22 +2,87 @@
 % Please edit documentation in R/createDictionary.R
 \name{createDictionary}
 \alias{createDictionary}
-\title{Generate data dictionary from survey microdata}
+\title{Generate Standardized Survey Data Dictionary from Microdata}
 \usage{
 createDictionary(data, survey, vintage, respondent, custom = FALSE)
 }
 \arguments{
-\item{data}{Data frame. Survey microdata with variable descriptions stored in columns via \code{\link[labelled]{var_label}}.}
+\item{data}{Data frame. Processed survey microdata containing variable descriptions
+assigned to columns via \code{\link[labelled]{var_label}}. \strong{Note:} Character columns
+must be converted to factors prior to calling \code{createDictionary()}.}
 
-\item{survey}{Character. Unique survey identifier (e.g. "RECS").}
+\item{survey}{Character. Unique survey abbreviation (e.g., \code{"RECS"}, \code{"CPS"}, \code{"AHS"}).}
 
-\item{vintage}{Character. Survey vintage (e.g. 2015).}
+\item{vintage}{Character or Numeric. Survey vintage or year (e.g., \code{2015} or \code{"2015-2020"}).}
 
-\item{respondent}{Character. Respondent type; either "Household" or "Person" or a string identifiable as such.}
+\item{respondent}{Character. Respondent unit type; must be identifiable as Household
+(e.g., \code{"Household"}, \code{"H"}) or Person (e.g., \code{"Person"}, \code{"P"}).}
+
+\item{custom}{Logical. Indicates whether the dictionary corresponds to a custom
+microdata extension file (\code{custom.fst}). Defaults to \code{FALSE}.}
 }
 \value{
-Returns a tibble with standard "dictionary" information based on the provided microdata.
+A \code{\link[tibble]{tibble}} containing nine standardized metadata columns:
+\itemize{
+\item \code{survey}: Unique survey identifier
+\item \code{vintage}: Survey vintage year
+\item \code{respondent}: Respondent unit type (\code{"H"} for Household, \code{"P"} for Person)
+\item \code{variable}: Variable name
+\item \code{description}: Human-readable variable label
+\item \code{values}: Formatted numeric range summary or factor level enumeration
+\item \code{type}: Abbreviated data type (e.g., \code{"fct"}, \code{"dbl"}, \code{"int"})
+\item \code{n}: Count of non-missing observations
+\item \code{custom}: Logical flag indicating custom dataset status
+}
 }
 \description{
-Produces a data dictionary with standard structure that can be saved alongside processed microdata. Resulting dictionary can be compiled with other survey dictionaries via \link{compileDictionary}. This function is typically called at the end of a .R script that generates processed survey microdata.
+Constructs a standardized variable-level codebook (tibble) from a processed
+survey microdata frame. The resulting dictionary contains variable names,
+human-readable descriptions, value range/level summaries, data types, and non-missing
+sample counts ($N$).
+}
+\details{
+\code{createDictionary()} is typically called at the end of an individual survey ingest
+script in \verb{survey-processing/}. The dictionary tibble returned by this function is
+saved alongside processed \code{.fst} microdata files as \verb{*_dictionary.rds} and later
+compiled into master package metadata using \code{\link[fusionData]{compileDictionary}}.
+
+Before constructing the dictionary, \code{createDictionary()} performs three safety checks:
+\itemize{
+\item \strong{Type Check:} Ensures no character columns remain in \code{data} (all string variables
+must be factorized).
+\item \strong{Uniqueness Check:} Verifies that row count matches distinct household/person IDs
+(\code{hid} / \code{pid}) to prevent duplicate observations.
+\item \strong{Completeness Check:} Ensures all predictor columns possess non-empty variable
+labels via \code{labelled::var_label()}.
+}
+}
+\section{Workflow Note}{
+
+Every variable intended for microdata assembly must have an explicit description assigned
+beforehand (e.g., \code{labelled::var_label(data$col) <- "Description"}). If any columns
+are missing labels, this function will raise an error identifying the unlabeled columns.
+}
+
+\examples{
+\dontrun{
+# Example survey processing snippet
+library(labelled)
+
+# Assign variable labels
+var_label(df$income) <- "Total household income (USD)"
+var_label(df$tenure) <- "Housing tenure status"
+
+# Generate dictionary
+dict <- createDictionary(
+  data = df,
+  survey = "RECS",
+  vintage = 2015,
+  respondent = "Household"
+)
+}
+
+}
+\seealso{
+\code{\link[fusionData]{compileDictionary}}, \code{\link[labelled]{var_label}}
 }

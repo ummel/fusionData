@@ -5,6 +5,9 @@
 
 harmony2dotR <- function(X, file.out) {
 
+  library(dplyr)
+  library(purrr)
+
   dput(X, file = file.out, control = c("niceNames"))
 
   d <- readLines(file.out)

@@ -18,3 +18,5 @@
 ^pkgdown$
 ^\.github$
 ^LICENSE\.md$
+^\.positai$
+^\.claude$

@@ -1,19 +1,18 @@
 Package: fusionData
 Title: Data backend for fusionACS platform
-Version: 1.0.7
+Version: 1.1.0
 Authors@R: c(
-    person(given = "Kevin", family = "Ummel", role = c("aut", "cre"), email = "ummel@berkeley.edu"),
+    person(given = "Kevin", family = "Ummel", role = c("aut", "cre"), email = "kevin.ummel@yale.edu"),
     person(given = "Karthik", family = "Akkiraju", role = "ctb"),
     person(given = "Hero", family = "Ashman", role = "ctb"),
     person(given = "Cora", family = "Kingdon", role = "ctb"),
     person(given = "Miguel", family = "Poblete Cazenave", role = "ctb"),
     person(given = "Steven", family = "Herrera Tenorio", role = "ctb"))
-Description: Pre-process raw survey and spatial data. Harmonize variables across surveys. Build harmonized microdata for use in fusionModel package.
+Description: Data backend for fusionACS platform
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 Depends: 
     R (>= 3.5.0)
 Imports: 
@@ -38,3 +37,4 @@ Imports:
     styler,
     tidyr
 URL: https://ummel.github.io/fusionData/
+Config/roxygen2/version: 8.0.0

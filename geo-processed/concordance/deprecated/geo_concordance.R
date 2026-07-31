@@ -1,0 +1,270 @@
+library(tidyverse)
+library(data.table)
+library(labelled)
+library(sf)
+
+#----------
+
+# Geocorr2018 application: https://mcdc.missouri.edu/applications/geocorr2018.html
+# Help page: https://mcdc.missouri.edu/applications/docs/geocorr-help.html
+# Geography glossary: https://mcdc.missouri.edu/applications/docs/maggot2014.html
+
+# Reference table for number of digits per GEOID
+# https://www.census.gov/programs-surveys/geography/guidance/geo-identifiers.html
+
+#----------
+
+# General crosswalk for geographic variables identified by state
+state.merge <- readRDS("geo-raw/miscellaneous/Geographic entities to merge on state.rds")
+
+#----------
+
+processGeocorr <- function(year) {
+
+  stopifnot(year %in% c(2018, 2022))
+
+  # Path to geocorr file in geo-raw/concordance
+  if (year == 2018) geocorr.file <- "geo-raw/concordance/geocorr2018/geocorr2018_2116808121.csv.zip"  # 2018
+  if (year == 2022) geocorr.file <- "geo-raw/concordance/geocorr2022/geocorr2022_2606200354.csv.zip"  # 2022
+
+  # Read only first row to get column information
+  meta <- data.table::fread(file = geocorr.file, nrow = 1)
+
+  # Read and format full file
+  d <- data.table::fread(file = geocorr.file,
+                         skip = 2,
+                         col.names = names(meta),
+                         colClasses = list(character = 1:(ncol(meta) - 2))) %>%
+    labelled::set_variable_labels(.labels = unlist(meta[1, ]))
+
+  # Replace literal empty strings ("") with NA for character type columns
+  # fread() does not convert empty strings to NA, as they are ambiguous
+  for (i in 1:ncol(d)) {
+    x <- d[[i]]
+    if (is.character(x)) set(d, j = i, value = na_if(x, ""))
+  }
+
+  #----------
+
+  if (year == 2018) {
+
+    # 2010 vintage (2018 geocorr)
+    # Rename columns to include a year identifier (except for state)
+    d <- d %>%
+      rename(puma10 = puma12,
+             county10 = county,
+             cousub10 = cousubfp,
+             tract10 = tract,
+             bg10 = bg,
+             zcta10 = zcta5,
+             #sldu10 = sldu,
+             #sldl10 = sldl,
+             ur10 = ur,
+             #ua12 = ua,
+             cbsa10 = cbsa10,
+             cbsatype10 = cbsatype10,
+             metdiv10 = metdiv10,
+             csa10 = csa10,
+             hus = hus10) %>%
+    select(state:csa10, ur10, hus, afact)
+
+  }
+
+  if (year == 2022) {
+
+    # 2020 vintage (2022 geocorr)
+    # Rename columns to include a year identifier (except for state)
+    d <- d %>%
+      rename(puma20 = puma22,
+             county20 = county,
+             cousub20 = cousub23,
+             tract20 = tract,
+             bg20 = blockgroup,
+             zcta20 = zcta,
+             # sldu20 = sldu,
+             # sldl20 = sldl,
+             ur20 = ur,
+             #ua20 = ua,
+             cbsa20 = cbsa20,
+             cbsatype20 = cbsatype20,
+             metdiv20 = metdiv20,
+             csa20 = csa20,
+             hus = hus20) %>% # Add to 2010 code?
+      select(state:zcta20, cbsa20:csa20, ur20, hus, afact)
+
+  }
+
+  #----------
+
+  # Extract and clean up variable labels/definitions
+  vlabs <- labelled::var_label(d, unlist = TRUE)
+  x <- str_squish(gsub("\\s*\\([^\\)]+\\)","", vlabs))
+  y <- names(vlabs)
+  vlabs <- ifelse(grepl("[a-z]\\d{2}$", y), paste0(x, " (20", str_sub(y, -2, -1), ")"), x)
+  vlabs[length(vlabs)] <- "Housing units allocation factor (sums to 1 for each PUMA)"
+  names(vlabs) <- y
+
+  # Fix-up values for select variables
+  d <- d %>%
+    mutate_at(vars(starts_with('county')), ~ substring(.x, 3, 5)) %>%
+    mutate_at(vars(starts_with('tract')), ~ sub(".", "", .x, fixed = TRUE)) %>%
+    mutate_at(vars(starts_with('cbsatype')), ~ ifelse(.x == " ", "None", substring(.x, 1, 3))) %>%
+    mutate_at(vars(starts_with('cbsatype')), ~ ifelse(.x != "None", paste0(.x, "ro"), .x)) %>%
+    #mutate_at(vars(starts_with('sdbesttype')), toupper) %>%
+    mutate_all(~ ifelse(grepl("^[9]*$", .x), NA, .x)) %>%   # Replace all "999", etc. (all nines) with NA
+    mutate(hus = replace_na(hus, 0L))
+
+  # Replace any NA values with string "None"
+  # This is to allow clear distinction in survey microdata between NA (unknown) and NA (not applicable); the latter should be set to "None" when survey is processed
+  # For example, geographies not affiliated with a CBSA are set to "None" rather than NA
+  d[is.na(d)] <- "None"
+
+  # Assign clean variable labels
+  stopifnot(all(names(d) == names(vlabs)))
+  labelled::var_label(d) <- vlabs
+
+  # Create final 'geocorr' data frame
+  geocorr <- d %>%
+    filter(hus > 0) %>%
+    rename(puma_weight = hus)
+
+  return(geocorr)
+
+}
+
+#----------
+
+# Compile and append 2018 and 2022 Geocorr processed data
+test <- c(2018, 2022) %>%
+  lapply(processGeocorr) %>%
+  rbindlist()
+temp <- bind_rows(test)
+
+#----------
+
+# Assign NCDC climate division, by block group
+# Climate divisions are only defined for the Lower 48 states
+# Custom codes 4900 and 5000 are introduced for Alaska and Hawaii, respectively
+
+# Block group centroids
+data(bg_centroids, package = "fusionData")
+
+# Shapefile of climate division boundaries
+climdiv <- st_read("geo-raw/climate/CONUS_CLIMATE_DIVISIONS.shp/GIS.OFFICIAL_CLIM_DIVISIONS.shp") %>%
+  st_make_valid() %>%
+  mutate(climate_division = str_pad(CLIMDIV, width = 4, pad = 0)) %>%
+  select(climate_division) %>%
+  st_transform(crs = st_crs(bg_centroids))
+
+# Create initial climate division assignment
+ind <- st_nearest_feature(bg_centroids, climdiv)
+cd <- climdiv$climate_division[ind]
+
+# Assign custom climate division codes for Alaska and Hawaii
+cd[bg_centroids$state == "02"] <- "4900"
+cd[bg_centroids$state == "15"] <- "5000"
+
+# Create crosswalk between block group and climate division
+climdiv <- bg_centroids %>%
+  mutate(pop10 = NULL,
+         climate_division = cd) %>%
+  st_drop_geometry()
+
+# Assign variable description
+var_label(climdiv$climate_division) <- "NCDC climate division with custom codes for AK and HI"
+
+stopifnot(!anyNA(climdiv))
+
+#----------
+
+# Calculate population of each CBSA to create concordance with custom "cex_cbsasize" variable
+# CBSA's are groups of contiguous counties and used as the primary sampling units in the CEX
+# The CEX 'popsize' variable (from which 'cex_cbsasize' is constructed) assigns each CBSA to one of 5 population ranges
+
+# county10.pop <- bg_centroids %>%
+#   st_drop_geometry() %>%
+#   group_by(state, county10) %>%
+#   summarize(pop10 = sum(pop10), .groups = "drop")
+#
+# cbsasize <- geocorr %>%
+#   select(state, county10, cbsa13) %>%
+#   distinct() %>%
+#   filter(!is.na(cbsa13)) %>%
+#   left_join(county10.pop, by = c("state", "county10")) %>%
+#   group_by(cbsa13) %>%
+#   summarize(pop10 = sum(pop10), .groups = "drop") %>%
+#   mutate(cex_cbsasize = cut(pop10, breaks = c(0, 100e3, 500e3, 1e6, 5e6, Inf), right = FALSE, labels = FALSE),
+#          cex_cbsasize = c("Less than 100 thousand", "100-500 thousand", "0.5-1.0 million", "1-5 million", "More than 5 million")[cex_cbsasize]) %>%
+#   select(-pop10)
+
+#----------
+
+# DEFINE CUSTOM VARIABLES
+# These are geographic variables used within specific donor surveys
+
+# # NOT USED FOR ASEC
+# ## ASEC ----
+#
+# # Include CPS-ASEC county codes - not identified for each observation
+# asec <- readRDS("geo-processed/ASEC/asec_county.rds")
+#
+# # rename to be consistent with the processed H data
+# asec <- asec %>%
+#   mutate(asec_county = county) %>%
+#   rename(county14 = county) %>%
+#   filter(county14 != "County not identified")
+
+## RECS 2015 ----
+
+# RECS 'recs_iecc_zone' variable
+# This links raw IECC codes to those used in RECS 2009 and 2015
+recs15.iecc <- tibble(
+  iecc_zone = c("1A*", "2A*", "2B", "2B*", "3A", "3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
+  recs15_iecc_zone = c("1A-2A", "1A-2A", "2B", "2B", "3A", "3A", "3B-4B", "3C", "4A", "3B-4B", "4C", "5A", "5B-5C", "5B-5C", "6A-6B", "6A-6B", "7A-7B-7AK-8AK", "7A-7B-7AK-8AK"),
+)
+
+recs15.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
+  mutate(recs15_ba_zone = ifelse(ba_zone %in% c('Cold', 'Very Cold'), 'Cold/Very Cold', ba_zone),
+         recs15_ba_zone = ifelse(recs15_ba_zone %in% c('Hot-Dry', 'Mixed-Dry'), 'Hot-Dry/Mixed-Dry', recs15_ba_zone)) %>%
+  left_join(recs15.iecc, by = "iecc_zone") %>%
+  select(state, county10, starts_with("recs15_")) %>%
+  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2015 IECC climate zone", "RECS 2015 Building America climate zone"))
+
+## RECS 2020 ----
+
+# This links raw IECC codes to those used in RECS 2020
+recs20.iecc <- tibble(
+  iecc_zone = c("1A*","2A*","2B","2B*","3A","3A*", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "7", "8"),
+  recs20_iecc_zone = c("1A", "2A","2B","2B","3A","3A","3B", "3C", "4A", "4B", "4C", "5A", "5B","5C", "6A", "6B", "7", "8"),
+)
+
+recs20.climate <- readRDS("geo-processed/climate/climate_zones_processed.rds") %>%
+  mutate(recs20_ba_zone = ifelse(ba_zone == 'Very Cold', 'Very-Cold', ba_zone)) %>%
+  left_join(recs20.iecc, by = "iecc_zone") %>%
+  select(state, county10, starts_with("recs20_")) %>%
+  labelled::set_variable_labels(.labels = c("State code", "County code (2010)", "RECS 2020 IECC climate zone", "RECS 2020 Building America climate zone"))
+
+#----------
+
+# Merge various datasets
+result <- geocorr %>%
+  left_join(state.merge, by = "state") %>%
+  left_join(recs15.climate, by = c("state", "county10")) %>%
+  left_join(recs20.climate, by = c("state", "county10")) %>%
+  left_join(climdiv, by = c("state", "county10", "tract10", "bg10")) %>%
+  #left_join(asec, by = c("state", "county14")) %>%  # FIX THIS!!!
+  # mutate(asec_county = if_else(!is.na(asec_county), asec_county, factor("County not identified")),
+  #        asec_division = if_else(!str_detect(recs_division, "Mountain"), recs_division, "Mountain")) %>%
+  # left_join(cbsasize, by = "cbsa13") %>%
+  # mutate(cex_cbsasize = ifelse(ur12 == "U" & !is.na(cbsa13), cex_cbsasize, "Rural"),
+  #        cex_metro = ifelse(ur12 == "U" & !is.na(cbsa13) & cbsatype13 == "Metro", "Metro", "Not metro")) %>%
+  select(puma10, puma_weight, state, state_name, state_postal, everything(), -afact)
+
+#----------
+
+# Save the variable descriptions as separate file
+defs <- enframe(var_label(result, unlist = TRUE, null_action = "na"), name = "variable", value = "description")
+saveRDS(defs, file = "geo-processed/concordance/geo_concordance_definitions.rds")
+
+# Save output as .fst file
+fst::write_fst(result, "geo-processed/concordance/geo_concordance.fst", compress = 100)

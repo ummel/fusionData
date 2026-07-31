@@ -19,3 +19,5 @@ surveys.rda
 !*dictionary.rds
 README_cache
 docs
+.positai
+temp_backup/

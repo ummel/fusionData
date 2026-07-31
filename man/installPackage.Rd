@@ -7,9 +7,25 @@
 installPackage()
 }
 \description{
-Safe and convenient way to (re-)install the fusionData package locally. Compiles local survey dictionary files (\code{\link{compileDictionary}}); updates package documentation and namespace (\code{\link[roxygen2]{roxygenise}}); and then (re-)installs the package locally (\code{\link[devtools]{install}}). Missing package dependencies are installed by default; user is asked in console if they wish to upgrade already-installed dependencies.
+Fast and safe way to (re-)install the local version of the \code{fusionData}
+package directly from source, mirroring RStudio's 'Install Package' build action.
+Compiles internal survey dictionary files (\code{\link{compileDictionary}}),
+updates package documentation and namespace via \code{\link[roxygen2]{roxygenise}},
+and reinstalls the package.
+}
+\details{
+When underlying survey microdata or spatial reference datasets are updated,
+running this function ensures that regenerated \code{.rda} files in \code{data/}
+are properly compiled, documented, and made accessible throughout the package.
+
+This function unloads the active \code{fusionData} namespace prior to installation
+to prevent file-locking errors, and passes \code{build = FALSE} to reinstall
+directly from local source files in seconds without archiving an intermediate
+\code{.tar.gz} bundle.
 }
 \examples{
+\dontrun{
 installPackage()
+}
 
 }
