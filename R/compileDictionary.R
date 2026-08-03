@@ -31,8 +31,6 @@
 #'   \item `universe/www/dictionary.rda` and `universe/www/surveys.rda` (Universe Shiny app assets)
 #' }
 #'
-#' @seealso \code{\link[usethis]{use_data}}
-#'
 #' @examples
 #' \dontrun{
 #' # Ensure working directory is set to the fusionData repository root
@@ -69,8 +67,8 @@ compileDictionary <- function() {
   dictionary$N <- NULL
 
   # Save primary datasets to package data directory
-  usethis::use_data(dictionary, overwrite = TRUE)
-  usethis::use_data(surveys, overwrite = TRUE)
+  use_data2(dictionary, overwrite = TRUE)
+  use_data2(surveys, overwrite = TRUE)
 
   # Mirror dictionary assets to the Harmony Shiny app web resources
   cli::cli_inform("Saving {.val dictionary} and {.val surveys} to {.path harmony/www}")

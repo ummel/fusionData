@@ -622,3 +622,23 @@ ct_planning_to_county_fips <- function(x) {
 
   return(out)
 }
+
+#----------
+
+# Saves R objects as .rda files to the local ./data directory.
+# Replaces usethis::use_data() without requiring an active usethis project.
+
+use_data2 <- function(..., overwrite = TRUE) {
+  obj_names <- as.character(match.call(expand.dots = FALSE)$...)
+
+  for (obj_name in obj_names) {
+    file_path <- file.path("data", paste0(obj_name, ".rda"))
+
+    if (file.exists(file_path) && !overwrite) {
+      cli::cli_abort("File {.path {file_path}} already exists. Use {.code overwrite = TRUE} to overwrite.")
+    }
+
+    save(list = obj_name, file = file_path, envir = parent.frame())
+    cli::cli_alert_success("Saved {.var {obj_name}} to {.path {file_path}}")
+  }
+}

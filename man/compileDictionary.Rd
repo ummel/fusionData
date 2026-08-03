@@ -52,6 +52,3 @@ installPackage()
 }
 
 }
-\seealso{
-\code{\link[usethis]{use_data}}
-}

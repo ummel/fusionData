@@ -67,5 +67,5 @@ installPackage()
 
 }
 \seealso{
-\code{\link[fst]{write_fst}}, \code{\link[usethis]{use_data}}, \code{\link[collapse]{fmode}}
+\code{\link[fst]{write_fst}}, \code{\link[collapse]{fmode}}
 }

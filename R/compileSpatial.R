@@ -43,7 +43,7 @@
 #'   \item `data/spatial.rda` (Package metadata object containing spatial variable labels and types)
 #' }
 #'
-#' @seealso \code{\link[fst]{write_fst}}, \code{\link[usethis]{use_data}}, \code{\link[collapse]{fmode}}
+#' @seealso \code{\link[fst]{write_fst}}, \code{\link[collapse]{fmode}}
 #'
 #' @examples
 #' \dontrun{
@@ -97,7 +97,7 @@ compileSpatial <- function() {
 
   # Save spatial dictionary to package data directory
   cli::cli_inform("Saving geo predictors metadata...")
-  usethis::use_data(spatial, overwrite = TRUE)
+  use_data2(spatial, overwrite = TRUE)
   rm(temp)
 
   # Expand each dataset temporally before merging
