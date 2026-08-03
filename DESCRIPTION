@@ -37,5 +37,7 @@ Imports:
     styler,
     tibble,
     tidyr
+Suggests:
+    pdftools
 URL: https://ummel.github.io/fusionData/
 Config/roxygen2/version: 8.0.0
