@@ -1,21 +1,24 @@
-#' Update Local Package Datasets
+#' Compile and Synchronize Package Datasets
+#'
+#' @name compileData
+#' @aliases compileData
 #'
 #' @description
-#' Compiles updated datasets from source files in the local `/fusionData` file structure
-#' and rebuilds the local fusionData package lazy-load database in-place.
-#' This function should be executed following any addition, deletion, or modification to:
+#' Compiles updated datasets from source files and rebuilds the installed
+#' package's lazy-load database in-place. These functions should be executed
+#' following any addition, deletion, or modification to:
 #' \itemize{
 #'   \item Microdata dictionaries
 #'   \item Spatial predictor data
 #'   \item Data objects created or modified by code inside the \code{data-raw/} directory
 #' }
 #'
-#' It provides a streamlined way to sync updated data directly into the local
-#' fusionData package installation without requiring a full re-build from source.
+#' Running \code{compileData()} provides a streamlined way to sync updated data
+#' directly into the active R library, particularly in HPC environments where full
+#' \code{R CMD INSTALL} or \code{usethis} workflows are unavailable.
 #'
 #' @section Side Effects on Disk:
-#' Running this function executes several disk-writing operations across
-#' the workspace and installed library:
+#' Running these compilation functions executes several disk-writing operations:
 #' \itemize{
 #'   \item \strong{Local Package Data (\code{data/}):} Overwrites or generates
 #'     \code{.rda} binary objects (\code{dictionary.rda}, \code{surveys.rda},
@@ -29,6 +32,12 @@
 #'     the installed package library directory (\code{system.file(package = "fusionData")}).
 #' }
 #'
+#' @section Directory Requirement:
+#' \strong{Important:} These functions must be executed with your R working directory set to
+#' the root of the local \code{fusionData} project folder (e.g., \code{setwd("path/to/fusionData")}).
+#' They rely on relative directory paths (\code{survey-processed/}, \code{geo-processed/},
+#' \code{harmony/www/}, \code{universe/www/}, etc.).
+#'
 #' @param compile_dictionary Logical. If \code{TRUE} (default), runs
 #'   \code{\link{compileDictionary}()} to regenerate dictionary objects into \code{./data/}.
 #' @param compile_spatial Logical. If \code{TRUE} (default), runs
@@ -37,16 +46,21 @@
 #' @return Invisibly returns a character vector of dataset names that were updated.
 #' @export
 #'
+#' @seealso \code{\link[fst]{write_fst}}, \code{\link[collapse]{fmode}}
+#'
 #' @examples
 #' \dontrun{
-#' # Update both dictionary and spatial datasets
-#' update()
+#' # Compile both dictionary and spatial datasets and sync to package DB
+#' compileData()
 #'
 #' # Skip spatial compilation and only update dictionary data
-#' update(compile_spatial = FALSE)
+#' compileData(compile_spatial = FALSE)
+#'
+#' # Run individual compilation sub-routines directly
+#' compileDictionary()
+#' compileSpatial()
 #' }
-
-update <- function(compile_dictionary = TRUE, compile_spatial = TRUE) {
+compileData <- function(compile_dictionary = TRUE, compile_spatial = TRUE) {
 
   # 1. Run compilation routines if requested
   if (isTRUE(compile_dictionary)) {

@@ -1,46 +1,26 @@
-#' Compile Universal Survey Data Dictionary
-#'
-#' @description
-#' Aggregates individual survey metadata codebooks stored in `survey-processed/`
-#' into a single, standardized data dictionary (`dictionary`) and a high-level
-#' survey metadata summary (`surveys`).
+#' @rdname compileData
+#' @aliases NULL
 #'
 #' @details
-#' This function forms part of the **Document** step in the `fusionData` package
-#' workflow. It scans all recursive survey metadata files (`*_dictionary.rds`) created
+#' \strong{\code{compileDictionary()}:}
+#' Aggregates individual survey metadata codebooks stored in \code{survey-processed/}
+#' into a single, standardized data dictionary (\code{dictionary}) and a high-level
+#' survey metadata summary (\code{surveys}).
+#'
+#' This function forms part of the \strong{Document} step in the \code{fusionData} package
+#' workflow. It scans all recursive survey metadata files (\code{*_dictionary.rds}) created
 #' during survey ingest, standardizes respondent types, calculates microdata disk
-#' footprints (including `.processed.fst` and optional `custom.fst` files), and
+#' footprints (including \code{.processed.fst} and optional \code{custom.fst} files), and
 #' outputs unified data objects needed by the package and embedded Shiny applications
-#' (`universe` and `harmony`).
+#' (\code{universe} and \code{harmony}).
 #'
-#' @section Directory Requirement:
-#' **Important:** This function must be executed with your R working directory set to
-#' the root of the local `fusionData` project folder (e.g., `setwd("path/to/fusionData")`).
-#' It relies on relative directory paths (`survey-processed/`, `harmony/www/`, and `universe/www/`).
-#'
-#' @section Workflow Note:
-#' Because `compileDictionary()` updates datasets stored in the package's `data/` directory,
-#' you must rebuild or reinstall the package locally (e.g., using `fusionData::installPackage()`)
-#' after running this function for the updated package datasets to take effect in your loaded session.
-#'
-#' @return Invisibly returns `NULL`. As a side effect, the function writes updated `.rda` files
-#' containing the `dictionary` and `surveys` data frames to disk across three locations:
-#' \itemize{
-#'   \item `data/dictionary.rda` and `data/surveys.rda` (Package datasets)
-#'   \item `harmony/www/dictionary.rda` and `harmony/www/surveys.rda` (Harmony Shiny app assets)
-#'   \item `universe/www/dictionary.rda` and `universe/www/surveys.rda` (Universe Shiny app assets)
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Ensure working directory is set to the fusionData repository root
-#' compileDictionary()
-#'
-#' # Reinstall local package binaries so updated data is recognized
-#' installPackage()
-#' }
+#' @section Directory Requirement (\code{compileDictionary}):
+#' \strong{Important:} This function must be executed with your R working directory set to
+#' the root of the local \code{fusionData} project folder (e.g., \code{setwd("path/to/fusionData")}).
+#' It relies on relative directory paths (\code{survey-processed/}, \code{harmony/www/}, and \code{universe/www/}).
 #'
 #' @export
+
 compileDictionary <- function() {
 
   # Extract survey dictionary paths from processed metadata directory
