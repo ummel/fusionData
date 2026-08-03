@@ -54,9 +54,11 @@ poverty_thresholds <- lapply(2005:2024, function(year) {
                  values_transform = as.integer,
                  values_to = "threshold",
                  names_to = "minors") %>%
-    mutate(year = as.integer(!!year),
+    mutate(
+      year = as.integer(!!year),
            minors = as.integer(substring(minors, 2, 2)),
-           senior = map(type, ~ if (grepl("people", .x)) {c(TRUE, FALSE)} else {c(grepl("65 years and over", .x))})) %>%
+           senior = map(type, ~ if (grepl("people", .x)) c(TRUE, FALSE) else c(grepl("65 years and over", .x)))
+      ) %>%
     unnest(senior) %>%
     select(year, size, minors, senior, threshold)
 }) %>%
@@ -68,4 +70,4 @@ poverty_thresholds <- lapply(2005:2024, function(year) {
 # ------------------------------------------------------------------------------
 
 # Save keyed data.table object to package /data directory
-usethis::use_data(poverty_thresholds, overwrite = TRUE)
+use_data2(poverty_thresholds, overwrite = TRUE)

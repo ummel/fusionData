@@ -14,6 +14,7 @@
 # ==============================================================================
 
 library(tidyverse)
+source("R/utils.R")
 
 # 1. Read raw crosswalk Excel file and clean/harmonize geography records
 puma_crosswalk <- readxl::read_excel("data-raw/source_data/PUMA2010_PUMA2020_crosswalk.xls", sheet = 1) |>
@@ -46,7 +47,7 @@ puma_crosswalk <- readxl::read_excel("data-raw/source_data/PUMA2010_PUMA2020_cro
   arrange(state, puma10, puma20)
 
 # 2. Write processed data object to the package's /data directory
-usethis::use_data(puma_crosswalk, overwrite = TRUE)
+use_data2(puma_crosswalk, overwrite = TRUE)
 
 # ------------------------------------------------------------------------------
 # Diagnostic Verification:

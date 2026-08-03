@@ -25,6 +25,7 @@
 
 library(sf)
 library(tidyverse)
+source("R/utils.R")
 
 # ------------------------------------------------------------------------------
 # 1. 2010 Block Group Centroids
@@ -42,8 +43,7 @@ bg_centroids_2010 <- "https://www2.census.gov/geo/docs/reference/cenpop2010/blkg
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4269)   # CRS matches that returned for Census geometry -- e.g. urban_areas()
 
 # Save 2010 block group centroids 'sf' object to package /data directory
-usethis::use_data(bg_centroids_2010, overwrite = TRUE)
-
+use_data2(bg_centroids_2010, overwrite = TRUE)
 
 # ------------------------------------------------------------------------------
 # 2. 2020 Block Group Centroids
@@ -61,7 +61,7 @@ bg_centroids_2020 <- "https://www2.census.gov/geo/docs/reference/cenpop2020/blkg
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4269)   # CRS matches that returned for Census geometry -- e.g. urban_areas()
 
 # Save 2020 block group centroids 'sf' object to package /data directory
-usethis::use_data(bg_centroids_2020, overwrite = TRUE)
+use_data2(bg_centroids_2020, overwrite = TRUE)
 
 
 # ------------------------------------------------------------------------------

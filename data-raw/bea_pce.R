@@ -33,6 +33,8 @@
 # data/BEA_pce_national.rda
 # data/BEA_pce_state.rda
 
+source("R/utils.R")
+
 createPCEseries <- function() {
 
   require(bea.R)
@@ -203,7 +205,7 @@ createPCEseries <- function() {
     mutate_if(is.double, cleanNumeric, tol = 0.001)
 
   # 2.5 Save State PCE output to disk
-  save(BEA_pce_state, file = "data/BEA_pce_state.rda", compress = TRUE)
+  use_data2(BEA_pce_state, overwrite = TRUE)
 
   # Print summary logs of created dataset objects
   message("BEA_pce_national.rda dimensions: ", paste(dim(BEA_pce_national), collapse = " x "), ". Most recent year: ", last(names(BEA_pce_national)))

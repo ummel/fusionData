@@ -17,6 +17,7 @@
 
 library(tidyverse)
 library(tidycensus)
+source("R/utils.R")
 
 # ------------------------------------------------------------------------------
 # STEP 1: Download 2020 Block Group Total Population Data via Census API
@@ -66,7 +67,6 @@ xwalk <- data.table::fread("data-raw/source_data/nhgis_bg2020_bg2010.csv.zip") |
   # Retain 2010/2020 GEOIDs and the population allocation proportion
   select(bg10, bg20, wt_pop)
 
-
 # ------------------------------------------------------------------------------
 # STEP 3: Merge Datasets and Compute Intersection Population Weights
 # ------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ bg_crosswalk <- inner_join(xwalk, pop2020, by = "bg20") |>
 # ------------------------------------------------------------------------------
 
 # Export crosswalk dataset to package /data directory
-usethis::use_data(bg_crosswalk, overwrite = TRUE)
+use_data2(bg_crosswalk, overwrite = TRUE)
 
 # ------------------------------------------------------------------------------
 # Diagnostic Verification:

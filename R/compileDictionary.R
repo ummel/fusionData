@@ -72,13 +72,13 @@ compileDictionary <- function() {
 
   # Mirror dictionary assets to the Harmony Shiny app web resources
   cli::cli_inform("Saving {.val dictionary} and {.val surveys} to {.path harmony/www}")
-  if (!dir.exists("harmony/www")) dir.create("harmony/www")
+  #if (!dir.exists("harmony/www")) dir.create("harmony/www")
   save(dictionary, file = "harmony/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "harmony/www/surveys.rda", compress = TRUE)
 
   # Mirror dictionary assets to the Universe Shiny app web resources
   cli::cli_inform("Saving {.val dictionary} and {.val surveys} to {.path universe/www}")
-  if (!dir.exists("universe/www")) dir.create("universe/www")
+  #if (!dir.exists("universe/www")) dir.create("universe/www")
   save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 

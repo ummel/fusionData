@@ -28,6 +28,7 @@
 
 library(fredr)
 library(dplyr)
+source("R/utils.R")
 
 # ------------------------------------------------------------------------------
 # 1. API Setup & Data Retrieval
@@ -55,4 +56,4 @@ cpi_series <- fredr(series_id = "CPIAUCSL") %>%
 # ------------------------------------------------------------------------------
 
 # Save result to /data
-usethis::use_data(cpi_series, overwrite = TRUE)
+use_data2(cpi_series, overwrite = TRUE)
