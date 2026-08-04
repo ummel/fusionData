@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Constructs and formats the aligned donor (training) and ACS recipient (prediction)
-#' microdata datasets required for downstream statistical matching in the `fusionData`
+#' microdata datasets required for downstream statistical fusion in the `fusionData`
 #' workflow. `fusionInput()` orchestrates survey harmonization, geographic location
 #' (PUMA) imputation, predictor distribution quality screening, and numeric feature
 #' scaling before writing compressed binary `.fst` files to disk.
@@ -270,14 +270,11 @@ fusionInput <- function(donor,
     fst::write_fst(path = dfile, compress = 100)
 
   fsize <- signif(file.size(dfile) / 1e6, 3)
-  fsize.true <- signif(fsize * n0 / nrow(data[[1]]), 2)
   data[[1]] <- NA
   invisible(gc())
 
   cli::cli_alert_success("Harmonized donor microdata saved to: {.file {basename(dfile)}} ({.val {fsize}} MB)")
-  if (test_mode & fsize.true > fsize) {
-    cli::cli_alert_info("TEST mode: Saved partial donor data. Expected production file size is ~{.val {fsize.true}} MB")
-  }
+  if (test_mode) cli::cli_alert_info("TEST mode: Saved partial donor data.")
 
   # Export compressed ACS recipient prediction microdata
   cli::cli_inform("Writing harmonized ACS microdata...")
@@ -290,13 +287,11 @@ fusionInput <- function(donor,
     fst::write_fst(path = rfile, compress = 100)
 
   fsize <- signif(file.size(rfile) / 1e6, 3)
-  fsize.true <- signif(fsize * n0 / nrow(data[[2]]), 3)
+
   invisible(gc())
 
   cli::cli_alert_success("Harmonized ACS microdata saved to: {.file {basename(rfile)}} ({.val {fsize}} MB)")
-  if (test_mode & fsize.true > fsize) {
-    cli::cli_alert_info("TEST mode: Saved partial recipient data. Expected production file size is ~{.val {fsize.true}} MB")
-  }
+  if (test_mode) cli::cli_alert_info("TEST mode: Saved partial recipient data.")
 
   # Completion Summary & Log Archiving
   cli::cli_h1("fusionInput() is finished!")

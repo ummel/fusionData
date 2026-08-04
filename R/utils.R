@@ -642,3 +642,52 @@ use_data2 <- function(..., overwrite = TRUE) {
     cli::cli_alert_success("Saved {.var {obj_name}} to {.path {file_path}}")
   }
 }
+
+#------------------
+
+#' Query System Free Physical Memory
+#'
+#' @description
+#' Queries OS system utilities across Windows, macOS, Linux, and HPC SLURM environments to estimate
+#' available system RAM.
+#'
+#' @return Numeric scalar estimating available memory in megabytes (MB).
+#'
+#' @keywords internal
+#' @noRd
+freeMemory <- function() {
+  gc()
+  sys <- Sys.info()["sysname"]
+  # Windows
+  if (sys == "Windows") {
+    x <- system2("wmic", args = "OS get FreePhysicalMemory /Value", stdout = TRUE)
+    x <- x[grepl("FreePhysicalMemory", x)]
+    x <- gsub("FreePhysicalMemory=", "", x, fixed = TRUE)
+    x <- gsub("\r", "", x, fixed = TRUE)
+    as.numeric(x) / 1e3
+  } else {
+    # Mac OS
+    if (sys == "Darwin") {
+      x <- system("vm_stat", intern = TRUE)
+      pagesize <- x[grepl("Mach Virtual Memory Statistics",x)]
+      pagesize <- gsub("Mach Virtual Memory Statistics: (page size of", "", pagesize, fixed = TRUE)
+      pagesize <- gsub("bytes)", "", pagesize, fixed = TRUE)
+      x <- x[grepl("Pages free: ", x)]
+      x <- gsub("Pages free: ", "", x, fixed = TRUE)
+      x <- gsub(".", "", x, fixed = TRUE)
+      as.numeric(x) * as.numeric(pagesize) / (1024 ^ 2)
+    } else {
+      ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+      if (is.na(ncores)) {
+        # Linux system assumed as backstop
+        x <- system('grep MemAvailable /proc/meminfo', intern = TRUE)
+        x <- strsplit(x, "\\s+")[[1]][2]
+        as.numeric(x) / 1024
+      } else {
+        # Yale HPC setting
+        ncores * as.integer(Sys.getenv("SLURM_MEM_PER_CPU"))
+      }
+    }
+  }
+}
+

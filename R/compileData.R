@@ -122,7 +122,7 @@ compileData <- function(compile_dictionary = TRUE, compile_spatial = TRUE) {
 
   unique_objs <- unique(loaded_objs)
   cli::cli_alert_success(
-    "Successfully updated installed {.pkg fusionData} package data for: {.var {unique_objs}}"
+    "Successfully updated installed {.pkg fusionData} package data."
   )
 
   invisible(unique_objs)
