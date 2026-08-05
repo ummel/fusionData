@@ -16,6 +16,7 @@ Roxygen: list(markdown = TRUE)
 Depends: 
     R (>= 3.5.0)
 Imports: 
+    arrow,
     collapse,
     data.table,
     devtools,
@@ -27,6 +28,7 @@ Imports:
     labelled,
     matrixStats,
     pbapply,
+    piggyback,
     purrr,
     rhandsontable,
     shiny,

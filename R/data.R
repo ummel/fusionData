@@ -59,20 +59,6 @@ NULL
 #' @keywords internal
 "bg_centroids_2020"
 
-#' Block Group Geographic Crosswalk
-#'
-#' Geographic relationship and crosswalk table linking block groups across 2010 and 2020 Census definitions.
-#'
-#' @format A data frame with 3 variables:
-#' \describe{
-#'   \item{bg10}{2010 12-digit block group code (character)}
-#'   \item{bg20}{2020 12-digit block group code (character)}
-#'   \item{xwalk_weight}{Population (2020) of the geographic intersection (integer)}
-#' }
-#' @source NHGIS 2020-to-2010 Block Group Crosswalk (https://www.nhgis.org/geographic-crosswalks).
-#' @keywords internal
-"bg_crosswalk"
-
 #' National Personal Consumption Expenditures (PCE)
 #'
 #' Bureau of Economic Analysis (BEA) national-level Personal Consumption Expenditures price index and series from 1959 to 2020 used for macroeconomic deflating and scaling.

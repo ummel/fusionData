@@ -38,7 +38,7 @@ generated \verb{/input} directory.
 }
 \description{
 Constructs and formats the aligned donor (training) and ACS recipient (prediction)
-microdata datasets required for downstream statistical matching in the \code{fusionData}
+microdata datasets required for downstream statistical fusion in the \code{fusionData}
 workflow. \code{fusionInput()} orchestrates survey harmonization, geographic location
 (PUMA) imputation, predictor distribution quality screening, and numeric feature
 scaling before writing compressed binary \code{.fst} files to disk.

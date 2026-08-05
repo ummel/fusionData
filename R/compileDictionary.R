@@ -1,4 +1,4 @@
-#' @rdname compileData
+#' @rdname compileMetadata
 #' @aliases NULL
 #'
 #' @details

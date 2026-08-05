@@ -1,7 +1,7 @@
 #' Compile and Synchronize Package Datasets
 #'
-#' @name compileData
-#' @aliases compileData
+#' @name compileMetadata
+#' @aliases compileMetadata
 #'
 #' @description
 #' Compiles updated datasets from source files and rebuilds the installed
@@ -13,9 +13,8 @@
 #'   \item Data objects created or modified by code inside the \code{data-raw/} directory
 #' }
 #'
-#' Running \code{compileData()} provides a streamlined way to sync updated data
-#' directly into the active R library, particularly in HPC environments where full
-#' \code{R CMD INSTALL} or \code{usethis} workflows are unavailable.
+#' Running \code{compileMetadata()} provides a streamlined way to sync updated data
+#' directly into the active R library without needing to build the package from source.
 #'
 #' @section Side Effects on Disk:
 #' Running these compilation functions executes several disk-writing operations:
@@ -51,16 +50,17 @@
 #' @examples
 #' \dontrun{
 #' # Compile both dictionary and spatial datasets and sync to package DB
-#' compileData()
+#' compileMetadata()
 #'
 #' # Skip spatial compilation and only update dictionary data
-#' compileData(compile_spatial = FALSE)
+#' compileMetadata(compile_spatial = FALSE)
 #'
 #' # Run individual compilation sub-routines directly
 #' compileDictionary()
 #' compileSpatial()
 #' }
-compileData <- function(compile_dictionary = TRUE, compile_spatial = TRUE) {
+
+compileMetadata <- function(compile_dictionary = TRUE, compile_spatial = TRUE) {
 
   # 1. Run compilation routines if requested
   if (isTRUE(compile_dictionary)) {
