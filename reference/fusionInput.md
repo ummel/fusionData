@@ -2,8 +2,8 @@
 
 Constructs and formats the aligned donor (training) and ACS recipient
 (prediction) microdata datasets required for downstream statistical
-matching in the `fusionData` workflow. `fusionInput()` orchestrates
-survey harmonization, geographic location (PUMA) imputation, predictor
+fusion in the `fusionData` workflow. `fusionInput()` orchestrates survey
+harmonization, geographic location (PUMA) imputation, predictor
 distribution quality screening, and numeric feature scaling before
 writing compressed binary `.fst` files to disk.
 

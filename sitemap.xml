@@ -9,8 +9,8 @@
 <url><loc>https://ummel.github.io/fusionData/reference/bg_centroids_2020.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/bg_crosswalk.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/categorical_similarity.html</loc></url>
-<url><loc>https://ummel.github.io/fusionData/reference/compileDictionary.html</loc></url>
-<url><loc>https://ummel.github.io/fusionData/reference/compileSpatial.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/compileMetadata.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/compileVersion.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/conveyHarmony.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/cpi_series.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/createDictionary.html</loc></url>
@@ -23,9 +23,9 @@
 <url><loc>https://ummel.github.io/fusionData/reference/harmony.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/imputeLocation.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/index.html</loc></url>
-<url><loc>https://ummel.github.io/fusionData/reference/installPackage.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/numerical_similarity.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/poverty_thresholds.html</loc></url>
+<url><loc>https://ummel.github.io/fusionData/reference/processACSmicrodata.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/puma_crosswalk.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/scaleNumeric.html</loc></url>
 <url><loc>https://ummel.github.io/fusionData/reference/spatial.html</loc></url>

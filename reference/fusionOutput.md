@@ -21,7 +21,7 @@ fusionOutput(
   rlocation = NULL,
   note = NULL,
   validation = TRUE,
-  ncores = 1,
+  ncores = getOption("fusionData.cores"),
   margin = 4,
   ...
 )

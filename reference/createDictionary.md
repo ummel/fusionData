@@ -71,8 +71,7 @@ containing nine standardized metadata columns:
 survey ingest script in `survey-processing/`. The dictionary tibble
 returned by this function is saved alongside processed `.fst` microdata
 files as `*_dictionary.rds` and later compiled into master package
-metadata using
-[`compileDictionary`](https://ummel.github.io/fusionData/reference/compileDictionary.md).
+metadata using `compileDictionary`.
 
 Before constructing the dictionary, `createDictionary()` performs three
 safety checks:
@@ -98,7 +97,7 @@ unlabeled columns.
 
 ## See also
 
-[`compileDictionary`](https://ummel.github.io/fusionData/reference/compileDictionary.md),
+`compileDictionary`,
 [`var_label`](https://larmarange.github.io/labelled/reference/var_label.html)
 
 ## Examples

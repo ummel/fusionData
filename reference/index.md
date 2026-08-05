@@ -2,10 +2,12 @@
 
 ## All functions
 
-- [`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileDictionary.md)
-  : Compile Universal Survey Data Dictionary
-- [`compileSpatial()`](https://ummel.github.io/fusionData/reference/compileSpatial.md)
-  : Compile Universal Spatial Predictor Variables
+- [`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileMetadata.md)
+  [`compileMetadata()`](https://ummel.github.io/fusionData/reference/compileMetadata.md)
+  [`compileSpatial()`](https://ummel.github.io/fusionData/reference/compileMetadata.md)
+  : Compile and Synchronize Package Datasets
+- [`compileVersion()`](https://ummel.github.io/fusionData/reference/compileVersion.md)
+  : Compile fusionACS Database Version and Optional Public Release
 - [`conveyHarmony()`](https://ummel.github.io/fusionData/reference/conveyHarmony.md)
   : Convey Existing Survey Variable Harmonies to New Survey Pairs
 - [`createDictionary()`](https://ummel.github.io/fusionData/reference/createDictionary.md)
@@ -19,7 +21,9 @@
   : Generate output files resulting from fusion
 - [`harmony()`](https://ummel.github.io/fusionData/reference/harmony.md)
   : Open the fusionACS Survey Harmonization Tool
-- [`installPackage()`](https://ummel.github.io/fusionData/reference/installPackage.md)
-  : Install fusionData package locally
+- [`processACScodebook()`](https://ummel.github.io/fusionData/reference/processACSmicrodata.md)
+  [`processACScustom()`](https://ummel.github.io/fusionData/reference/processACSmicrodata.md)
+  [`processACSmicrodata()`](https://ummel.github.io/fusionData/reference/processACSmicrodata.md)
+  : Process ACS PUMS Microdata Records, Codebooks, and Custom Variables
 - [`universe()`](https://ummel.github.io/fusionData/reference/universe.md)
   : Open the fusionACS Universal Survey Dictionary

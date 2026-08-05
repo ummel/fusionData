@@ -80,15 +80,13 @@ issue an error otherwise). This is because the package works with (and
 expects) a particular directory structure locally that is mimicked in
 the Github repository.
 
-fusionData includes a convenience function called
-[`installPackage()`](https://ummel.github.io/fusionData/reference/installPackage.md)
-to safely update (re-install) your local installation of the fusionData
+fusionData includes a convenience function called `installPackage()` to
+safely update (re-install) your local installation of the fusionData
 package. If you modify important code yourself or pull changes from the
 Github repository, it is necessary to re-install the fusionData
 *package* locally to get all of the functionality. For example, if a
 function is added or modified on Github, your local installation won’t
-reflect the changes until you pull and re-install.
-[`installPackage()`](https://ummel.github.io/fusionData/reference/installPackage.md)
+reflect the changes until you pull and re-install. `installPackage()`
 does a number of operations that our initial
 [`devtools::install()`](https://devtools.r-lib.org/reference/install.html)
 didn’t, so let’s go ahead and run it now:
@@ -522,28 +520,25 @@ function described in the next section.
 
 The previous section showed how and where a survey’s “dictionary.rds”
 file(s) are created. Whenever a dictionary file is added or updated, it
-is necessary to run the
-[`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileDictionary.md)
-function to compile all of fusionData’s individual survey dictionaries
-into a single “universal” dictionary. The usage is straightforward:
+is necessary to run the `compileDictionary()` function to compile all of
+fusionData’s individual survey dictionaries into a single “universal”
+dictionary. The usage is straightforward:
 
 ``` r
 
 compileDictionary()
 ```
 
-As the console output reveals,
-[`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileDictionary.md)
-updates two files: `data/dictionary.rda` and `data/surveys.rda`. These
-files are part of the Github repository and are used by both the
-“Universal Survey Dictionary” and “Survey Harmonization Tool” Shiny apps
-that are part of fusionData.
+As the console output reveals, `compileDictionary()` updates two files:
+`data/dictionary.rda` and `data/surveys.rda`. These files are part of
+the Github repository and are used by both the “Universal Survey
+Dictionary” and “Survey Harmonization Tool” Shiny apps that are part of
+fusionData.
 
-If this is the first time you are calling
-[`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileDictionary.md)
-for a new survey, you will need to add the survey abbreviation and
-description of the survey to the R script `universe/app.R` on line 32 so
-it can be called on by
+If this is the first time you are calling `compileDictionary()` for a
+new survey, you will need to add the survey abbreviation and description
+of the survey to the R script `universe/app.R` on line 32 so it can be
+called on by
 [`universe()`](https://ummel.github.io/fusionData/reference/universe.md)
 (described below).
 
@@ -874,17 +869,14 @@ and “bg10” in order to allow a smooth merge with the concordance file
 (this is the case for the EPA-SLD dataset).
 
 Unlike with processed *survey* data, the naming convention for processed
-spatial data files is quite relaxed. The function
-[`compileSpatial()`](https://ummel.github.io/fusionData/reference/compileSpatial.md)
+spatial data files is quite relaxed. The function `compileSpatial()`
 automatically detects and compiles all files in `/geo-processed` ending
 with “\_processed.rds”. As long as a processed spatial data file has the
 necessary suffix – and meets the two hard requirements mentioned above –
 it will be compiled into the `geo_predictors.fst` file.
 
 Whenever a processed .rds file is added or updated, it is necessary to
-run
-[`compileSpatial()`](https://ummel.github.io/fusionData/reference/compileSpatial.md)
-to update the `geo_predictors.fst` file.
+run `compileSpatial()` to update the `geo_predictors.fst` file.
 
 The `geo_predictors.fst` file contains all variables and vintages across
 available spatial datasets, aggregated to PUMA-level in preparation for
@@ -1480,10 +1472,12 @@ input files.
 
 ## All functions
 
-- [`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileDictionary.md)
-  : Compile Universal Survey Data Dictionary
-- [`compileSpatial()`](https://ummel.github.io/fusionData/reference/compileSpatial.md)
-  : Compile Universal Spatial Predictor Variables
+- [`compileDictionary()`](https://ummel.github.io/fusionData/reference/compileMetadata.md)
+  [`compileMetadata()`](https://ummel.github.io/fusionData/reference/compileMetadata.md)
+  [`compileSpatial()`](https://ummel.github.io/fusionData/reference/compileMetadata.md)
+  : Compile and Synchronize Package Datasets
+- [`compileVersion()`](https://ummel.github.io/fusionData/reference/compileVersion.md)
+  : Compile fusionACS Database Version and Optional Public Release
 - [`conveyHarmony()`](https://ummel.github.io/fusionData/reference/conveyHarmony.md)
   : Convey Existing Survey Variable Harmonies to New Survey Pairs
 - [`createDictionary()`](https://ummel.github.io/fusionData/reference/createDictionary.md)
@@ -1497,8 +1491,10 @@ input files.
   : Generate output files resulting from fusion
 - [`harmony()`](https://ummel.github.io/fusionData/reference/harmony.md)
   : Open the fusionACS Survey Harmonization Tool
-- [`installPackage()`](https://ummel.github.io/fusionData/reference/installPackage.md)
-  : Install fusionData package locally
+- [`processACScodebook()`](https://ummel.github.io/fusionData/reference/processACSmicrodata.md)
+  [`processACScustom()`](https://ummel.github.io/fusionData/reference/processACSmicrodata.md)
+  [`processACSmicrodata()`](https://ummel.github.io/fusionData/reference/processACSmicrodata.md)
+  : Process ACS PUMS Microdata Records, Codebooks, and Custom Variables
 - [`universe()`](https://ummel.github.io/fusionData/reference/universe.md)
   : Open the fusionACS Universal Survey Dictionary
 
