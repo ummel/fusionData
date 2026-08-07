@@ -2,7 +2,7 @@
 % Please edit documentation in R/fusionInput.R
 \name{fusionInput}
 \alias{fusionInput}
-\title{Generate Prepared Fusion Input Datasets from Harmonized Donor and ACS Microdata}
+\title{Generate Fusion Input Datasets from Harmonized Donor and ACS Microdata}
 \usage{
 fusionInput(
   donor,

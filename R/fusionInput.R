@@ -1,4 +1,4 @@
-#' Generate Prepared Fusion Input Datasets from Harmonized Donor and ACS Microdata
+#' Generate Fusion Input Datasets from Harmonized Donor and ACS Microdata
 #'
 #' @description
 #' Constructs and formats the aligned donor (training) and ACS recipient (prediction)
