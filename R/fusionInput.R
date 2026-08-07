@@ -7,14 +7,14 @@
 #' (PUMA) imputation, predictor distribution quality screening, and numeric feature
 #' scaling before writing compressed binary `.fst` files to disk.
 #'
-#' @param donor Character. Identifier for the donor survey vintage (e.g., `"RECS_2015"`,
-#'   `"AHS_2023"`). Must correspond to an existing harmonization file in `harmony/harmonies/`.
-#' @param acs_year Integer. Year of ACS microdata serving as the recipient dataset (e.g., `2015`, `2023`).
+#' @param donor Character. Identifier for the donor survey and vintage (e.g. `"RECS_2015"`,
+#'   `"AHS_2023"`).
+#' @param acs_year Integer. Year of ACS microdata serving as the recipient dataset (e.g. `2023`).
 #' @param respondent Character. Unit of observation; must be either `"household"` (or `"H"`)
 #'   or `"person"` (or `"P"`).
 #' @param test_mode Logical. If `TRUE` (default), outputs are written to a scratch directory
-#'   (`fusion_/.../input/`) and datasets are truncated to ~10,000 observations for rapid testing.
-#'   If `FALSE`, full-scale production files are written to `fusion/.../input/`.
+#'   (`fusionData/fusion_/`) and datasets are truncated to ~10,000 observations for rapid testing.
+#'   If `FALSE`, full-scale production files are written to `fusionData/fusion/` (no underscore).
 #' @param ncores Integer. Number of CPU cores allocated for parallel execution during
 #'   harmonization and file compression. Defaults to `getOption("fusionData.cores")`.
 #' @param note Character. Optional user note recorded directly in the run execution log.
@@ -41,8 +41,8 @@
 #' @section Directory Structure & Outputs:
 #' Output files are stored in structured paths based on execution mode:
 #' \itemize{
-#'   \item **Test Mode:** `fusion_/[DONOR]/[ACS_YEAR]/input/[DATE]/`
-#'   \item **Production Mode:** `fusion/[DONOR]/[ACS_YEAR]/input/[DATE]/`
+#'   \item **Test Mode:** `fusion_/[DONOR_NAME]/[DONOR_VINTAGE]/[ACS_YEAR]/input/[DATE]/`
+#'   \item **Production Mode:** `fusion/[DONOR_NAME]/[DONOR_VINTAGE]/[ACS_YEAR]/input/[DATE]/`
 #' }
 #' Each run creates three files in the target directory:
 #' \enumerate{
@@ -142,45 +142,57 @@ fusionInput <- function(donor,
 
   # Record run header metadata and environment specifications
   tstamp <- as.POSIXct(Sys.time(), tz = "UTC")
-  cli::cli_inform(format(tstamp, usetz = TRUE))
-  cli::cli_inform(R.version.string)
-  cli::cli_inform(c("i" = "Platform: {.val {R.Version()$platform}}"))
-  cli::cli_inform(c("i" = "Package: {.val fusionData v{as.character(utils::packageVersion('fusionData'))}}"))
+  cli::cat_line("==================================================================")
+  cli::cat_line("fusionInput() RUN INFORMATION")
+  cli::cat_line("==================================================================")
+  cli::cat_line("Timestamp: ", format(tstamp, usetz = TRUE))
+  cli::cat_line("R Version: ", R.version.string)
+  cli::cat_line("Platform:  ", R.Version()$platform)
+  cli::cat_line("Package:   fusionData v", as.character(utils::packageVersion("fusionData")))
 
   # Log non-default parameter arguments
+  cli::cat_line("Function Call:")
   print(match.call.defaults(exclude = if (is.null(note)) NULL else "note"))
-  cli::cli_inform("")
+  cli::cat_line()
 
   # Report current execution mode
   mode_text <- ifelse(test_mode, "TEST", "PRODUCTION")
-  cli::cli_inform(c("i" = "fusionInput() is running in {.strong {mode_text}} mode."))
-  cli::cli_inform("")
-
-  # Log optional user comment if supplied
-  if (!is.null(note)) {
-    cli::cli_inform(c("i" = "User-supplied note:\n{.val {note}}"))
-    cli::cli_inform("")
-  }
+  cli::cat_line("Execution Mode: ", mode_text)
+  cli::cat_line()
 
   # Construct absolute output directory path based on mode, donor, vintage, and execution date
   donor <- toupper(donor)
   dir <- file.path(stub, ifelse(test_mode, "fusion_", "fusion"), sub("_", .Platform$file.sep, donor), acs_year, "input", as.Date(tstamp))
-  cli::cli_inform(c("i" = "Result files will be saved to:\n{.file {dir}}"))
+  cli::cat_line("Fusion INPUT Directory:")
+  cli::cat_line("  ", dir)
+  cli::cat_line()
+
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
+
+  # Log optional user comment if supplied
+  if (!is.null(note)) {
+    cli::cat_line("User-Supplied Note:")
+    cli::cat_line("  ", note)
+    cli::cat_line()
+  }
 
   # Form base file path prefix for output artifacts
   stub <- file.path(dir, paste(donor, acs_year, rtype, sep = "_"))
 
-  # Stage: Microdata Harmonization
-  cli::cli_h1("Harmonize donor and recipient microdata")
+  # Stage 1: Microdata Harmonization
+  cli::cat_line("------------------------------------------------------------------")
+  cli::cat_line("STEP 1: HARMONIZE DONOR AND RECIPIENT MICRODATA")
+  cli::cat_line("------------------------------------------------------------------")
 
   harmonized <- harmonize(harmony.file = paste0(donor, "__ACS_", acs_year, ".R"),
                           respondent = respondent,
                           output = "both",
                           ncores = ncores)
 
-  # Stage: Spatial Imputation
-  cli::cli_h1("Impute location (PUMA) of donor respondents")
+  # Stage 2: Spatial Imputation
+  cli::cat_line("------------------------------------------------------------------")
+  cli::cat_line("STEP 2: IMPUTE LOCATION (PUMA) OF DONOR RESPONDENTS")
+  cli::cat_line("------------------------------------------------------------------")
 
   location.data <- imputeLocation(harmonized = harmonized, ncores = ncores)
 
@@ -200,8 +212,10 @@ fusionInput <- function(donor,
   data <- list(donor = D, recipient = R)
   rm(D, R, harmonized, location.data)
 
-  # Stage: Predictor Variable Screening & Scaling
-  cli::cli_h1("Check harmonized predictor variables")
+  # Stage 3: Predictor Variable Screening & Scaling
+  cli::cat_line("------------------------------------------------------------------")
+  cli::cat_line("STEP 3: CHECK HARMONIZED PREDICTOR VARIABLES")
+  cli::cat_line("------------------------------------------------------------------")
 
   cvars <- data[[1]] %>%
     select(-any_of(key(.)), -weight) %>%
@@ -235,7 +249,7 @@ fusionInput <- function(donor,
     mutate(`Similarity score` = round(`Similarity score`, 3)) %>%
     arrange(`Similarity score`)
 
-  cli::cli_inform(c("i" = "Similarity scores for {.val {nrow(sim)}} harmonized predictor variables:"))
+  cli::cat_line("Similarity scores for ", nrow(sim), " harmonized predictor variables:")
   print(sim, n = Inf)
 
   # Filter out predictor variables with similarity below the 0.80 quality threshold
@@ -244,10 +258,10 @@ fusionInput <- function(donor,
     pull(`Harmonized variable`)
 
   if (length(drop) == 0) {
-    cli::cli_alert_success("Retaining all categorical harmonized variables")
+    cli::cat_line("\nRetaining all categorical harmonized variables")
   } else {
-    cli::cli_alert_warning("Removed the following harmonized predictor variables (similarity score below 0.8):")
-    cli::cli_inform(c("*" = "{drop}"))
+    cli::cat_line("\nRemoved the following harmonized predictor variables (similarity score below 0.8):")
+    for (d in drop) cli::cat_line("  * ", d)
     data[[1]] <- select(data[[1]], -all_of(drop))
     data[[2]] <- select(data[[2]], -all_of(drop))
   }
@@ -255,13 +269,17 @@ fusionInput <- function(donor,
   # Count retained predictor categories
   harm.vars <- grep("__", names(data[[1]]), fixed = TRUE, value = TRUE)
   loc.vars <- grep("loc..", names(data[[1]]), fixed = TRUE, value = TRUE)
-  cli::cli_inform(c("v" = "Utilizing {.val {length(harm.vars)}} harmonized respondent-level predictor{?s} and {.val {length(loc.vars)}} location predictor{?s}"))
+  cli::cat_line("\nUtilizing ", length(harm.vars), " harmonized respondent-level predictor", if (length(harm.vars) != 1) "s" else "",
+                " and ", length(loc.vars), " location predictor", if (length(loc.vars) != 1) "s" else "")
+  cli::cat_line()
 
-  # Stage: File Output Generation
-  cli::cli_h1("Write fusion input files to disk")
+  # Stage 4: File Output Generation
+  cli::cat_line("------------------------------------------------------------------")
+  cli::cat_line("STEP 4: WRITE FUSION INPUT FILES TO DISK")
+  cli::cat_line("------------------------------------------------------------------")
 
   # Export compressed donor training microdata
-  cli::cli_inform("Writing harmonized donor microdata...")
+  cli::cat_line("Writing harmonized donor microdata...")
   dfile <- paste(stub, "donor.fst", sep = "_")
   n0 <- nrow(data[[1]])
   if (test_mode) data[[1]] <- slice(data[[1]], 1:min(10e3, n0))
@@ -273,11 +291,11 @@ fusionInput <- function(donor,
   data[[1]] <- NA
   invisible(gc())
 
-  cli::cli_alert_success("Harmonized donor microdata saved to: {.file {basename(dfile)}} ({.val {fsize}} MB)")
-  if (test_mode) cli::cli_alert_info("TEST mode: Saved partial donor data.")
+  cli::cat_line("Results saved to: ", basename(dfile), " (", fsize, " MB)")
+  if (test_mode) cli::cat_line("  - TEST mode: Saved partial donor data.")
 
   # Export compressed ACS recipient prediction microdata
-  cli::cli_inform("Writing harmonized ACS microdata...")
+  cli::cat_line("\nWriting harmonized ACS microdata...")
   rfile <- paste(stub, "recipient.fst", sep = "_")
   n0 <- nrow(data[[2]])
   if (test_mode) data[[2]] <- slice(data[[2]], 1:min(10e3, n0))
@@ -290,18 +308,22 @@ fusionInput <- function(donor,
 
   invisible(gc())
 
-  cli::cli_alert_success("Harmonized ACS microdata saved to: {.file {basename(rfile)}} ({.val {fsize}} MB)")
-  if (test_mode) cli::cli_alert_info("TEST mode: Saved partial recipient data.")
+  cli::cat_line("Results saved to: ", basename(rfile), " (", fsize, " MB)")
+  if (test_mode) cli::cat_line("  - TEST mode: Saved partial recipient data.")
 
   # Completion Summary & Log Archiving
-  cli::cli_h1("fusionInput() is finished!")
+  cli::cat_line()
+  cli::cat_line("==================================================================")
+  cli::cat_line("fusionInput() IS FINISHED!")
+  cli::cat_line("==================================================================")
 
   tout <- difftime(Sys.time(), tstart)
-  cli::cli_alert_success("Total processing time: {.val {signif(as.numeric(tout), 3)}} {attr(tout, 'units')}")
+  cli::cat_line("\nTotal processing time: ", signif(as.numeric(tout), 3), " ", attr(tout, 'units'))
 
   # Finalize text log copy to output directory
   log.path <- file.path(dir, paste(donor, acs_year, rtype, "inputlog.txt", sep = "_"))
-  cli::cli_inform(c("i" = "Log file saved to:\n{.file {log.path}}"))
+  cli::cat_line("Log file saved to:\n  ", log.path)
+  cli::cat_line()
 
   sink(type = "output")
   close(log.txt)

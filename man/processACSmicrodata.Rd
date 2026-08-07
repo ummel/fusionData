@@ -3,7 +3,7 @@
 %   R/processACSmicrodata.R
 \name{processACScodebook}
 \alias{processACSmicrodata}
-\title{Process ACS PUMS Microdata Records, Codebooks, and Custom Variables}
+\title{Process ACS PUMS Microdata, Codebooks, and Custom Variables}
 \usage{
 processACScodebook(dictionary.file)
 

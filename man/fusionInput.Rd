@@ -14,17 +14,17 @@ fusionInput(
 )
 }
 \arguments{
-\item{donor}{Character. Identifier for the donor survey vintage (e.g., \code{"RECS_2015"},
-\code{"AHS_2023"}). Must correspond to an existing harmonization file in \verb{harmony/harmonies/}.}
+\item{donor}{Character. Identifier for the donor survey and vintage (e.g. \code{"RECS_2015"},
+\code{"AHS_2023"}).}
 
-\item{acs_year}{Integer. Year of ACS microdata serving as the recipient dataset (e.g., \code{2015}, \code{2023}).}
+\item{acs_year}{Integer. Year of ACS microdata serving as the recipient dataset (e.g. \code{2023}).}
 
 \item{respondent}{Character. Unit of observation; must be either \code{"household"} (or \code{"H"})
 or \code{"person"} (or \code{"P"}).}
 
 \item{test_mode}{Logical. If \code{TRUE} (default), outputs are written to a scratch directory
-(\verb{fusion_/.../input/}) and datasets are truncated to ~10,000 observations for rapid testing.
-If \code{FALSE}, full-scale production files are written to \verb{fusion/.../input/}.}
+(\verb{fusionData/fusion_/}) and datasets are truncated to ~10,000 observations for rapid testing.
+If \code{FALSE}, full-scale production files are written to \verb{fusionData/fusion/} (no underscore).}
 
 \item{ncores}{Integer. Number of CPU cores allocated for parallel execution during
 harmonization and file compression. Defaults to \code{getOption("fusionData.cores")}.}
@@ -66,8 +66,8 @@ datasets utilizing maximum \code{fst} compression (\code{compress = 100}).
 
 Output files are stored in structured paths based on execution mode:
 \itemize{
-\item \strong{Test Mode:} \verb{fusion_/[DONOR]/[ACS_YEAR]/input/[DATE]/}
-\item \strong{Production Mode:} \verb{fusion/[DONOR]/[ACS_YEAR]/input/[DATE]/}
+\item \strong{Test Mode:} \verb{fusion_/[DONOR_NAME]/[DONOR_VINTAGE]/[ACS_YEAR]/input/[DATE]/}
+\item \strong{Production Mode:} \verb{fusion/[DONOR_NAME]/[DONOR_VINTAGE]/[ACS_YEAR]/input/[DATE]/}
 }
 Each run creates three files in the target directory:
 \enumerate{

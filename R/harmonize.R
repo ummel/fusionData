@@ -128,8 +128,8 @@ harmonize <- function(harmony.file,
     vnames <- if (j == 1) dnames else c(rnames, rgeo)
     vres <- if (j == 1) dres else rres
 
-    # Output status notification via cli package
-    cli::cli_inform("Harmonizing {survey[j]} ({type}) microdata at {respondent} level...")
+    # Output status notification via console
+    cat_line("Harmonizing ", survey[j], " (", type, ") microdata at ", respondent, " level...")
 
     # Load household processed microdata (.fst) if available
     hpath <- list.files(path = "survey-processed", pattern = paste(survey[j], "H", "processed.fst", sep = "_"), recursive = TRUE, full.names = TRUE)

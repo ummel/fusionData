@@ -2,6 +2,7 @@
 "_PACKAGE"
 
 ## usethis namespace: start
+#' @import cli
 #' @import DT
 #' @import gt
 #' @import rhandsontable
@@ -11,9 +12,8 @@
 #' @import stringr
 #' @import tibble
 #' @import fst
-#' @import devtools
-#' @import styler
 #' @import tidyr
+#' @import arrow
 #' @rawNamespace import(shinyjs, except = c(html, runExample, alert))
 #' @rawNamespace import(matrixStats, except = c(count))
 #' @rawNamespace import(shiny, except = c(dataTableOutput, renderDataTable, validate))

@@ -828,7 +828,7 @@ compileVersion <- function(version_date = as.character(Sys.Date()),
   # If desired release already exists, delete first for safety
   # WHY: Prevents tag collision or asset accumulation errors when re-running compilation.
   if (delete_release) {
-    pb_release_delete(repo = repo, tag = version_date, .token = token)
+    piggyback::pb_release_delete(repo = repo, tag = version_date, .token = token)
 
     # Ensure the release is NOT showing up in the Github API (there is a delay)
     cli::cli_alert_info(" -- Waiting for Github API to update...")

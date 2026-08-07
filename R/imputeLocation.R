@@ -109,7 +109,7 @@ imputeLocation <- function(harmonized, ncores) {
   gdonor <- intersect(names(glink), names(D))
 
   # Report geographic intersection variables
-  cli::cli_alert_info("Identified the following geographic intersection variables: {paste(gdonor, collapse = ', ')}")
+  cat_line("Identified geographic intersection variables: ", paste(gdonor, collapse = ", "))
 
   #-----
 
@@ -160,7 +160,7 @@ imputeLocation <- function(harmonized, ncores) {
   D[, id := .GRP, by = gdonor]
 
   # Report number of unique geographic intersections
-  cli::cli_alert_info("Identified {max(D$id)} geographic intersections in the donor...")
+  cat_line("Identified ", max(D$id), " geographic intersections in the donor...")
 
   #---
 
@@ -290,7 +290,7 @@ imputeLocation <- function(harmonized, ncores) {
 
   #---
 
-  cli::cli_alert_info("Imputing PUMA for donor observations...")
+  cat_line("Imputing PUMA for donor observations...")
 
   # Troubleshooting
   #for (id in sort(unique(D$id))) sampleIntersection(id)
@@ -330,7 +330,7 @@ imputeLocation <- function(harmonized, ncores) {
 
   #---
 
-  cli::cli_alert_info("Assigning location variables to recipient observations...")
+  cat_line("Assigning location variables to recipient observations...")
 
   # Assign 'gkeep' variables to each recipient household
   # There is no guarantee that PUMA's are uniquely identified by the 'gdonor' variables
@@ -369,7 +369,7 @@ imputeLocation <- function(harmonized, ncores) {
 
   # Rename the 'gkeep' variables to include the "loc.." prefix
   # This identifies them as spatial variables, but "loc" is reserved for variables that are actually known and not imputed
-  # This code is more complicates than original setnames(...) in order to safely account for location ('gkeep') variables that are also in 'gtarget'
+  # This code is more simplifies than original setnames(...) in order to safely account for location ('gkeep') variables that are also in 'gtarget'
   # In that case, the 'gtarget' variables are kept as-is, and an identical loc.. version added
   for (v in gkeep) {
     set(D, j = paste0("loc..", v), value = D[[v]])
