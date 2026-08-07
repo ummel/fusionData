@@ -663,8 +663,6 @@ fusionOutput_multiyear <- function(acs_years, ...) {
 
   # Input validation
   stopifnot(is.numeric(acs_years), length(acs_years) > 0)
-  stopifnot(is.character(fusion_vars), length(fusion_vars) > 0)
-
   if (is.unsorted(acs_years)) {
     stop("`acs_years` must be provided in ascending numeric order (e.g., 2019:2023).", call. = FALSE)
   }
