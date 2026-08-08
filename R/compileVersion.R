@@ -132,7 +132,7 @@ compileVersion <- function(version_date = as.character(Sys.Date()),
 
     cli::cli_h2("Compiling full fusionACS database version: {.val {version_date}}")
     dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
-    cli::cli_alert_success("Created target output directory: {.path {target_dir}}")
+    cli::cli_alert_success("Created target output directory:\n{.path {target_dir}}")
 
     # Establish cleanup trigger: If compilation fails mid-way, delete corrupted target_dir
     on.exit({
@@ -252,7 +252,7 @@ compileVersion <- function(version_date = as.character(Sys.Date()),
       file.symlink(from = prior_geography, to = geo_target_path)
     } else {
       arrow::write_parquet(geoxwalk, sink = geo_target_path, compression = "snappy")
-      cli::cli_alert_success("Saved updated geography crosswalk to {.path {geo_target_path}}")
+      cli::cli_alert_success("Saved updated geography crosswalk to:\n{.path {geo_target_path}}")
     }
 
     # ---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ compileVersion <- function(version_date = as.character(Sys.Date()),
       data.table::setorder(upop, bg10, bg20, year, hid)
 
       arrow::write_parquet(upop, sink = file.path(target_dir, "location.parquet"), compression = "snappy")
-      cli::cli_alert_success("Saved location data to {.path {file.path(target_dir, 'location.parquet')}}")
+      cli::cli_alert_success("Saved location data to:\n{.path {file.path(target_dir, 'location.parquet')}}")
     }
 
     # ---------------------------------------------------------------------------
@@ -631,11 +631,14 @@ compileVersion <- function(version_date = as.character(Sys.Date()),
       dplyr::select(variable, description, survey, vintage, respondent, type, n_values, values, years, custom, version, file)
 
     arrow::write_parquet(meta, sink = file.path(target_dir, "dictionary.parquet"), compression = "snappy")
-    cli::cli_alert_success("Metadata dictionary saved to {.path {file.path(target_dir, 'dictionary.parquet')}}")
+    cli::cli_alert_success("Metadata dictionary saved to:/n{.path {file.path(target_dir, 'dictionary.parquet')}}")
 
     # Mark compilation as successfully completed
     file.create(file.path(target_dir, ".complete"))
-    cli::cli_alert_success("Full database version compiled at {.path {target_dir}}")
+    cli::cli_alert_success("Full database version compiled at:\n{.path {target_dir}}")
+
+    # Set the local fusionACS package data directory to the latest version
+    fusionACS::set_directory(target_dir)
   }
 
   # Exit early if public release is not requested
@@ -674,10 +677,6 @@ compileVersion <- function(version_date = as.character(Sys.Date()),
   cli::cli_alert_info("Generating UrbanPop spatial pseudo-sample ({.file location.parquet})...")
   d <- arrow::read_parquet(file.path(target_dir, "location.parquet"))
   data.table::setDT(d)
-
-  # !!!TEMP FOR TEST!!!
-  # Just makes steps faster for debugging Github upload code
-  d <- d[1:10e3]
 
   # Keep only columns necessary for spatial sampling to reduce RAM footprint
   d <- d[, .(year, hid, bg10, bg20, weight)]
