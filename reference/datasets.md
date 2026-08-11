@@ -28,10 +28,6 @@ An overview of internal reference datasets bundled with the package.
 
   Annual Consumer Price Index series from FRED.
 
-- [`dictionary`](https://ummel.github.io/fusionData/reference/dictionary.md):
-
-  Master variable dictionary for supported microdata surveys.
-
 - [`poverty_thresholds`](https://ummel.github.io/fusionData/reference/poverty_thresholds.md):
 
   Historical official U.S. Census Bureau poverty thresholds.
@@ -39,11 +35,3 @@ An overview of internal reference datasets bundled with the package.
 - [`puma_crosswalk`](https://ummel.github.io/fusionData/reference/puma_crosswalk.md):
 
   Geographic crosswalk between 2010 and 2020 PUMAs.
-
-- [`spatial`](https://ummel.github.io/fusionData/reference/spatial.md):
-
-  Metadata index mapping spatial predictors to source variables.
-
-- [`surveys`](https://ummel.github.io/fusionData/reference/surveys.md):
-
-  Summary metadata index of processed survey vintages and sample sizes.

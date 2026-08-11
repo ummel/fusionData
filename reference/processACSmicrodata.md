@@ -1,4 +1,4 @@
-# Process ACS PUMS Microdata Records, Codebooks, and Custom Variables
+# Process ACS PUMS Microdata, Codebooks, and Custom Variables
 
 A unified suite of maintainer utilities in the fusionData pipeline
 designed to ingest, parse, harmonize, and extend U.S. Census Bureau

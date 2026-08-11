@@ -17,12 +17,12 @@
 ## Citation
 
 Ummel K (2026). *fusionData: Data backend for fusionACS platform*. R
-package version 1.1.0, <https://ummel.github.io/fusionData/>.
+package version 2.0.1, <https://ummel.github.io/fusionData/>.
 
     @Manual{,
       title = {fusionData: Data backend for fusionACS platform},
       author = {Kevin Ummel},
       year = {2026},
-      note = {R package version 1.1.0},
+      note = {R package version 2.0.1},
       url = {https://ummel.github.io/fusionData/},
     }

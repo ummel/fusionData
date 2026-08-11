@@ -13,7 +13,7 @@ sample counts ($N$)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fusionData</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,7 +94,7 @@ microdata extension file (<code>custom.fst</code>). Defaults to <code>FALSE</cod
     <p><code>createDictionary()</code> is typically called at the end of an individual survey ingest
 script in <code>survey-processing/</code>. The dictionary tibble returned by this function is
 saved alongside processed <code>.fst</code> microdata files as <code>*_dictionary.rds</code> and later
-compiled into master package metadata using <code>compileDictionary</code>.</p>
+compiled into master package metadata using <code><a href="compileDictionary.html">compileDictionary</a></code>.</p>
 <p>Before constructing the dictionary, <code>createDictionary()</code> performs three safety checks:</p><ul><li><p><strong>Type Check:</strong> Ensures no character columns remain in <code>data</code> (all string variables
 must be factorized).</p></li>
 <li><p><strong>Uniqueness Check:</strong> Verifies that row count matches distinct household/person IDs
@@ -112,7 +112,7 @@ are missing labels, this function will raise an error identifying the unlabeled 
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code>compileDictionary</code>, <code><a href="https://larmarange.github.io/labelled/reference/var_label.html" class="external-link">var_label</a></code></p></div>
+    <div class="dont-index"><p><code><a href="compileDictionary.html">compileDictionary</a></code>, <code><a href="https://larmarange.github.io/labelled/reference/var_label.html" class="external-link">var_label</a></code></p></div>
     </div>
 
     <div class="section level2">

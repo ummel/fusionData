@@ -69,7 +69,7 @@ application.
 
 ## See also
 
-[`dictionary`](https://ummel.github.io/fusionData/reference/dictionary.md)
+`dictionary`
 
 ## Examples
 

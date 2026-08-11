@@ -1,4 +1,4 @@
-# Generate Prepared Fusion Input Datasets from Harmonized Donor and ACS Microdata
+# Generate Fusion Input Datasets from Harmonized Donor and ACS Microdata
 
 Constructs and formats the aligned donor (training) and ACS recipient
 (prediction) microdata datasets required for downstream statistical
@@ -24,14 +24,13 @@ fusionInput(
 
 - donor:
 
-  Character. Identifier for the donor survey vintage (e.g.,
-  `"RECS_2015"`, `"AHS_2023"`). Must correspond to an existing
-  harmonization file in `harmony/harmonies/`.
+  Character. Identifier for the donor survey and vintage (e.g.
+  `"RECS_2015"`, `"AHS_2023"`).
 
 - acs_year:
 
-  Integer. Year of ACS microdata serving as the recipient dataset (e.g.,
-  `2015`, `2023`).
+  Integer. Year of ACS microdata serving as the recipient dataset (e.g.
+  `2023`).
 
 - respondent:
 
@@ -41,9 +40,9 @@ fusionInput(
 - test_mode:
 
   Logical. If `TRUE` (default), outputs are written to a scratch
-  directory (`fusion_/.../input/`) and datasets are truncated to ~10,000
-  observations for rapid testing. If `FALSE`, full-scale production
-  files are written to `fusion/.../input/`.
+  directory (`fusionData/fusion_/`) and datasets are truncated to
+  ~10,000 observations for rapid testing. If `FALSE`, full-scale
+  production files are written to `fusionData/fusion/` (no underscore).
 
 - ncores:
 
@@ -96,9 +95,11 @@ to the generated `/input` directory.
 
 Output files are stored in structured paths based on execution mode:
 
-- **Test Mode:** `fusion_/[DONOR]/[ACS_YEAR]/input/[DATE]/`
+- **Test Mode:**
+  `fusion_/[DONOR_NAME]/[DONOR_VINTAGE]/[ACS_YEAR]/input/[DATE]/`
 
-- **Production Mode:** `fusion/[DONOR]/[ACS_YEAR]/input/[DATE]/`
+- **Production Mode:**
+  `fusion/[DONOR_NAME]/[DONOR_VINTAGE]/[ACS_YEAR]/input/[DATE]/`
 
 Each run creates three files in the target directory:
 

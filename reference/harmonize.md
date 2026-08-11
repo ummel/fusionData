@@ -67,19 +67,20 @@ structural metadata attached as custom R attributes:
 definitions recorded in a harmony file against processed donor and ACS
 microdata (\`survey-processed/\*.fst\`).
 
-Key internal processing steps include: \* \*\*Microdata Loading:\*\*
-Dynamically pulls matching household (\`H\`) and person (\`P\`) \`.fst\`
-files based on the harmony file specifications. \* \*\*Variable
-Transformation & Recoding:\*\* Evaluates custom inline expressions
-(\`adj\`), applies categorical grouping (\`groups\` / \`levels\`), or
-assigns numeric break intervals (\`breaks\`). \* \*\*Cross-Level
-Aggregation & Rescaling:\*\* Automatically converts person-level
-variables to household-level (via methods such as reference person
-assignment, mean, min, max) or replicates household attributes across
-person-level observations as required by the \`respondent\` level. \*
-\*\*Geographic Attribute Retention:\*\* Automatically extracts state and
-PUMA geographic identifiers for recipient ACS observations across
-vintages.
+Key internal processing steps include:
+
+\* \*\*Microdata Loading:\*\* Dynamically pulls matching household
+(\`H\`) and person (\`P\`) \`.fst\` files based on the harmony file
+specifications. \* \*\*Variable Transformation & Recoding:\*\* Evaluates
+custom inline expressions (\`adj\`), applies categorical grouping
+(\`groups\` / \`levels\`), or assigns numeric break intervals
+(\`breaks\`). \* \*\*Cross-Level Aggregation & Rescaling:\*\*
+Automatically converts person-level variables to household-level (via
+methods such as reference person assignment, mean, min, max) or
+replicates household attributes across person-level observations as
+required by the \`respondent\` level. \* \*\*Geographic Attribute
+Retention:\*\* Automatically extracts state and PUMA geographic
+identifiers for recipient ACS observations across vintages.
 
 ## Note
 
