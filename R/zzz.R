@@ -12,45 +12,37 @@
 
 .onAttach <- function(libname, pkgname) {
 
-  # 1. Package Version and SHA Update Check
+  # 1. Package Version and Remote Update Check
   current_ver <- utils::packageVersion("fusionData")
 
   # Always print package info first
   packageStartupMessage("fusionData v", current_ver, " | https://github.com/ummel/fusionData")
 
-  # Extract local installed RemoteSha added by devtools/remotes
-  local_sha <- utils::packageDescription("fusionData")$RemoteSha
+  # Direct raw URL check (bypasses GitHub API rate limits)
+  remote_ver <- tryCatch({
+    raw_url <- "https://raw.githubusercontent.com/ummel/fusionData/master/DESCRIPTION"
 
-  # Direct raw Atom feed check (bypasses GitHub API rate limits)
-  remote_sha <- tryCatch({
-    api_url <- "https://api.github.com/repos/ummel/fusionData/commits/master"
-
+    # Set a strict 2-second timeout to prevent slowing down package load on slow connections
     opts <- options(timeout = 2)
     on.exit(options(opts), add = TRUE)
 
-    # Explicit User-Agent header prevents GitHub network blocks
-    con <- url(api_url, headers = c("User-Agent" = "fusionData-R-pkg"))
-    on.exit(close(con), add = TRUE, TRUE)
+    desc_lines <- readLines(raw_url, warn = FALSE)
+    ver_line <- grep("^Version:", desc_lines, value = TRUE)
 
-    lines <- readLines(con, warn = FALSE)
-    sha_line <- grep('"sha":', lines, value = TRUE)[1]
-
-    if (!is.na(sha_line)) {
-      sub('.*"sha":\\s*"([a-f0-9]{40})".*', '\\1', sha_line)
+    if (length(ver_line) > 0) {
+      package_version(trimws(sub("^Version:", "", ver_line[1])))
     } else {
       NULL
     }
   }, error = function(e) NULL)
 
-  # Alert based on remote SHA comparison
-  if (!is.null(local_sha) && !is.null(remote_sha)) {
-    if (local_sha != remote_sha) {
-      packageStartupMessage("A newer commit (", substr(remote_sha, 1, 7), ") is available on GitHub. Run devtools::install_github('ummel/fusionData') to upgrade.")
+  # Alert based on remote version check
+  if (!is.null(remote_ver)) {
+    if (remote_ver > current_ver) {
+      packageStartupMessage("A newer version (v", remote_ver, ") is available. Run devtools::install_github('ummel/fusionData') to upgrade.")
     } else {
-      packageStartupMessage("You are using the latest commit.")
+      packageStartupMessage("You are using the latest version.")
     }
-  } else if (is.null(local_sha)) {
-    packageStartupMessage("Installed locally or via source without git remote tracking.")
   }
 
   # 2. Yale HPC Automated Working Directory Configuration
