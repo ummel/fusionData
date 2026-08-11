@@ -23,19 +23,20 @@
 
   # Direct raw Atom feed check (bypasses GitHub API rate limits)
   remote_sha <- tryCatch({
-    raw_atom_url <- "https://github.com/ummel/fusionData/commits/master.atom"
+    api_url <- "https://api.github.com/repos/ummel/fusionData/commits/master"
 
-    # Set a strict 2-second timeout to prevent slowing down package load on slow connections
     opts <- options(timeout = 2)
     on.exit(options(opts), add = TRUE)
 
-    atom_lines <- readLines(raw_atom_url, warn = FALSE)
+    # Explicit User-Agent header prevents GitHub network blocks
+    con <- url(api_url, headers = c("User-Agent" = "fusionData-R-pkg"))
+    on.exit(close(con), add = TRUE, TRUE)
 
-    # Extract the full 40-character commit SHA from the first <id> tag containing 'Commit'
-    commit_line <- grep("<id>tag:github.com,2008:GitRepository/[0-9]+/Commit/", atom_lines, value = TRUE)[1]
+    lines <- readLines(con, warn = FALSE)
+    sha_line <- grep('"sha":', lines, value = TRUE)[1]
 
-    if (!is.na(commit_line)) {
-      sub(".*Commit/([a-f0-9]{40}).*", "\\1", commit_line)
+    if (!is.na(sha_line)) {
+      sub('.*"sha":\\s*"([a-f0-9]{40})".*', '\\1', sha_line)
     } else {
       NULL
     }
