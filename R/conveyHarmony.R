@@ -81,8 +81,8 @@ conveyHarmony <- function(from, to, overwrite = FALSE) {
   # Extract bracketed categorical factor levels from dictionary 'Values' strings
   clean <- function(x) gsub("[", "", gsub("]", "", str_squish(unlist(strsplit(x, split = "], ", fixed = T))), fixed = T), fixed = T)
 
-  # Load master package variable dictionary
-  data(dictionary, package = "fusionData")
+  # Load variable dictionary
+  load("harmony/www/dictionary.rda")
 
   # Extract existing harmony specifications and parse donor/recipient variable names
   hfile <- dget(paste0("harmony/harmonies/", from))

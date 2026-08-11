@@ -426,6 +426,11 @@ processACSmicrodata <- function(year, respondent = c("H", "P")) {
         INSP = ifelse(INSP == 0 & (MRGI == "Yes, insurance included in payment" | grepl("Owned with mortgage", TEN)), NA, INSP)
       )
 
+    # Safety check to ensure mortgage paymeny (MRGP) is zero for households without mortgages
+    # This safety check is necessary for at least 2021 and 2022, where it appears MRGP = 4 for some or all non-mortgage households (instead of zero, which it does for other years)
+    d <- d |>
+      mutate(MRGP = ifelse(grepl("Owned with mortgage", TEN), MRGP, 0L))
+
   }
 
   #---------------------------------------

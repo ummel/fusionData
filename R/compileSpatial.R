@@ -1,12 +1,11 @@
-#' @rdname compileMetadata
-#' @aliases NULL
+#' Compile Spatial Predictor Variables
 #'
-#' @details
-#' \strong{\code{compileSpatial()}:}
+#' @description
 #' Detects, aggregates, and harmonizes all processed spatial datasets in
 #' \code{geo-processed/} into a single, standardized spatial predictor file
 #' (\code{geo_predictors.fst}) and spatial dictionary (\code{spatial}).
 #'
+#' @details
 #' Processes geographic covariates (e.g., land use, walkability, climate) across
 #' varying temporal vintages and spatial units into uniform PUMA-level summaries.
 #'
@@ -26,6 +25,10 @@
 #'   \item \strong{Unified Storage:} Outer-joins all processed spatial datasets across PUMA-vintages
 #'     and exports compressed binary datasets (\code{geo_predictors.fst} and \code{spatial.rda}).
 #' }
+#'
+#' \strong{Important:} This function must be executed with your R working directory set to
+#' the root of the local \code{fusionData} project folder (e.g., \code{setwd("path/to/fusionData")}).
+#' It relies on relative directory paths (\code{geo-processed/}.
 #'
 #' @export
 
@@ -69,9 +72,17 @@ compileSpatial <- function() {
     filter(!predictor %in% c("vintage", "state", "puma", "puma_vintage"))
 
   # Save spatial dictionary to package data directory
-  cli::cli_inform("Saving geo predictors metadata...")
-  use_data2(spatial, overwrite = TRUE)
+  #cli::cli_inform("Saving geo predictors metadata...")
+  #use_data2(spatial, overwrite = TRUE)
   rm(temp)
+
+  # Mirror spatial dictionary assets to the Harmony Shiny app web resources
+  cli::cli_inform("Saving {.val spatial} to {.path harmony/www}")
+  save(spatial, file = "harmony/www/spatial.rda", compress = TRUE)
+
+  # Mirror dictionary assets to the Universe Shiny app web resources
+  cli::cli_inform("Saving {.val spatial} to {.path universe/www}")
+  save(spatial, file = "universe/www/spatial.rda", compress = TRUE)
 
   # Expand each dataset temporally before merging
 

@@ -20,6 +20,7 @@
 #' in a harmony file against processed donor and ACS microdata (`survey-processed/*.fst`).
 #'
 #' Key internal processing steps include:
+#'
 #' * **Microdata Loading:** Dynamically pulls matching household (`H`) and person (`P`) `.fst`
 #'   files based on the harmony file specifications.
 #' * **Variable Transformation & Recoding:** Evaluates custom inline expressions (`adj`),

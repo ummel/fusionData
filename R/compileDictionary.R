@@ -1,20 +1,17 @@
-#' @rdname compileMetadata
-#' @aliases NULL
+#' Compile Survey Microdata Dictionaries
 #'
-#' @details
-#' \strong{\code{compileDictionary()}:}
-#' Aggregates individual survey metadata codebooks stored in \code{survey-processed/}
+#' @description
+#' Aggregates individual survey dictionaries stored in \code{survey-processed/}
 #' into a single, standardized data dictionary (\code{dictionary}) and a high-level
 #' survey metadata summary (\code{surveys}).
 #'
-#' This function forms part of the \strong{Document} step in the \code{fusionData} package
-#' workflow. It scans all recursive survey metadata files (\code{*_dictionary.rds}) created
+#' @details
+#' This function scans all recursive survey dictionary files (\code{*_dictionary.rds}) created
 #' during survey ingest, standardizes respondent types, calculates microdata disk
 #' footprints (including \code{.processed.fst} and optional \code{custom.fst} files), and
-#' outputs unified data objects needed by the package and embedded Shiny applications
+#' outputs unified data objects needed by the embedded Shiny applications
 #' (\code{universe} and \code{harmony}).
 #'
-#' @section Directory Requirement (\code{compileDictionary}):
 #' \strong{Important:} This function must be executed with your R working directory set to
 #' the root of the local \code{fusionData} project folder (e.g., \code{setwd("path/to/fusionData")}).
 #' It relies on relative directory paths (\code{survey-processed/}, \code{harmony/www/}, and \code{universe/www/}).
@@ -47,18 +44,16 @@ compileDictionary <- function() {
   dictionary$N <- NULL
 
   # Save primary datasets to package data directory
-  use_data2(dictionary, overwrite = TRUE)
-  use_data2(surveys, overwrite = TRUE)
+  # use_data2(dictionary, overwrite = TRUE)
+  # use_data2(surveys, overwrite = TRUE)
 
   # Mirror dictionary assets to the Harmony Shiny app web resources
   cli::cli_inform("Saving {.val dictionary} and {.val surveys} to {.path harmony/www}")
-  #if (!dir.exists("harmony/www")) dir.create("harmony/www")
   save(dictionary, file = "harmony/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "harmony/www/surveys.rda", compress = TRUE)
 
   # Mirror dictionary assets to the Universe Shiny app web resources
   cli::cli_inform("Saving {.val dictionary} and {.val surveys} to {.path universe/www}")
-  #if (!dir.exists("universe/www")) dir.create("universe/www")
   save(dictionary, file = "universe/www/dictionary.rda", compress = TRUE)
   save(surveys, file = "universe/www/surveys.rda", compress = TRUE)
 

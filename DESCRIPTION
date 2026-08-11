@@ -1,6 +1,6 @@
 Package: fusionData
 Title: Data backend for fusionACS platform
-Version: 2.0
+Version: 2.0.1
 Authors@R: c(
     person(given = "Kevin", family = "Ummel", role = c("aut", "cre"), email = "kevin.ummel@yale.edu"),
     person(given = "Karthik", family = "Akkiraju", role = "ctb"),

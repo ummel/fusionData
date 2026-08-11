@@ -12,11 +12,8 @@
 #'   \item{\code{\link{BEA_pce_national}}}{BEA national Personal Consumption Expenditures series (1959–2020).}
 #'   \item{\code{\link{BEA_pce_state}}}{BEA state-level Personal Consumption Expenditures series (1997–2019).}
 #'   \item{\code{\link{cpi_series}}}{Annual Consumer Price Index series from FRED.}
-#'   \item{\code{\link{dictionary}}}{Master variable dictionary for supported microdata surveys.}
 #'   \item{\code{\link{poverty_thresholds}}}{Historical official U.S. Census Bureau poverty thresholds.}
 #'   \item{\code{\link{puma_crosswalk}}}{Geographic crosswalk between 2010 and 2020 PUMAs.}
-#'   \item{\code{\link{spatial}}}{Metadata index mapping spatial predictors to source variables.}
-#'   \item{\code{\link{surveys}}}{Summary metadata index of processed survey vintages and sample sizes.}
 #' }
 #'
 #' @docType data
@@ -115,24 +112,6 @@ NULL
 #' @keywords internal
 "cpi_series"
 
-#' Master Variable Dictionary
-#'
-#' Combined variable metadata dictionary compiled across supported microdata surveys and vintages.
-#'
-#' @format A \code{tbl_df} tibble data frame with 8 variables:
-#' \describe{
-#'   \item{Survey}{Abbreviated survey name, e.g., 'ACS' (character)}
-#'   \item{Vintage}{4-digit survey vintage year (character)}
-#'   \item{Respondent}{Respondent level, e.g., 'Household' or 'Person' (character)}
-#'   \item{Variable}{Harmonized variable code/identifier (character)}
-#'   \item{Description}{Variable label or human-readable description (character)}
-#'   \item{Values}{Encoded or factor value level descriptions (character)}
-#'   \item{Type}{Variable data type designation, e.g., 'fct', 'ord', 'dbl' (character)}
-#'   \item{Custom}{Logical indicator if the variable is a custom calculated feature (logical)}
-#' }
-#' @keywords internal
-"dictionary"
-
 #' Historical Official Poverty Thresholds
 #'
 #' Historical official U.S. Census Bureau poverty thresholds organized by family size, number of related minor children, senior status, and year.
@@ -177,34 +156,3 @@ NULL
 #' @source 2020 Block Groups to 2010 Block Groups NHGIS crosswalk (https://www.nhgis.org/geographic-crosswalks)
 #' @keywords internal
 "bg_crosswalk"
-
-#' Spatial Predictor Metadata
-#'
-#' Metadata index mapping spatial predictors to their source variables, vintage, value coding, and statistical data types.
-#'
-#' @format A \code{tbl_df} tibble data frame with 5 variables:
-#' \describe{
-#'   \item{predictor}{Spatial predictor variable name (character)}
-#'   \item{variable_rds}{Source variable identifier string (character)}
-#'   \item{vintage}{4-digit survey or dataset vintage year (character)}
-#'   \item{values}{Named list containing valid value definitions or categories (named list)}
-#'   \item{type}{Data type specification, e.g., 'dbl' (character)}
-#' }
-#' @keywords internal
-"spatial"
-
-#' Survey Metadata Index
-#'
-#' Summary index detailing processed survey vintages, respondent levels, sample sizes, variable counts, and file sizes.
-#'
-#' @format A \code{tbl_df} tibble data frame with 6 variables:
-#' \describe{
-#'   \item{Survey}{Abbreviated survey name (character)}
-#'   \item{Vintage}{4-digit survey vintage year (character)}
-#'   \item{Respondent}{Respondent level, e.g., 'Household' or 'Person' (character)}
-#'   \item{Sample size}{Total sample size count formatted string (character)}
-#'   \item{No. of variables}{Number of survey variables formatted string (character)}
-#'   \item{Size on disk (MB)}{File storage footprint on disk in megabytes formatted string (character)}
-#' }
-#' @keywords internal
-"surveys"

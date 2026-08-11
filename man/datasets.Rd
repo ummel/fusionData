@@ -15,11 +15,8 @@ An overview of internal reference datasets bundled with the package.
 \item{\code{\link{BEA_pce_national}}}{BEA national Personal Consumption Expenditures series (1959–2020).}
 \item{\code{\link{BEA_pce_state}}}{BEA state-level Personal Consumption Expenditures series (1997–2019).}
 \item{\code{\link{cpi_series}}}{Annual Consumer Price Index series from FRED.}
-\item{\code{\link{dictionary}}}{Master variable dictionary for supported microdata surveys.}
 \item{\code{\link{poverty_thresholds}}}{Historical official U.S. Census Bureau poverty thresholds.}
 \item{\code{\link{puma_crosswalk}}}{Geographic crosswalk between 2010 and 2020 PUMAs.}
-\item{\code{\link{spatial}}}{Metadata index mapping spatial predictors to source variables.}
-\item{\code{\link{surveys}}}{Summary metadata index of processed survey vintages and sample sizes.}
 }
 }
 \keyword{datasets}

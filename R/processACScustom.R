@@ -83,7 +83,7 @@ processACScustom <- function(year) {
   out <- lapply(flist, function(fun) {
 
     # Extract function name from path, load code into environment, and validate formals
-    source(fun)
+    source(fun, local = TRUE)
     fname <- sub("\\.R$", "", basename(fun))
     f <- get(fname)
     a <- names(formals(f))
@@ -92,7 +92,7 @@ processACScustom <- function(year) {
     }
 
     # Execute custom computation routine wrapped in error handling
-    cli::cli_alert_info("Executing custom function from {.file {basename(fun)}} for year {year}")
+    cli::cli_alert_info("Attempting to execute custom function from {.file {basename(fun)}} for year {year}")
     out <- try(expr = f(year = year), silent = TRUE)
 
     # Process and validate successfully evaluated data frame returns
