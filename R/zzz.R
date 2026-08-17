@@ -45,6 +45,8 @@
     }
   }
 
+  #---
+
   # 2. Yale HPC Automated Working Directory Configuration
   yale_target_dir <- "/gpfs/milgram/project/rao/shared/fusionACS/fusionData"
 
@@ -59,6 +61,52 @@
   # Warn if directory is still not /fusionData after attempting HPC adjustment
   if (basename(getwd()) != "fusionData") {
     packageStartupMessage("Warning: The fusionData package requires the working directory to be /fusionData")
+  }
+
+  # ---------------------------------------------------------------------------
+  # 3. Check: 'harmony/www/dictionary.rda' vs 'survey-processed/*_*_dictionary.rds'
+  # ---------------------------------------------------------------------------
+  dict_rda <- "harmony/www/dictionary.rda"
+
+  if (file.exists(dict_rda)) {
+    dict_rda_time <- file.info(dict_rda)$mtime
+
+    dict_rds_files <- list.files(
+      path = "survey-processed",
+      pattern = "_._dictionary.rds",
+      recursive = TRUE,
+      full.names = TRUE
+    )
+
+    if (length(dict_rds_files) > 0) {
+      rds_mtimes <- file.info(dict_rds_files)$mtime
+      if (any(rds_mtimes > dict_rda_time, na.rm = TRUE)) {
+        packageStartupMessage("One or more survey dictionary files have been updated since compileDictionary() was last called.\n--> Run compileDictionary() to rebuild.")
+      }
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # 4. Check: 'geo-processed/geo_predictors.fst' vs 'geo-processed/*_processed.rds'
+  # ---------------------------------------------------------------------------
+  geo_fst <- "geo-processed/geo_predictors.fst"
+
+  if (file.exists(geo_fst)) {
+    geo_fst_time <- file.info(geo_fst)$mtime
+
+    geo_rds_files <- list.files(
+      path = "geo-processed",
+      pattern = "_processed.rds$",
+      recursive = TRUE,
+      full.names = TRUE # Must be TRUE for file.info() to resolve paths correctly
+    )
+
+    if (length(geo_rds_files) > 0) {
+      geo_rds_mtimes <- file.info(geo_rds_files)$mtime
+      if (any(geo_rds_mtimes > geo_fst_time, na.rm = TRUE)) {
+        packageStartupMessage("One or more processed geo files have been updated since compileSpatial() was last called.\n--> Run compileSpatial() to rebuild.")
+      }
+    }
   }
 
 }

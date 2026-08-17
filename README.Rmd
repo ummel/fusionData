@@ -407,7 +407,7 @@ See the [`compileVersion()`](https://ummel.github.io/fusionData/reference/compil
 
 The HPC environment is the only locale capable of analyzing the complete, multi-implicate fusionACS database.
 
-When working on a new project or analysis using fusionACS data, the general recommendation is to use the `fusionACS` package outside of the HPC first (utilizing the public pseudo-sample) to do data exploration, analysis development, prototyping, and testing. Using the public pseudo-sample will not yield 100% valid estimates, but they are generally reasonably close and data assembly and analysis is much faster using the pseudo-sample.
+When working on a new project or analysis using fusionACS data, the general recommendation is to use the `fusionACS` package outside of the HPC first (utilizing the public pseudo-sample) to do data exploration, analysis development, prototyping, and testing. Using the public pseudo-sample will not yield accurate estimates -- especially for small effective sample sizes -- but they are reasonable for prototyping most analyses. Data assembly and analysis is much faster using the pseudo-sample.
 
 > **Note:** Analyses relying exclusively on native ACS variables yield valid point estimates and margins of error using the public pseudo-sample. However, any analysis incorporating fused donor variables or sub-PUMA geographic units requires HPC access for accurate estimates.
 
